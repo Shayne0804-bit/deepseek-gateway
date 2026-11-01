@@ -11,7 +11,8 @@ import {
   normalizeUsage,
   resolveModelPrice,
 } from '../src/pricing.js';
-import { APP_ROOT, loadConfig } from '../src/config.js';
+import { APP_ROOT, DEFAULT_MAX_BODY_BYTES, byteLimit, loadConfig } from '../src/config.js';
+import { formatByteSize } from '../src/http-utils.js';
 import {
   checkClientAccess,
   clampOutputTokens,
@@ -161,20 +162,41 @@ test('checkClientAccess : desactive, expire, quotas', () => {
 
 test('clampOutputTokens respecte plafond et quota restant', () => {
   const body = { max_tokens: 1000 };
-  clampOutputTokens(body, { maxOutputTokens: 64, quotaTokens: null, usedTokens: 0 });
+  assert.equal(clampOutputTokens(body, { maxOutputTokens: 64, quotaTokens: null, usedTokens: 0 }), true);
   assert.equal(body.max_tokens, 64);
 
   const body2 = { max_tokens: 500 };
-  clampOutputTokens(body2, { maxOutputTokens: null, quotaTokens: 100, usedTokens: 90 });
+  assert.equal(clampOutputTokens(body2, { maxOutputTokens: null, quotaTokens: 100, usedTokens: 90 }), true);
   assert.equal(body2.max_tokens, 10);
 
   const body3 = { max_completion_tokens: 999 };
-  clampOutputTokens(body3, { maxOutputTokens: 32, quotaTokens: null, usedTokens: 0 });
+  assert.equal(clampOutputTokens(body3, { maxOutputTokens: 32, quotaTokens: null, usedTokens: 0 }), true);
   assert.equal(body3.max_completion_tokens, 32);
 
   const body4 = {};
-  clampOutputTokens(body4, { maxOutputTokens: 32, quotaTokens: null, usedTokens: 0 });
+  assert.equal(clampOutputTokens(body4, { maxOutputTokens: 32, quotaTokens: null, usedTokens: 0 }), false);
   assert.equal(body4.max_tokens, undefined);
+
+  // Deja sous les plafonds : aucune modification (donc pas de re-serialisation).
+  const body5 = { max_tokens: 10 };
+  assert.equal(clampOutputTokens(body5, { maxOutputTokens: 32, quotaTokens: null, usedTokens: 0 }), false);
+  assert.equal(body5.max_tokens, 10);
+});
+
+test('limite de corps : valeurs, formats et depassement', () => {
+  assert.equal(DEFAULT_MAX_BODY_BYTES, 32 * 1024 * 1024);
+  assert.equal(byteLimit(undefined, 100), 100);
+  assert.equal(byteLimit('', 100), 100);
+  assert.equal(byteLimit('4194304', 100), 4194304);
+  assert.equal(byteLimit(' 8388608 ', 100), 8388608);
+  assert.equal(byteLimit('abc', 100), 100);
+  assert.equal(byteLimit('0', 100), Infinity);
+  assert.equal(byteLimit('-5', 100), Infinity);
+  assert.equal(formatByteSize(4194304), '4 Mo');
+  assert.equal(formatByteSize(33554432), '32 Mo');
+  assert.equal(formatByteSize(2048), '2 Ko');
+  assert.equal(formatByteSize(512), '512 octets');
+  assert.equal(formatByteSize(Infinity), 'illimitee');
 });
 
 test('remainingFor et isModelAllowed', () => {

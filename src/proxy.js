@@ -235,7 +235,11 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
       let body = null;
       let isChatLike = false;
       if (req.method === 'POST') {
-        rawBody = await readBody(req, config.maxBodyBytes);
+        rawBody = await readBody(
+          req,
+          config.maxBodyBytes,
+          "Augmentez MAX_BODY_BYTES si votre client envoie de gros contextes ou des images.",
+        );
         if (rawBody.trim()) {
           try {
             body = JSON.parse(rawBody);
@@ -246,10 +250,12 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
             throw new HttpError(400, 'Le corps JSON doit etre un objet.', 'invalid_json');
           }
           // Anciens noms de modeles DeepSeek -> nom canonique (ex. deepseek-v4-flash -> deepseek-flash).
+          let bodyMutated = false;
           const requestedModel = typeof body.model === 'string' ? body.model : null;
           const model = canonicalModelName(requestedModel);
           if (requestedModel && model !== requestedModel) {
             body.model = model;
+            bodyMutated = true;
           }
           if (!isModelAllowed(client, model)) {
             sendApiError(
@@ -262,8 +268,9 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
             );
             return;
           }
-          clampOutputTokens(body, client);
-          rawBody = JSON.stringify(body);
+          if (clampOutputTokens(body, client)) bodyMutated = true;
+          // Re-serialisation uniquement si necessaire (gros corps : evite un pic memoire inutile).
+          if (bodyMutated) rawBody = JSON.stringify(body);
           isChatLike =
             pathname.includes('/completions') ||
             pathname.includes('/responses') ||

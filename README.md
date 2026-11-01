@@ -115,7 +115,7 @@ sauf `DEEPSEEK_API_KEY` (ou la clé saisie dans le panneau).
 | `TRUST_PROXY` | `0` | `1` derrière un reverse proxy HTTPS (cookie `Secure`, IP réelles). |
 | `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | À modifier seulement pour un proxy intermédiaire. |
 | `DATA_DIR` | `./data` | Dossier de la base SQLite (une valeur vide = `./data`). |
-| `MAX_BODY_BYTES` | `4194304` | Taille maximale d'une requête entrante. |
+| `MAX_BODY_BYTES` | `33554432` (32 Mo) | Taille maximale d'une requête entrante. `0` = illimité (attention à la mémoire). |
 | `UPSTREAM_TIMEOUT_MS` | `1800000` | Délai maximal d'un appel vers DeepSeek (30 min). |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`. |
 
@@ -508,6 +508,15 @@ Vérifiez `~/.claude/settings.json` (ou `$env:USERPROFILE\.claude\settings.json`
 - Un 404 vers `https://api.deepseek.com/v1/messages` (et non `…/anthropic/v1/messages`) signifie que
   la passerelle est trop ancienne : mettez-la à jour (version ≥ 1.0.1).
 
+**« Corps de requête trop volumineux » (413) / INVALID_REQUEST dans Claude Code** — Le client envoie
+plus que la limite autorisée (32 Mo par défaut). C'est fréquent avec Claude Code (contexte long,
+captures d'écran, futures fenêtres 1M tokens). Augmentez la limite dans `.env` puis redémarrez :
+```env
+MAX_BODY_BYTES=134217728   # 128 Mo ; 0 = illimité
+```
+Sur Railway : ajoutez la variable `MAX_BODY_BYTES` à la même valeur et redéployez. Le message
+d'erreur renvoyé par la passerelle indique la taille reçue et la limite en vigueur.
+
 **Où voir ce qui a été consommé ?** — Onglet **Journaux** (100 requêtes par page, filtre par clé)
 et **Vue d'ensemble** (graphique 30 jours, top consommateurs).
 
@@ -523,6 +532,8 @@ et **Vue d'ensemble** (graphique 30 jours, top consommateurs).
   modèles et format Anthropic texte le sont.
 - Les journaux ne sont pas purgés automatiquement (prévoyez un nettoyage si volume important).
 - Pas de budget partagé global entre plusieurs clés : chaque clé a ses propres plafonds.
+- Les corps de requête sont lus en mémoire : avec `MAX_BODY_BYTES` très élevé, surveillez la
+  mémoire du serveur si plusieurs grosses requêtes arrivent en même temps.
 
 ---
 

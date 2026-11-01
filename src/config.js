@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '1.0.2';
+export const APP_VERSION = '1.0.3';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -49,6 +49,26 @@ function stripTrailingSlash(value) {
 }
 
 /**
+ * Taille maximale du corps d'une requete entrante.
+ * Claude Code (contexte long, images, futures fenetres 1M tokens) depasse
+ * facilement 4 Mo : on autorise 32 Mo par defaut.
+ */
+export const DEFAULT_MAX_BODY_BYTES = 32 * 1024 * 1024;
+
+/**
+ * Convertit une valeur MAX_BODY_BYTES en octets.
+ * - absent / invalide  -> valeur par defaut
+ * - 0 ou negatif       -> illimite (attention a la memoire)
+ */
+export function byteLimit(value, fallback = DEFAULT_MAX_BODY_BYTES) {
+  if (value == null || String(value).trim() === '') return fallback;
+  const n = Number.parseInt(String(value).trim(), 10);
+  if (!Number.isFinite(n)) return fallback;
+  if (n <= 0) return Number.POSITIVE_INFINITY;
+  return n;
+}
+
+/**
  * Charge la configuration.
  * Les `overrides` sont surtout utilises par les tests (port, dataDir, upstream...).
  * Les variables d'environnement priment sur le fichier .env.
@@ -83,7 +103,7 @@ export function loadConfig(overrides = {}) {
     publicBaseUrl: stripTrailingSlash(overrides.publicBaseUrl ?? raw('PUBLIC_BASE_URL') ?? ''),
     adminPassword: overrides.adminPassword ?? raw('ADMIN_PASSWORD') ?? '',
     sessionHours: intOr(raw('SESSION_HOURS'), 12),
-    maxBodyBytes: intOr(raw('MAX_BODY_BYTES'), 4 * 1024 * 1024),
+    maxBodyBytes: overrides.maxBodyBytes ?? byteLimit(raw('MAX_BODY_BYTES'), DEFAULT_MAX_BODY_BYTES),
     upstreamTimeoutMs: intOr(raw('UPSTREAM_TIMEOUT_MS'), 30 * 60 * 1000),
     logLevel: raw('LOG_LEVEL') ?? 'info',
     trustProxy: overrides.trustProxy ?? boolOr(raw('TRUST_PROXY'), false),

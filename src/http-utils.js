@@ -38,7 +38,24 @@ export function corsHeaders() {
   };
 }
 
-export function readBody(req, limitBytes) {
+/** Taille lisible : 4194304 -> « 4 Mo », Infinity -> « illimitee ». */
+export function formatByteSize(bytes) {
+  if (!Number.isFinite(bytes)) return 'illimitee';
+  if (bytes >= 1024 * 1024) return `${Math.round((bytes / (1024 * 1024)) * 10) / 10} Mo`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} Ko`;
+  return `${bytes} octets`;
+}
+
+function payloadTooLarge(limitBytes, receivedBytes, hint) {
+  const detail = receivedBytes == null
+    ? `limite ${formatByteSize(limitBytes)}`
+    : `${formatByteSize(receivedBytes)} recus, limite ${formatByteSize(limitBytes)}`;
+  const suffix = hint ? ` ${hint}` : '';
+  return new HttpError(413, `Corps de requete trop volumineux (${detail}).${suffix}`, 'payload_too_large');
+}
+
+export function readBody(req, limitBytes = Number.POSITIVE_INFINITY, hint = '') {
+  const limit = Number.isFinite(limitBytes) ? limitBytes : Number.POSITIVE_INFINITY;
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
@@ -51,14 +68,22 @@ export function readBody(req, limitBytes) {
       else resolve(value);
     };
 
+    // Rejet immediat si le client annonce deja un corps trop gros (Content-Length).
+    const declaredLength = Number.parseInt(String(req.headers['content-length'] ?? ''), 10);
+    if (Number.isFinite(limit) && Number.isFinite(declaredLength) && declaredLength > limit) {
+      req.resume();
+      finish(payloadTooLarge(limit, declaredLength, hint));
+      return;
+    }
+
     req.on('data', (chunk) => {
       if (done) {
         req.resume();
         return;
       }
       size += chunk.length;
-      if (size > limitBytes) {
-        finish(new HttpError(413, `Corps de requete trop volumineux (limite ${limitBytes} octets).`, 'payload_too_large'));
+      if (size > limit) {
+        finish(payloadTooLarge(limit, null, hint));
         req.resume();
         return;
       }

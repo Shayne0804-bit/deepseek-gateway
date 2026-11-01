@@ -169,7 +169,8 @@ export async function startGateway(overrides = {}) {
       }
     });
   });
-  server.requestTimeout = 120_000;
+  // 5 min : laisse le temps d'envoyer de gros corps (contexte long, images).
+  server.requestTimeout = 300_000;
   server.headersTimeout = 65_000;
 
   // Nettoyage periodique (sessions expirees, fenetres de debit).

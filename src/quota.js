@@ -93,6 +93,7 @@ export function checkClientAccess(client, now = new Date()) {
 /**
  * Limite le nombre de tokens de sortie demande par le client :
  * plafond configure + tokens restants sur le quota (pour eviter un depassement massif).
+ * Retourne true si le corps a ete modifie (evite une re-serialisation inutile).
  */
 export function clampOutputTokens(body, client) {
   const keys = ['max_tokens', 'max_completion_tokens'];
@@ -100,16 +101,23 @@ export function clampOutputTokens(body, client) {
   if (client.quotaTokens != null) {
     remaining = Math.max(0, client.quotaTokens - client.usedTokens);
   }
+  let changed = false;
   for (const key of keys) {
     if (body[key] == null) continue;
-    let value = Number(body[key]);
+    const original = body[key];
+    let value = Number(original);
     if (!Number.isFinite(value) || value < 1) {
       value = 1;
     }
     if (client.maxOutputTokens != null) value = Math.min(value, client.maxOutputTokens);
     if (remaining != null) value = Math.min(value, Math.max(1, Math.floor(remaining)));
-    body[key] = Math.floor(value);
+    const clamped = Math.floor(value);
+    if (clamped !== original) {
+      body[key] = clamped;
+      changed = true;
+    }
   }
+  return changed;
 }
 
 export function isModelAllowed(client, model) {

@@ -574,6 +574,52 @@ test('chemin avec slashs multiples normalise', async () => {
   assert.equal((await res.json()).object, 'list');
 });
 
+test('corps de requete trop volumineux -> 413 explicite (limite configurable)', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsk-gateway-big-'));
+  const local = await startGateway({
+    dataDir: dir,
+    host: '127.0.0.1',
+    port: 0,
+    providerApiKey: ORIGINAL_KEY,
+    providerBaseUrl: mock.url,
+    adminPassword: 'mot-de-passe-test-123',
+    maxBodyBytes: 4096,
+    logLevel: 'error',
+    logger: silentLogger,
+  });
+  try {
+    const loginRes = await fetch(`${local.url}/admin/api/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-requested-with': 'dsk-admin' },
+      body: JSON.stringify({ password: 'mot-de-passe-test-123' }),
+    });
+    const localCookie = loginRes.headers.getSetCookie()[0].split(';')[0];
+    const created = await fetch(`${local.url}/admin/api/clients`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-requested-with': 'dsk-admin', cookie: localCookie },
+      body: JSON.stringify({ name: 'Corps volumineux', period: 'total' }),
+    });
+    const { key } = await created.json();
+
+    const res = await fetch(`${local.url}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'deepseek-flash',
+        messages: [{ role: 'user', content: 'x'.repeat(6000) }],
+      }),
+    });
+    assert.equal(res.status, 413);
+    const body = await res.json();
+    assert.equal(body.error.code, 'payload_too_large');
+    assert.match(body.error.message, /MAX_BODY_BYTES/);
+    assert.match(body.error.message, /limite 4 Ko/);
+  } finally {
+    await local.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('cle fournisseur absente -> 503 explicite', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsk-gateway-nokey-'));
   const local = await startGateway({
