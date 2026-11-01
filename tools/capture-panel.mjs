@@ -97,6 +97,10 @@ async function main() {
     dataDir,
     host: '127.0.0.1',
     port: GATEWAY_PORT,
+    // Isolation : on n'active pas le HTTPS du .env local pour la demonstration.
+    httpsPort: 0,
+    tlsCertFile: '',
+    tlsKeyFile: '',
     providerApiKey: 'sk-demo-original',
     providerBaseUrl: mock.url,
     adminPassword: ADMIN_PASSWORD,

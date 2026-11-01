@@ -21,6 +21,7 @@ Un **panneau web** en français permet de tout gérer et de suivre la consommati
 - [Tarifs et estimation des coûts](#tarifs-et-estimation-des-coûts)
 - [Alias de modèles (déguisement)](#alias-de-modèles-déguisement)
 - [Exposer la passerelle sur Internet](#exposer-la-passerelle-sur-internet)
+- [HTTPS local (Claude Desktop)](#https-local-claude-desktop)
 - [Docker](#docker)
 - [Déployer sur Railway](#déployer-sur-railway)
 - [Données, sauvegardes et sécurité](#données-sauvegardes-et-sécurité)
@@ -54,6 +55,8 @@ Un **panneau web** en français permet de tout gérer et de suivre la consommati
 - **Alias de modèles** : exposez le nom de votre choix (ex. `claude-opus-5`) tout en servant
   réellement un modèle DeepSeek (`deepseek-flash` par défaut). Les quotas et le coût restent
   calculés sur le modèle facturé.
+- **HTTP + HTTPS** : HTTP sur `8787` et, si un certificat est fourni, HTTPS sur `8788`
+  (requis par Claude Desktop). Voir [HTTPS local](#https-local-claude-desktop).
 - **Zéro dépendance** : Node.js + SQLite intégré (`node:sqlite`). Pas de `npm install`, pas de build.
 
 ## Architecture
@@ -122,6 +125,11 @@ sauf `DEEPSEEK_API_KEY` (ou la clé saisie dans le panneau).
 | `MAX_BODY_BYTES` | `33554432` (32 Mo) | Taille maximale d'une requête entrante. `0` = illimité (attention à la mémoire). |
 | `UPSTREAM_TIMEOUT_MS` | `1800000` | Délai maximal d'un appel vers DeepSeek (30 min). |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`. |
+| `HTTPS_PORT` | `8788` | Port HTTPS (actif seulement si un certificat est configuré). |
+| `TLS_CERT_FILE` | — | Certificat PEM (`data/tls/server.crt`). |
+| `TLS_KEY_FILE` | — | Clé privée PEM (`data/tls/server.key`). |
+| `TLS_PFX_FILE` | — | Alternative Windows : certificat PFX. |
+| `TLS_PFX_PASSPHRASE` | — | Mot de passe du PFX. |
 
 ## Créer une clé pour votre ami
 
@@ -370,6 +378,61 @@ Ouvrez uniquement les ports 80/443 dans le pare-feu. Le panneau est alors access
 Mettez `HOST=0.0.0.0`, ouvrez le port dans le pare-feu Windows, et donnez à votre ami
 `http://VOTRE-IP-LOCALE:8787/v1`. À réserver au réseau de confiance (pas d'HTTPS).
 
+## HTTPS local (Claude Desktop)
+
+Certains clients (dont **Claude Desktop**) n'acceptent que des URL `https://`. La passerelle
+peut servir **HTTP et HTTPS en parallèle** : HTTP sur `PORT` (8787), HTTPS sur `HTTPS_PORT`
+(8788) dès qu'un certificat est configuré. Les deux modes sont donc disponibles.
+
+### Option 1 — La plus simple : tunnel HTTPS (aucun certificat)
+
+```powershell
+winget install --id Cloudflare.cloudflared --accept-source-agreements --accept-package-agreements
+cloudflared tunnel --url http://127.0.0.1:8787
+```
+
+Cloudflare affiche une URL `https://xxxx.trycloudflare.com`. Dans Claude Desktop, utilisez
+`https://xxxx.trycloudflare.com/anthropic` comme URL de base (ou la racine) + une clé dérivée.
+Fonctionne aussi pour un ami à distance. L'URL change à chaque redémarrage du tunnel.
+
+### Option 2 — HTTPS natif avec certificat local (recommandé en local)
+
+```powershell
+pwsh -File tools/generate-local-tls.ps1
+```
+
+Le script crée une autorité de certification locale + un certificat serveur dans `data/tls/`,
+installe la CA dans Windows (Claude Desktop, navigateurs et Electron lui font alors confiance)
+et affiche les lignes à ajouter dans `.env` :
+
+```env
+HTTPS_PORT=8788
+TLS_CERT_FILE=data/tls/server.crt
+TLS_KEY_FILE=data/tls/server.key
+```
+
+Redémarrez la passerelle : `https://localhost:8788/`, `https://127.0.0.1:8788/` et
+`https://VOTRE-IP-LAN:8788/` sont disponibles, en plus de l'HTTP sur 8787.
+
+Dans Claude Desktop, utilisez comme URL de base :
+`https://127.0.0.1:8788/anthropic` (ou `https://192.168.x.x:8788/anthropic` depuis un autre PC
+du réseau, après avoir installé `data/tls/ca.crt` sur ce PC — double-clic → « Installer le
+certificat » → *Autorités de certification racines de confiance*).
+
+- Le certificat couvre `localhost`, le nom de la machine et toutes les IPv4 locales.
+- Alternative : un certificat PFX existant via `TLS_PFX_FILE` / `TLS_PFX_PASSPHRASE`.
+- Linux/macOS : `mkcert -install` puis `mkcert localhost 127.0.0.1`, et pointez
+  `TLS_CERT_FILE` / `TLS_KEY_FILE` vers les fichiers générés.
+
+### Option 3 — Railway (HTTPS public fourni)
+
+Railway fournit un domaine HTTPS : dans Claude Desktop, utilisez
+`https://VOTRE-DOMAINE.up.railway.app/anthropic` + une clé dérivée.
+Voir [Déployer sur Railway](#déployer-sur-railway).
+
+> ⚠️ Le HTTPS local chiffre le trafic sur votre réseau, mais la passerelle reste destinée à un
+> usage privé : pour un partage à distance, préférez Railway ou un tunnel.
+
 ## Docker
 
 ```bash
@@ -464,12 +527,12 @@ Serveur arrêté, copiez le dossier `data/` (ou au minimum `gateway.db`). À cha
 node --test test
 ```
 
-La suite (52 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
+La suite (54 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
 normalisation `usage` OpenAI/Anthropic, quotas (tokens, requêtes, coût, reset de période),
 limites de débit et de concurrence, authentification admin (hash scrypt, sessions),
 chiffrement/hachage des clés dérivées, proxy JSON et **streaming SSE** avec comptage,
 liste de modèles autorisés, plafond `max_tokens`, limite de taille du corps (413),
-alias de modèles, compatibilité Claude Code
+alias de modèles, **écouteur HTTPS natif** (HTTP + HTTPS en parallèle), compatibilité Claude Code
 (`/v1/messages` → `/anthropic/v1/messages`, alias de modèles), chemins avec slashs multiples,
 erreurs et absence de clé fournisseur.
 Les tests utilisent un faux serveur DeepSeek local : **aucun appel réseau réel, aucune clé nécessaire**.
@@ -492,7 +555,9 @@ deepseek-gateway/
 │   └── http-utils.js         # helpers HTTP, cookies, erreurs, sécurité
 ├── public/                   # panneau web (HTML/CSS/JS, sans dépendance)
 ├── test/                     # tests automatisés (node --test)
+├── test/fixtures/tls/        # certificat auto-signé réservé aux tests HTTPS
 ├── tools/capture-panel.mjs   # captures d'écran de démonstration (dev)
+├── tools/generate-local-tls.ps1  # certificat local + CA pour HTTPS (Claude Desktop)
 ├── docs/                     # captures d'écran
 ├── data/                     # base SQLite (créée au démarrage, ignorée par Git)
 ├── start.bat / start.ps1 / start.sh
@@ -525,6 +590,11 @@ Puis démarrez avec `ADMIN_PASSWORD=...` dans `.env` (premier démarrage de nouv
 
 **« node:sqlite introuvable » ou erreur de module** — Node.js est trop ancien : installez Node.js 24 LTS
 ou supérieur (le module `node:sqlite` est intégré et utilisable sans drapeau à partir de Node 23/24).
+
+**Claude Desktop refuse mon URL http:// (« only https is supported »)** — Claude Desktop exige
+HTTPS. Deux solutions : un tunnel qui fournit une URL `https://` (`cloudflared tunnel --url
+http://127.0.0.1:8787`), ou le HTTPS natif local (`pwsh -File tools/generate-local-tls.ps1`
+puis les variables `TLS_*` dans `.env`). Voir [HTTPS local (Claude Desktop)](#https-local-claude-desktop).
 
 **Mon ami reçoit une page HTML au lieu de l'API** — Il doit utiliser `…/v1` dans `base_url`
 (ou l'URL complète `…/v1/chat/completions`), pas la racine du site.

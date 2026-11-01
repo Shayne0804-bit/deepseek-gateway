@@ -1174,8 +1174,11 @@
                 L'URL racine fonctionne aussi (les appels <span class="mono">/v1/messages</span> sont redirigés).
                 Les anciens noms de modèles (<span class="mono">deepseek-v4-flash</span>, <span class="mono">deepseek-chat</span>…)
                 et le suffixe <span class="mono">[1m]</span> sont acceptés et convertis automatiquement.
-                Vous pouvez aussi exposer des alias (ex. <span class="mono">claude-opus-5</span> → <span class="mono">deepseek-v4-pro</span>)
-                depuis <strong>Réglages → Alias de modèles</strong>.
+                Vous pouvez aussi exposer des alias (ex. <span class="mono">claude-opus-5</span> → <span class="mono">deepseek-flash</span>)
+                depuis <strong>Réglages → Alias de modèles</strong>.<br>
+                <strong>Claude Desktop n'accepte que https://</strong> : activez le HTTPS local
+                (<span class="mono">tools/generate-local-tls.ps1</span> + variables <span class="mono">TLS_*</span> dans <code>.env</code>),
+                utilisez l'URL Railway, ou un tunnel Cloudflare — voir le README.
               </div>
             </div>
           </div>

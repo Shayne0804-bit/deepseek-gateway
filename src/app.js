@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import http from 'node:http';
+import https from 'node:https';
 import path from 'node:path';
 import { APP_VERSION, loadConfig } from './config.js';
 import { closeDb, getSetting, openDb, setSetting, cleanupAdminSessions } from './db.js';
@@ -67,9 +68,38 @@ function listen(server, host, port) {
 }
 
 /**
+ * Construit les options TLS du serveur HTTPS a partir de la configuration.
+ * Retourne null si aucun certificat n'est configure (HTTPS desactive).
+ */
+export function buildTlsOptions(config) {
+  const hasPfx = Boolean(config.tlsPfxFile);
+  const hasPem = Boolean(config.tlsCertFile) && Boolean(config.tlsKeyFile);
+  if (!hasPfx && !hasPem) return null;
+
+  const read = (file, label) => {
+    if (!fs.existsSync(file)) {
+      throw new Error(`${label} introuvable : ${file}`);
+    }
+    return fs.readFileSync(file);
+  };
+
+  if (hasPfx) {
+    return {
+      pfx: read(config.tlsPfxFile, 'TLS_PFX_FILE'),
+      passphrase: config.tlsPfxPassphrase || undefined,
+    };
+  }
+  return {
+    cert: read(config.tlsCertFile, 'TLS_CERT_FILE'),
+    key: read(config.tlsKeyFile, 'TLS_KEY_FILE'),
+  };
+}
+
+/**
  * Demarre la passerelle complete.
  * `overrides` : { dataDir, host, port, providerApiKey, providerBaseUrl, publicBaseUrl,
- *                 adminPassword, logLevel, logger, upstreamTimeoutMs }
+ *                 adminPassword, logLevel, logger, upstreamTimeoutMs, maxBodyBytes,
+ *                 httpsPort, tlsCertFile, tlsKeyFile, tlsPfxFile, tlsPfxPassphrase }
  */
 export async function startGateway(overrides = {}) {
   const config = loadConfig(overrides);
@@ -157,7 +187,7 @@ export async function startGateway(overrides = {}) {
     });
   }
 
-  const server = http.createServer((req, res) => {
+  const handleRequest = (req, res) => {
     route(req, res).catch((err) => {
       log.error(`Erreur non geree : ${err?.stack ?? err}`);
       if (!res.headersSent) {
@@ -168,10 +198,27 @@ export async function startGateway(overrides = {}) {
         res.end();
       }
     });
-  });
+  };
+
   // 5 min : laisse le temps d'envoyer de gros corps (contexte long, images).
-  server.requestTimeout = 300_000;
-  server.headersTimeout = 65_000;
+  const applyTimeouts = (srv) => {
+    srv.requestTimeout = 300_000;
+    srv.headersTimeout = 65_000;
+  };
+
+  const server = http.createServer(handleRequest);
+  applyTimeouts(server);
+
+  // HTTPS optionnel : requis par certains clients (Claude Desktop refuse http://).
+  let tlsOptions = null;
+  try {
+    tlsOptions = buildTlsOptions(config);
+  } catch (err) {
+    closeDb(db);
+    throw err;
+  }
+
+  let httpsServer = null;
 
   // Nettoyage periodique (sessions expirees, fenetres de debit).
   const maintenance = setInterval(() => {
@@ -184,20 +231,35 @@ export async function startGateway(overrides = {}) {
   maintenance.unref();
 
   let address;
+  let httpsAddress = null;
   try {
     address = await listen(server, config.host, config.port);
+    if (tlsOptions) {
+      httpsServer = https.createServer(tlsOptions, handleRequest);
+      applyTimeouts(httpsServer);
+      httpsAddress = await listen(httpsServer, config.host, config.httpsPort);
+    }
   } catch (err) {
+    clearInterval(maintenance);
+    if (httpsServer) httpsServer.close();
+    server.close();
     closeDb(db);
     throw err;
   }
 
   const actualPort = address.port;
+  const actualHttpsPort = httpsAddress ? httpsAddress.port : null;
   const close = async () => {
     clearInterval(maintenance);
-    await new Promise((resolve) => {
-      server.close(() => resolve());
-      if (typeof server.closeAllConnections === 'function') server.closeAllConnections();
-    });
+    await Promise.all(
+      [server, httpsServer].filter(Boolean).map(
+        (srv) =>
+          new Promise((resolve) => {
+            srv.close(() => resolve());
+            if (typeof srv.closeAllConnections === 'function') srv.closeAllConnections();
+          }),
+      ),
+    );
     closeDb(db);
   };
 
@@ -205,10 +267,14 @@ export async function startGateway(overrides = {}) {
     config,
     db,
     server,
+    httpsServer,
     log,
     port: actualPort,
+    httpsPort: actualHttpsPort,
+    tlsEnabled: Boolean(tlsOptions),
     host: config.host,
     url: `http://${config.host}:${actualPort}`,
+    httpsUrl: actualHttpsPort ? `https://${config.host}:${actualHttpsPort}` : null,
     adminBootstrap,
     generatedPasswordFile,
     close,
@@ -217,7 +283,7 @@ export async function startGateway(overrides = {}) {
 
 /** Affiche le message de demarrage convivial (utilise par server.js). */
 export function printStartupBanner(started, log = console.log) {
-  const { config, port, host } = started;
+  const { config, port, host, httpsPort } = started;
   const displayHost = host === '0.0.0.0' || host === '::' || host === '' ? '127.0.0.1' : host;
   log('');
   log('  ============================================================');
@@ -225,6 +291,12 @@ export function printStartupBanner(started, log = console.log) {
   log('  ============================================================');
   log(`   Panneau       : http://${displayHost}:${port}/`);
   log(`   API (ami)     : http://${displayHost}:${port}/v1`);
+  if (httpsPort) {
+    log(`   HTTPS         : https://${displayHost}:${httpsPort}/`);
+    log(`   API HTTPS     : https://${displayHost}:${httpsPort}/v1  (Claude Desktop)`);
+  } else {
+    log('   HTTPS         : desactive (TLS_CERT_FILE + TLS_KEY_FILE pour l activer)');
+  }
   log(`   Donnees       : ${config.dataDir}`);
   if (started.adminBootstrap.generatedPassword) {
     log('');

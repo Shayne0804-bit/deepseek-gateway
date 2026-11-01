@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '1.1.1';
+export const APP_VERSION = '1.2.0';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -47,6 +47,16 @@ function boolOr(value, fallback) {
 function stripTrailingSlash(value) {
   return String(value ?? '').replace(/\/+$/, '');
 }
+
+/** Resout un chemin de fichier relatif par rapport a la racine du projet. */
+function resolveFilePath(value) {
+  if (value == null) return '';
+  const file = String(value).trim();
+  if (!file) return '';
+  return path.isAbsolute(file) ? file : path.resolve(APP_ROOT, file);
+}
+
+export const DEFAULT_HTTPS_PORT = 8788;
 
 /**
  * Taille maximale du corps d'une requete entrante.
@@ -107,10 +117,26 @@ export function loadConfig(overrides = {}) {
     upstreamTimeoutMs: intOr(raw('UPSTREAM_TIMEOUT_MS'), 30 * 60 * 1000),
     logLevel: raw('LOG_LEVEL') ?? 'info',
     trustProxy: overrides.trustProxy ?? boolOr(raw('TRUST_PROXY'), false),
+    // HTTPS optionnel : utile pour les clients qui refusent http:// (Claude Desktop…).
+    httpsPort: overrides.httpsPort ?? intOr(raw('HTTPS_PORT'), DEFAULT_HTTPS_PORT),
+    tlsCertFile: resolveFilePath(overrides.tlsCertFile ?? raw('TLS_CERT_FILE')),
+    tlsKeyFile: resolveFilePath(overrides.tlsKeyFile ?? raw('TLS_KEY_FILE')),
+    tlsPfxFile: resolveFilePath(overrides.tlsPfxFile ?? raw('TLS_PFX_FILE')),
+    tlsPfxPassphrase: overrides.tlsPfxPassphrase ?? raw('TLS_PFX_PASSPHRASE') ?? '',
   };
 
   if (!Number.isInteger(config.port) || config.port < 0 || config.port > 65535) {
     throw new Error(`PORT invalide : ${config.port}`);
+  }
+  if (!Number.isInteger(config.httpsPort) || config.httpsPort < 0 || config.httpsPort > 65535) {
+    throw new Error(`HTTPS_PORT invalide : ${config.httpsPort}`);
+  }
+  const hasPem = Boolean(config.tlsCertFile) || Boolean(config.tlsKeyFile);
+  if (hasPem && (!config.tlsCertFile || !config.tlsKeyFile)) {
+    throw new Error('TLS_CERT_FILE et TLS_KEY_FILE doivent etre definis ensemble (ou utilisez TLS_PFX_FILE).');
+  }
+  if (config.tlsPfxFile && hasPem) {
+    throw new Error('Choisissez soit TLS_PFX_FILE, soit TLS_CERT_FILE + TLS_KEY_FILE (pas les deux).');
   }
   if (config.sessionHours < 1 || config.sessionHours > 24 * 30) {
     config.sessionHours = 12;
