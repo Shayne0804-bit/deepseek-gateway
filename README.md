@@ -21,6 +21,7 @@ Un **panneau web** en français permet de tout gérer et de suivre la consommati
 - [Tarifs et estimation des coûts](#tarifs-et-estimation-des-coûts)
 - [Exposer la passerelle sur Internet](#exposer-la-passerelle-sur-internet)
 - [Docker](#docker)
+- [Déployer sur Railway](#déployer-sur-railway)
 - [Données, sauvegardes et sécurité](#données-sauvegardes-et-sécurité)
 - [Tests](#tests)
 - [Structure du projet](#structure-du-projet)
@@ -337,8 +338,12 @@ cp .env.example .env   # renseignez DEEPSEEK_API_KEY et ADMIN_PASSWORD
 docker compose up -d --build
 ```
 
-- Port `8787`, données persistées dans le volume `gateway_data`.
+- Port `8787`, données persistées dans le volume `gateway_data` (monté sur `/data`).
 - La santé du conteneur est vérifiée sur `/healthz`.
+- L'image démarre en `root` uniquement pour corriger les droits du volume, puis exécute
+  l'application avec l'utilisateur non privilégié `node` (`docker-entrypoint.sh`).
+- **Pas d'instruction `VOLUME` dans le Dockerfile** : elle est refusée par Railway et
+  inutile avec `docker compose` (le volume est déclaré dans `docker-compose.yml`).
 - Derrière un reverse proxy, gardez `HOST=0.0.0.0` (déjà forcé dans `docker-compose.yml`).
 
 Sans compose :
@@ -350,6 +355,44 @@ docker run -d --name deepseek-gateway -p 8787:8787 \
   -e DEEPSEEK_API_KEY=sk-... -e ADMIN_PASSWORD=... \
   deepseek-gateway
 ```
+
+## Déployer sur Railway
+
+Le dépôt est prêt pour Railway : `railway.json` configure le build Dockerfile, le
+healthcheck `/healthz` et le redémarrage automatique. Le volume n'est **pas** déclaré
+dans le Dockerfile (Railway le refuse) : il se crée dans le tableau de bord et se monte
+sur `/data`.
+
+1. **Créer le projet** — Railway → *New Project* → *Deploy from GitHub repo* →
+   choisissez `Shayne0804-bit/deepseek-gateway` (autorisez l'accès au dépôt privé).
+   Railway détecte automatiquement le `Dockerfile`.
+2. **Variables** (service → onglet *Variables*) :
+   ```env
+   DEEPSEEK_API_KEY=sk-votre-cle-originale
+   ADMIN_PASSWORD=un-mot-de-passe-long-et-unique
+   TRUST_PROXY=1
+   DATA_DIR=/data
+   HOST=0.0.0.0
+   PUBLIC_BASE_URL=https://VOTRE-DOMAINE.up.railway.app
+   ```
+   > Ne fixez pas `PORT` : Railway l'injecte automatiquement et l'application l'utilise.
+   > `PUBLIC_BASE_URL` peut être renseignée après l'étape 4, puis redéployée.
+3. **Volume** — clic droit sur le service → *Attach Volume* (ou *Volumes* → *Add Volume*),
+   **Mount path : `/data`** (doit correspondre à `DATA_DIR`). Sans volume, la base SQLite
+   (clés dérivées, quotas, journaux) est perdue à chaque redéploiement.
+4. **Domaine public** — service → *Settings* → *Networking* → *Generate Domain*.
+   Copiez l'URL `https://…up.railway.app`, mettez-la dans `PUBLIC_BASE_URL` et redéployez.
+5. **Utiliser** — ouvrez `https://VOTRE-DOMAINE/` : le panneau demande votre
+   `ADMIN_PASSWORD`. Créez une clé dérivée, puis donnez à votre ami
+   `https://VOTRE-DOMAINE/v1` (ou `…/anthropic` pour Claude Code) et la clé.
+
+Notes :
+
+- Le volume est monté par la plateforme avant le démarrage : l'entrypoint du conteneur
+  ajuste ses droits puis lance l'application en utilisateur non privilégié `node`.
+- Sur l'offre d'essai, le service peut se mettre en veille ; il redémarre à la demande.
+  Vérifiez le journal de déploiement (onglet *Deployments*) si besoin.
+- Le disque du conteneur (hors `/data`) est éphémère : n'y stockez rien d'important.
 
 ## Données, sauvegardes et sécurité
 
@@ -414,6 +457,9 @@ deepseek-gateway/
 ├── data/                     # base SQLite (créée au démarrage, ignorée par Git)
 ├── start.bat / start.ps1 / start.sh
 ├── Dockerfile / docker-compose.yml
+├── docker-entrypoint.sh     # droits du volume + execution non-root
+├── railway.json             # configuration de deploiement Railway
+├── .dockerignore
 └── .env.example
 ```
 

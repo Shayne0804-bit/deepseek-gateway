@@ -1,0 +1,14 @@
+.git
+.gitignore
+.gitattributes
+.env
+.env.*
+!.env.example
+data
+docs
+test
+tools
+*.log
+gateway.db
+gateway.db-*
+node_modules
