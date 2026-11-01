@@ -14,6 +14,12 @@ import {
 import { APP_ROOT, DEFAULT_MAX_BODY_BYTES, byteLimit, loadConfig } from '../src/config.js';
 import { formatByteSize } from '../src/http-utils.js';
 import {
+  DEFAULT_MODEL_ALIASES,
+  loadModelAliases,
+  normalizeModelAliases,
+  resolveModelAlias,
+} from '../src/model-aliases.js';
+import {
   checkClientAccess,
   clampOutputTokens,
   estimateUsage,
@@ -197,6 +203,31 @@ test('limite de corps : valeurs, formats et depassement', () => {
   assert.equal(formatByteSize(2048), '2 Ko');
   assert.equal(formatByteSize(512), '512 octets');
   assert.equal(formatByteSize(Infinity), 'illimitee');
+});
+
+/* ---------------------------- alias de modeles ------------------------- */
+
+test('alias de modeles : resolution, wildcard et validation', () => {
+  // Defaut : claude-opus-5 (et variantes datees) -> deepseek-flash (modele economique).
+  assert.equal(resolveModelAlias('claude-opus-5', DEFAULT_MODEL_ALIASES), 'deepseek-flash');
+  assert.equal(resolveModelAlias('claude-opus-5-20260101', DEFAULT_MODEL_ALIASES), 'deepseek-flash');
+  assert.equal(resolveModelAlias('deepseek-flash', DEFAULT_MODEL_ALIASES), 'deepseek-flash');
+  assert.equal(resolveModelAlias('claude-opus-5', {}), 'claude-opus-5');
+
+  // Correspondance exacte prioritaire, motif le plus long gagne.
+  assert.equal(resolveModelAlias('claude-opus-5', { 'claude-opus-5': 'deepseek-flash' }), 'deepseek-flash');
+  assert.equal(resolveModelAlias('claude-opus-9', { 'claude*': 'a', 'claude-opus*': 'b' }), 'b');
+  assert.equal(resolveModelAlias('autre', { 'claude*': 'a' }), 'autre');
+
+  assert.deepEqual(normalizeModelAliases({ ' a ': ' b ' }), { a: 'b' });
+  assert.throws(() => normalizeModelAliases([]), /objet JSON/);
+  assert.throws(() => normalizeModelAliases({ x: '' }), /cible/);
+
+  // Chargement : reglage absent -> defauts ; objet vide -> aucun alias ; invalide -> defauts.
+  assert.deepEqual(loadModelAliases(() => null), { ...DEFAULT_MODEL_ALIASES });
+  assert.deepEqual(loadModelAliases(() => ({})), {});
+  assert.deepEqual(loadModelAliases(() => ({ x: 'deepseek-flash' })), { x: 'deepseek-flash' });
+  assert.deepEqual(loadModelAliases(() => { throw new Error('boom'); }), { ...DEFAULT_MODEL_ALIASES });
 });
 
 test('remainingFor et isModelAllowed', () => {

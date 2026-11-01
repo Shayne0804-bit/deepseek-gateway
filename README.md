@@ -19,6 +19,7 @@ Un **panneau web** en français permet de tout gérer et de suivre la consommati
 - [Utilisation côté ami](#utilisation-côté-ami)
 - [Limites et quotas disponibles](#limites-et-quotas-disponibles)
 - [Tarifs et estimation des coûts](#tarifs-et-estimation-des-coûts)
+- [Alias de modèles (déguisement)](#alias-de-modèles-déguisement)
 - [Exposer la passerelle sur Internet](#exposer-la-passerelle-sur-internet)
 - [Docker](#docker)
 - [Déployer sur Railway](#déployer-sur-railway)
@@ -50,6 +51,9 @@ Un **panneau web** en français permet de tout gérer et de suivre la consommati
   sont automatiquement redirigées vers `/anthropic/v1/messages`, et les anciens noms de modèles
   (`deepseek-v4-flash`, `deepseek-chat`, `deepseek-reasoner`, variantes `[1m]`…) sont convertis
   vers les noms canoniques (`deepseek-flash`, `deepseek-v4-pro`).
+- **Alias de modèles** : exposez le nom de votre choix (ex. `claude-opus-5`) tout en servant
+  réellement un modèle DeepSeek (`deepseek-flash` par défaut). Les quotas et le coût restent
+  calculés sur le modèle facturé.
 - **Zéro dépendance** : Node.js + SQLite intégré (`node:sqlite`). Pas de `npm install`, pas de build.
 
 ## Architecture
@@ -271,6 +275,41 @@ Les tarifs publics DeepSeek (2026, USD par million de tokens) sont préchargés 
 - Ils sont modifiables dans **Réglages → Tarification** (JSON) si DeepSeek change ses prix.
 - Les modèles inconnus (anciens noms) utilisent le tarif de repli (`deepseek-flash` par défaut).
 
+## Alias de modèles (déguisement)
+
+Vous pouvez exposer aux clients (Claude Code, SDK OpenAI…) un **nom de modèle différent** de
+celui réellement utilisé par DeepSeek. Un alias est une simple règle
+« nom demandé → modèle DeepSeek » :
+
+```json
+{
+  "claude-opus-5*": "deepseek-flash"
+}
+```
+
+- `claude-opus-5*` est un motif : il couvre `claude-opus-5`, `claude-opus-5-20260101`, etc.
+- Un alias exact (`"mon-modele": "deepseek-flash"`) est aussi possible ; le motif le plus précis gagne.
+- **Par défaut**, l'alias `claude-opus-5* → deepseek-flash` est déjà actif : le nom « Opus 5 »
+  utilise le modèle DeepSeek économique, jamais le pro. Pour utiliser le pro, remplacez la cible
+  par `deepseek-v4-pro` dans le panneau.
+
+Modifiable dans le panneau : **Réglages → Alias de modèles** (JSON). Videz le champ puis
+enregistrez pour revenir aux alias par défaut. Le remplacement de la table annule les alias
+par défaut : ajoutez-les explicitement si vous les conservez.
+
+**Ce qui reste réel (par transparence) :**
+
+- Les **quotas, le coût estimé et les journaux** utilisent le modèle DeepSeek réellement facturé.
+- Le client reçoit les en-têtes `x-gateway-requested-model` (nom demandé) et
+  `x-gateway-billed-model` (modèle réel).
+- La réponse de l'API contient le nom du modèle DeepSeek (le « déguisement » se fait au niveau
+  du nom demandé par le client / de son affichage, pas en falsifiant la facture).
+
+Exemple avec Claude Code : mettez `ANTHROPIC_MODEL=claude-opus-5` dans ses variables ; il
+affichera « Opus 5 » et la passerelle servira `deepseek-flash`.
+Pour être certain qu'aucun modèle pro ne soit jamais utilisé, renseignez aussi la liste
+**Modèles autorisés** de la clé dérivée à `deepseek-flash` (panneau → Modifier).
+
 ## Exposer la passerelle sur Internet
 
 Trois options, de la plus simple à la plus « production ».
@@ -425,11 +464,12 @@ Serveur arrêté, copiez le dossier `data/` (ou au minimum `gateway.db`). À cha
 node --test test
 ```
 
-La suite (45 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
+La suite (52 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
 normalisation `usage` OpenAI/Anthropic, quotas (tokens, requêtes, coût, reset de période),
 limites de débit et de concurrence, authentification admin (hash scrypt, sessions),
 chiffrement/hachage des clés dérivées, proxy JSON et **streaming SSE** avec comptage,
-liste de modèles autorisés, plafond `max_tokens`, compatibilité Claude Code
+liste de modèles autorisés, plafond `max_tokens`, limite de taille du corps (413),
+alias de modèles, compatibilité Claude Code
 (`/v1/messages` → `/anthropic/v1/messages`, alias de modèles), chemins avec slashs multiples,
 erreurs et absence de clé fournisseur.
 Les tests utilisent un faux serveur DeepSeek local : **aucun appel réseau réel, aucune clé nécessaire**.

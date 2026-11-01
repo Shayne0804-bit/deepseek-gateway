@@ -34,6 +34,8 @@ export function corsHeaders() {
     'access-control-allow-origin': '*',
     'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'access-control-allow-headers': 'authorization, x-api-key, content-type, x-requested-with',
+    'access-control-expose-headers':
+      'x-quota-tokens-remaining, x-quota-requests-remaining, x-quota-usd-remaining, x-quota-tokens-limit, x-quota-requests-limit, x-quota-period, x-gateway-requested-model, x-gateway-billed-model',
     'access-control-max-age': '86400',
   };
 }

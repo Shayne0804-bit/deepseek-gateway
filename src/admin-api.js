@@ -6,6 +6,7 @@ import {
   countUsageSince,
   deleteAllAdminSessions,
   deleteClient,
+  deleteSetting,
   getClientById,
   getSetting,
   insertClient,
@@ -41,6 +42,11 @@ import {
   normalizePricing,
   peakWindowsLabel,
 } from './pricing.js';
+import {
+  DEFAULT_MODEL_ALIASES,
+  loadModelAliases,
+  normalizeModelAliases,
+} from './model-aliases.js';
 import {
   checkClientAccess,
   normalizePeriod,
@@ -280,6 +286,7 @@ export function createAdminApi({ config, db, log }) {
   function readSettingsView() {
     const provider = resolveProviderConfig(db, config);
     const pricing = loadPricing(() => getSetting(db, 'pricing', null));
+    const modelAliases = loadModelAliases(() => getSetting(db, 'model_aliases', null));
     const publicStored = getSetting(db, 'public_base_url', '') || '';
     const publicBaseUrl = config.publicBaseUrl || publicStored;
     let publicBaseUrlSource = 'default';
@@ -302,6 +309,8 @@ export function createAdminApi({ config, db, log }) {
         peakLabel: peakWindowsLabel(pricing),
         defaultPricing: DEFAULT_PRICING,
       },
+      modelAliases,
+      modelAliasesMeta: { defaults: DEFAULT_MODEL_ALIASES },
       admin: { passwordSource: getAdminPasswordSource(db) },
       server: serverInfo(config),
     };
@@ -604,6 +613,23 @@ export function createAdminApi({ config, db, log }) {
           }
           setSetting(db, 'pricing', pricing);
           changed.push('pricing');
+        }
+
+        if (body.modelAliases !== undefined) {
+          if (body.modelAliases === null) {
+            // Retour aux alias par defaut.
+            deleteSetting(db, 'model_aliases');
+            changed.push('modelAliases(reset)');
+          } else {
+            let aliases;
+            try {
+              aliases = normalizeModelAliases(body.modelAliases);
+            } catch (err) {
+              throw new HttpError(400, `Alias de modeles invalides : ${err.message}`, 'invalid_aliases');
+            }
+            setSetting(db, 'model_aliases', aliases);
+            changed.push('modelAliases');
+          }
         }
 
         log.info(`Reglages mis a jour : ${changed.join(', ') || 'aucun changement'}.`);

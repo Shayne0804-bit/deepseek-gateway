@@ -867,6 +867,7 @@
     const s = state.settings;
     const provider = s.provider;
     const pricingJson = JSON.stringify(s.pricing, null, 2);
+    const aliasesJson = JSON.stringify(s.modelAliases ?? {}, null, 2);
     const version = s.server?.version || '1.0.0';
 
     $('#view').innerHTML = `
@@ -948,6 +949,32 @@
       <section class="panel">
         <div class="panel-head">
           <div>
+            <h2>Alias de modèles</h2>
+            <span class="hint">Exposez un nom de modèle différent du modèle DeepSeek réellement utilisé.</span>
+          </div>
+          <div class="panel-head-actions">
+            <button class="btn btn-ghost btn-sm" data-action="reset-aliases">Valeurs par défaut</button>
+          </div>
+        </div>
+        <div class="alert">
+          Par défaut : <span class="mono">claude-opus-5*</span> → <span class="mono">deepseek-flash</span>.
+          Un client qui demande <span class="mono">claude-opus-5</span> (ou <span class="mono">claude-opus-5-20260101</span>)
+          est donc servi par DeepSeek Flash (le modèle économique). Les quotas, le coût estimé et les journaux utilisent le
+          <strong>modèle réellement facturé</strong> ; le client reçoit les en-têtes
+          <span class="mono">x-gateway-requested-model</span> / <span class="mono">x-gateway-billed-model</span>.
+          Videz le champ puis enregistrez pour revenir aux alias par défaut.
+        </div>
+        <form data-form="settings-aliases">
+          <label class="field"><span>JSON des alias (« nom demandé » → « modèle DeepSeek »)</span>
+            <textarea name="aliases" rows="8" spellcheck="false">${esc(aliasesJson)}</textarea>
+          </label>
+          <div class="form-actions"><button type="submit" class="btn btn-primary">Enregistrer les alias</button></div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
             <h2>Mot de passe du panneau</h2>
             <span class="hint">${s.admin?.passwordSource === 'panel' ? 'Mot de passe personnalisé.' : 'Mot de passe initial — pensez à le changer.'}</span>
           </div>
@@ -1011,6 +1038,21 @@
     }
     await api('/settings', { method: 'PUT', body: { pricing } });
     toast('Tarification enregistrée.', 'success');
+    await loadSettings();
+  }
+
+  async function handleAliasesSave(form) {
+    const raw = form.elements.aliases.value.trim();
+    let modelAliases = null;
+    if (raw) {
+      try {
+        modelAliases = JSON.parse(raw);
+      } catch (err) {
+        throw new Error(`JSON invalide : ${err.message}`);
+      }
+    }
+    await api('/settings', { method: 'PUT', body: { modelAliases } });
+    toast('Alias de modèles enregistrés.', 'success');
     await loadSettings();
   }
 
@@ -1132,6 +1174,8 @@
                 L'URL racine fonctionne aussi (les appels <span class="mono">/v1/messages</span> sont redirigés).
                 Les anciens noms de modèles (<span class="mono">deepseek-v4-flash</span>, <span class="mono">deepseek-chat</span>…)
                 et le suffixe <span class="mono">[1m]</span> sont acceptés et convertis automatiquement.
+                Vous pouvez aussi exposer des alias (ex. <span class="mono">claude-opus-5</span> → <span class="mono">deepseek-v4-pro</span>)
+                depuis <strong>Réglages → Alias de modèles</strong>.
               </div>
             </div>
           </div>
@@ -1209,6 +1253,14 @@
           textarea.value = JSON.stringify(state.settings.pricingMeta.defaultPricing, null, 2);
           toast('Tarifs par défaut chargés dans l\'éditeur. Cliquez sur « Enregistrer les tarifs ».', 'info');
         }
+      }
+      return;
+    }
+    if (action === 'reset-aliases') {
+      const textarea = document.querySelector('textarea[name="aliases"]');
+      if (textarea) {
+        textarea.value = JSON.stringify(state.settings?.modelAliasesMeta?.defaults ?? {}, null, 2);
+        toast('Alias par défaut chargés dans l\'éditeur. Cliquez sur « Enregistrer les alias ».', 'info');
       }
       return;
     }
@@ -1347,6 +1399,7 @@
       else if (kind === 'settings-provider') await handleProviderSave(form);
       else if (kind === 'settings-public') await handlePublicUrlSave(form);
       else if (kind === 'settings-pricing') await handlePricingSave(form);
+      else if (kind === 'settings-aliases') await handleAliasesSave(form);
       else if (kind === 'settings-password') await handlePasswordSave(form);
     } catch (err) {
       toast(err.message || 'Erreur inattendue.', 'error');

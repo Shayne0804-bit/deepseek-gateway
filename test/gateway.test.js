@@ -483,6 +483,80 @@ test('journaux pagines et filtrables', async () => {
   assert.ok(data.rows.every((row) => typeof row.clientName === 'string'));
 });
 
+test('alias de modele : claude-opus-5 est servi par deepseek-flash', async () => {
+  const { key } = await createClient({ name: 'Alias opus 5', period: 'total' });
+  const res = await proxyChat(key, { model: 'claude-opus-5' });
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get('x-gateway-requested-model'), 'claude-opus-5');
+  assert.equal(res.headers.get('x-gateway-billed-model'), 'deepseek-flash');
+  const body = await res.json();
+  assert.equal(body.model, 'deepseek-flash');
+  assert.equal(mock.seen.at(-1).body.model, 'deepseek-flash');
+});
+
+test('alias de modele : variante datee et format Anthropic (Claude Code)', async () => {
+  const { key } = await createClient({ name: 'Alias opus 5 date', period: 'total' });
+  const dated = await proxyChat(key, { model: 'claude-opus-5-20260101' });
+  assert.equal(dated.status, 200);
+  await dated.text();
+  assert.equal(mock.seen.at(-1).body.model, 'deepseek-flash');
+
+  const res = await fetch(`${base}/v1/messages`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': key },
+    body: JSON.stringify({
+      model: 'claude-opus-5',
+      max_tokens: 32,
+      messages: [{ role: 'user', content: 'hey' }],
+    }),
+  });
+  assert.equal(res.status, 200);
+  const data = await res.json();
+  assert.equal(data.model, 'deepseek-flash');
+  assert.equal(mock.seen.at(-1).url, '/anthropic/v1/messages');
+  assert.equal(mock.seen.at(-1).body.model, 'deepseek-flash');
+});
+
+test('alias de modele : la liste d autorisation est comparee au modele facture', async () => {
+  const { key } = await createClient({
+    name: 'Alias allowlist facture',
+    allowedModels: ['deepseek-flash'],
+    period: 'total',
+  });
+  const res = await proxyChat(key, { model: 'claude-opus-5' });
+  assert.equal(res.status, 200);
+  await res.text();
+});
+
+test('alias de modele personnalises via les reglages, puis retour aux defauts', async () => {
+  try {
+    const save = await api('/admin/api/settings', {
+      method: 'PUT',
+      body: { modelAliases: { 'mon-modele': 'deepseek-flash' } },
+    });
+    assert.equal(save.status, 200);
+    const settingsView = await api('/admin/api/settings');
+    assert.equal(settingsView.data.modelAliases['mon-modele'], 'deepseek-flash');
+
+    const { key } = await createClient({ name: 'Alias perso', period: 'total' });
+    const res = await proxyChat(key, { model: 'mon-modele' });
+    assert.equal(res.status, 200);
+    await res.text();
+    assert.equal(mock.seen.at(-1).body.model, 'deepseek-flash');
+
+    // La table personnalisee remplace les defauts : claude-opus-5 n'est plus mappe.
+    const notMapped = await proxyChat(key, { model: 'claude-opus-5' });
+    assert.equal(notMapped.status, 200);
+    await notMapped.text();
+    assert.equal(mock.seen.at(-1).body.model, 'claude-opus-5');
+  } finally {
+    const restore = await api('/admin/api/settings', { method: 'PUT', body: { modelAliases: null } });
+    assert.equal(restore.status, 200);
+    const defaults = await api('/admin/api/settings');
+    assert.equal(defaults.data.modelAliases['claude-opus-5*'], 'deepseek-flash');
+  }
+});
+
 test('changement de mot de passe admin', async () => {
   const wrong = await api('/admin/api/settings/password', {
     method: 'POST',

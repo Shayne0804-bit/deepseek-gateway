@@ -1,4 +1,5 @@
 import { computeCost, canonicalModelName, loadPricing, normalizeUsage } from './pricing.js';
+import { loadModelAliases, resolveModelAlias } from './model-aliases.js';
 import {
   checkClientAccess,
   clampOutputTokens,
@@ -208,6 +209,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
 
     const responseHeaders = { ...cors, ...quotaHeaders(client) };
     const pricing = loadPricing(() => getSetting(db, 'pricing', null));
+    const modelAliases = loadModelAliases(() => getSetting(db, 'model_aliases', null));
 
     let recorded = false;
     const record = (opts) => {
@@ -249,19 +251,27 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           if (body === null || typeof body !== 'object' || Array.isArray(body)) {
             throw new HttpError(400, 'Le corps JSON doit etre un objet.', 'invalid_json');
           }
-          // Anciens noms de modeles DeepSeek -> nom canonique (ex. deepseek-v4-flash -> deepseek-flash).
+          // Alias de modele (« deguisement ») puis anciens noms DeepSeek -> nom canonique.
           let bodyMutated = false;
           const requestedModel = typeof body.model === 'string' ? body.model : null;
-          const model = canonicalModelName(requestedModel);
+          const aliasedModel = resolveModelAlias(requestedModel, modelAliases);
+          const model = canonicalModelName(aliasedModel);
           if (requestedModel && model !== requestedModel) {
             body.model = model;
             bodyMutated = true;
+            // Permet au client de connaitre le modele reellement facture.
+            responseHeaders['x-gateway-requested-model'] = requestedModel;
+            responseHeaders['x-gateway-billed-model'] = model;
           }
-          if (!isModelAllowed(client, model)) {
+          const modelAllowed =
+            isModelAllowed(client, model) ||
+            (requestedModel ? isModelAllowed(client, requestedModel) : true);
+          if (!modelAllowed) {
+            const converted = model !== requestedModel ? ` (converti en ${model})` : '';
             sendApiError(
               res,
               403,
-              `Modele non autorise pour cette cle : ${model}. Modeles autorises : ${client.allowedModels.join(', ')}.`,
+              `Modele non autorise pour cette cle : ${requestedModel ?? model}${converted}. Modeles autorises : ${client.allowedModels.join(', ')}.`,
               'permission_error',
               'model_not_allowed',
               responseHeaders,
