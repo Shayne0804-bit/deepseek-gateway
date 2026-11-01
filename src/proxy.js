@@ -1,0 +1,526 @@
+import { computeCost, canonicalModelName, loadPricing, normalizeUsage } from './pricing.js';
+import {
+  checkClientAccess,
+  clampOutputTokens,
+  ConcurrencyTracker,
+  estimateUsage,
+  findClientByApiKey,
+  isModelAllowed,
+  maybeRollPeriod,
+  RateLimiter,
+  recordUsage,
+  remainingFor,
+} from './quota.js';
+import { getSetting } from './db.js';
+import {
+  bearerToken,
+  corsHeaders,
+  HttpError,
+  readBody,
+  sendApiError,
+} from './http-utils.js';
+import { APP_VERSION } from './config.js';
+
+/**
+ * Chemins proxifies vers l'API DeepSeek. Le client peut utiliser
+ * indifferemment `<base>/v1/...` ou `<base>/...` (compatibilite OpenAI SDK).
+ */
+const API_PREFIXES = [
+  '/v1/',
+  '/beta/',
+  '/anthropic/',
+  '/chat/completions',
+  '/completions',
+  '/responses',
+  '/messages',
+  '/models',
+];
+
+export function isProxyPath(pathname) {
+  return API_PREFIXES.some((prefix) =>
+    prefix.endsWith('/') ? pathname.startsWith(prefix) : pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
+/**
+ * Normalise le chemin entrant :
+ * - supprime les slashs multiples (base URL se terminant par « / ») ;
+ * - redirige `/v1/messages` (format Anthropic envoye par Claude Code) vers
+ *   `/anthropic/v1/messages`, chemin reel de l'API Anthropic de DeepSeek.
+ */
+export function normalizeProxyPath(rawPathname) {
+  let pathname = String(rawPathname || '/').replace(/\/{2,}/g, '/');
+  if (pathname === '/v1/messages' || pathname.startsWith('/v1/messages/')) {
+    pathname = `/anthropic${pathname}`;
+  }
+  return pathname;
+}
+
+function quotaHeaders(client) {
+  const left = remainingFor(client);
+  const headers = {};
+  if (left.tokens != null) headers['x-quota-tokens-remaining'] = String(left.tokens);
+  if (left.requests != null) headers['x-quota-requests-remaining'] = String(left.requests);
+  if (left.usd != null) headers['x-quota-usd-remaining'] = left.usd.toFixed(4);
+  if (client.quotaTokens != null) headers['x-quota-tokens-limit'] = String(client.quotaTokens);
+  if (client.quotaRequests != null) headers['x-quota-requests-limit'] = String(client.quotaRequests);
+  headers['x-quota-period'] = client.period;
+  return headers;
+}
+
+function truncate(text, max = 500) {
+  const value = String(text ?? '');
+  return value.length <= max ? value : `${value.slice(0, max)}…`;
+}
+
+function mergeUsageState(current, next) {
+  if (!next) return current;
+  if (!current) return { ...next };
+  const merged = {
+    prompt: Math.max(current.prompt ?? 0, next.prompt ?? 0),
+    completion: Math.max(current.completion ?? 0, next.completion ?? 0),
+    cacheHit: Math.max(current.cacheHit ?? 0, next.cacheHit ?? 0),
+  };
+  merged.total = merged.prompt + merged.completion;
+  merged.cacheMiss = Math.max(0, merged.prompt - merged.cacheHit);
+  return merged;
+}
+
+/** Extrait modele + usage d'une ligne SSE (`data: {...}`). */
+function processSseLine(line, state) {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith('data:')) return;
+  const payload = trimmed.slice(5).trim();
+  if (!payload || payload === '[DONE]') return;
+  let obj;
+  try {
+    obj = JSON.parse(payload);
+  } catch {
+    return;
+  }
+  const usage = obj?.usage ?? obj?.message?.usage ?? null;
+  if (usage) state.usage = mergeUsageState(state.usage, normalizeUsage(usage));
+  if (typeof obj?.model === 'string') state.model = obj.model;
+  if (typeof obj?.message?.model === 'string') state.model = obj.message.model;
+}
+
+function readClientApiKey(req) {
+  const bearer = bearerToken(req);
+  if (bearer) return bearer;
+  // Compatibilite avec les clients Anthropic qui envoient x-api-key.
+  const header = req.headers['x-api-key'];
+  if (typeof header === 'string' && header.trim()) return header.trim();
+  return null;
+}
+
+export function createProxyHandler({ config, db, log, resolveProvider }) {
+  const limiter = new RateLimiter();
+  const concurrency = new ConcurrencyTracker();
+
+  function accessLog(req, client, status, tokens, cost, ms, pathname) {
+    log.info(
+      `${req.method} ${pathname} -> ${status} | ${tokens} tok | $${Number(cost).toFixed(5)} | ${ms} ms | ${client.name}`,
+    );
+  }
+
+  async function handleProxy(req, res, url) {
+    const startedAt = Date.now();
+    const pathname = normalizeProxyPath(url.pathname);
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, corsHeaders());
+      res.end();
+      return;
+    }
+
+    const cors = corsHeaders();
+
+    // ---- 1. Authentification par cle derivee -------------------------
+    const apiKey = readClientApiKey(req);
+    if (!apiKey) {
+      sendApiError(
+        res,
+        401,
+        "Cle API manquante. Utilisez l'en-tete Authorization: Bearer <votre-cle>.",
+        'authentication_error',
+        'missing_api_key',
+        cors,
+      );
+      return;
+    }
+    let client = findClientByApiKey(db, apiKey);
+    if (!client) {
+      sendApiError(
+        res,
+        401,
+        "Cle API invalide ou revoquee. Demandez une nouvelle cle a l'administrateur.",
+        'authentication_error',
+        'invalid_api_key',
+        cors,
+      );
+      return;
+    }
+
+    // ---- 2. Remise a zero de periode + droits -------------------------
+    client = maybeRollPeriod(db, client);
+    const denied = checkClientAccess(client);
+    if (denied) {
+      log.warn(`Quota/refus ${client.name} (${denied.code})`);
+      sendApiError(res, denied.status, denied.message, denied.type, denied.code, cors);
+      return;
+    }
+
+    // ---- 3. Limites de debit ------------------------------------------
+    if (client.rpmLimit != null) {
+      const rate = limiter.hit(client.id, client.rpmLimit);
+      if (!rate.ok) {
+        sendApiError(
+          res,
+          429,
+          `Limite de ${client.rpmLimit} requetes/minute atteinte. Reessayez dans ${rate.retryAfter} s.`,
+          'rate_limit_error',
+          'rate_limit_exceeded',
+          { ...cors, 'retry-after': String(rate.retryAfter) },
+        );
+        return;
+      }
+    }
+
+    const hasConcurrencyLimit = client.concurrencyLimit != null;
+    if (hasConcurrencyLimit && !concurrency.acquire(client.id, client.concurrencyLimit)) {
+      sendApiError(
+        res,
+        429,
+        `Trop de requetes simultanees (limite ${client.concurrencyLimit}).`,
+        'rate_limit_error',
+        'concurrency_limit_exceeded',
+        cors,
+      );
+      return;
+    }
+
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true;
+      if (hasConcurrencyLimit) concurrency.release(client.id);
+    };
+
+    const responseHeaders = { ...cors, ...quotaHeaders(client) };
+    const pricing = loadPricing(() => getSetting(db, 'pricing', null));
+
+    let recorded = false;
+    const record = (opts) => {
+      if (recorded) return;
+      recorded = true;
+      try {
+        recordUsage(db, client.id, {
+          model: opts.model ?? null,
+          usage: opts.usage ?? null,
+          costUsd: opts.costUsd ?? 0,
+          status: opts.status ?? 0,
+          streamed: Boolean(opts.streamed),
+          estimated: Boolean(opts.estimated),
+          latencyMs: Date.now() - startedAt,
+          error: opts.error ? truncate(opts.error) : null,
+        });
+      } catch (err) {
+        log.error(`Ecriture du journal impossible : ${err.message}`);
+      }
+    };
+
+    try {
+      // ---- 4. Lecture et validation du corps --------------------------
+      let rawBody = null;
+      let body = null;
+      let isChatLike = false;
+      if (req.method === 'POST') {
+        rawBody = await readBody(req, config.maxBodyBytes);
+        if (rawBody.trim()) {
+          try {
+            body = JSON.parse(rawBody);
+          } catch {
+            throw new HttpError(400, 'Corps JSON invalide.', 'invalid_json');
+          }
+          if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+            throw new HttpError(400, 'Le corps JSON doit etre un objet.', 'invalid_json');
+          }
+          // Anciens noms de modeles DeepSeek -> nom canonique (ex. deepseek-v4-flash -> deepseek-flash).
+          const requestedModel = typeof body.model === 'string' ? body.model : null;
+          const model = canonicalModelName(requestedModel);
+          if (requestedModel && model !== requestedModel) {
+            body.model = model;
+          }
+          if (!isModelAllowed(client, model)) {
+            sendApiError(
+              res,
+              403,
+              `Modele non autorise pour cette cle : ${model}. Modeles autorises : ${client.allowedModels.join(', ')}.`,
+              'permission_error',
+              'model_not_allowed',
+              responseHeaders,
+            );
+            return;
+          }
+          clampOutputTokens(body, client);
+          rawBody = JSON.stringify(body);
+          isChatLike =
+            pathname.includes('/completions') ||
+            pathname.includes('/responses') ||
+            pathname.includes('/messages');
+        }
+      }
+
+      // ---- 5. Cle originale cote fournisseur --------------------------
+      const provider = resolveProvider(db, config);
+      if (!provider.apiKey) {
+        log.error("Cle API DeepSeek originale non configuree.");
+        sendApiError(
+          res,
+          503,
+          "La passerelle n'est pas encore configuree : cle API DeepSeek originale manquante. Contactez l'administrateur.",
+          'api_error',
+          'provider_not_configured',
+          responseHeaders,
+        );
+        return;
+      }
+
+      // ---- 6. Appel de l'API DeepSeek ---------------------------------
+      const upstreamHeaders = {
+        'content-type': 'application/json',
+        authorization: `Bearer ${provider.apiKey}`,
+        'user-agent': `deepseek-gateway/${APP_VERSION}`,
+      };
+      if (req.headers.accept) upstreamHeaders.accept = String(req.headers.accept);
+
+      const controller = new AbortController();
+      let clientGone = false;
+      const timeout = setTimeout(
+        () => controller.abort(new Error('upstream_timeout')),
+        config.upstreamTimeoutMs,
+      );
+      const onResClose = () => {
+        if (!res.writableEnded) {
+          clientGone = true;
+          controller.abort(new Error('client_aborted'));
+        }
+      };
+      res.once('close', onResClose);
+
+      const modelFromRequest = typeof body?.model === 'string' ? body.model : null;
+      let streamState = { usage: null, model: modelFromRequest };
+      let bytesStreamed = 0;
+      let upstreamRes = null;
+
+      try {
+        upstreamRes = await fetch(`${provider.baseUrl}${pathname}${url.search}`, {
+          method: req.method,
+          headers: upstreamHeaders,
+          body: req.method === 'POST' ? rawBody ?? '' : undefined,
+          signal: controller.signal,
+        });
+      } catch (err) {
+        clearTimeout(timeout);
+        res.off('close', onResClose);
+        const aborted = err?.name === 'AbortError';
+        if (aborted && clientGone) {
+          record({
+            model: modelFromRequest,
+            usage: estimateUsage(rawBody ?? '', bytesStreamed),
+            costUsd: computeCost(estimateUsage(rawBody ?? '', bytesStreamed), modelFromRequest, pricing),
+            status: 0,
+            streamed: true,
+            estimated: true,
+            error: 'client_aborted',
+          });
+          if (!res.headersSent) res.destroy();
+          else if (!res.writableEnded) res.end();
+          return;
+        }
+        if (aborted) {
+          record({ model: modelFromRequest, status: 0, error: 'upstream_timeout' });
+          sendApiError(
+            res,
+            504,
+            "Delai depasse en attendant l'API DeepSeek.",
+            'api_error',
+            'upstream_timeout',
+            responseHeaders,
+          );
+          return;
+        }
+        record({ model: modelFromRequest, status: 0, error: err?.message ?? 'network_error' });
+        log.error(`Passerelle amont injoignable : ${err?.message ?? err}`);
+        sendApiError(
+          res,
+          502,
+          "Impossible de joindre l'API DeepSeek. Reessayez plus tard.",
+          'api_error',
+          'upstream_unreachable',
+          responseHeaders,
+        );
+        return;
+      }
+
+      const contentType = String(upstreamRes.headers.get('content-type') ?? 'application/json');
+      const isEventStream = contentType.includes('text/event-stream');
+
+      // ---- 7a. Reponse JSON classique --------------------------------
+      if (!isEventStream) {
+        let text = '';
+        try {
+          text = await upstreamRes.text();
+        } catch (err) {
+          clearTimeout(timeout);
+          res.off('close', onResClose);
+          if (err?.name === 'AbortError' && clientGone) {
+            record({
+              model: modelFromRequest,
+              usage: estimateUsage(rawBody ?? '', 0),
+              costUsd: computeCost(estimateUsage(rawBody ?? '', 0), modelFromRequest, pricing),
+              status: 0,
+              estimated: true,
+              error: 'client_aborted',
+            });
+            if (!res.headersSent) res.destroy();
+            return;
+          }
+          throw err;
+        }
+        clearTimeout(timeout);
+        res.off('close', onResClose);
+
+        let payload = null;
+        try {
+          payload = JSON.parse(text);
+        } catch {
+          /* reponse non JSON : passee telle quelle */
+        }
+        const usage = payload?.usage ? normalizeUsage(payload.usage) : null;
+
+        if (isChatLike && req.method === 'POST') {
+          let billedUsage = usage;
+          let estimated = false;
+          if (!billedUsage && upstreamRes.ok) {
+            billedUsage = estimateUsage(rawBody ?? '', text.length);
+            estimated = true;
+          }
+          const cost = billedUsage ? computeCost(billedUsage, modelFromRequest ?? payload?.model, pricing) : 0;
+          record({
+            model: modelFromRequest ?? payload?.model ?? null,
+            usage: billedUsage,
+            costUsd: cost,
+            status: upstreamRes.status,
+            streamed: false,
+            estimated,
+            error: upstreamRes.ok ? null : payload?.error?.message ?? text,
+          });
+          accessLog(req, client, upstreamRes.status, billedUsage?.total ?? 0, cost, Date.now() - startedAt, pathname);
+        }
+
+        if (res.headersSent) {
+          if (!res.writableEnded) res.end();
+          return;
+        }
+        res.writeHead(upstreamRes.status, {
+          ...responseHeaders,
+          'content-type': contentType,
+          'cache-control': 'no-store',
+          'content-length': Buffer.byteLength(text),
+        });
+        res.end(text);
+        return;
+      }
+
+      // ---- 7b. Streaming SSE -----------------------------------------
+      res.writeHead(upstreamRes.status, {
+        ...responseHeaders,
+        'content-type': contentType,
+        'cache-control': 'no-cache, no-transform',
+        'x-accel-buffering': 'no',
+      });
+      res.flushHeaders?.();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      try {
+        for await (const chunk of upstreamRes.body) {
+          const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+          bytesStreamed += buf.length;
+          if (!res.writableEnded) res.write(buf);
+          buffer += decoder.decode(buf, { stream: true });
+          let newline;
+          while ((newline = buffer.indexOf('\n')) !== -1) {
+            const line = buffer.slice(0, newline).replace(/\r$/, '');
+            buffer = buffer.slice(newline + 1);
+            processSseLine(line, streamState);
+          }
+        }
+        buffer += decoder.decode();
+        if (buffer.trim()) processSseLine(buffer, streamState);
+      } catch (err) {
+        clearTimeout(timeout);
+        res.off('close', onResClose);
+        const aborted = err?.name === 'AbortError';
+        const usage = streamState.usage ?? estimateUsage(rawBody ?? '', bytesStreamed);
+        const estimated = !streamState.usage;
+        const cost = computeCost(usage, streamState.model, pricing);
+        record({
+          model: streamState.model,
+          usage,
+          costUsd: cost,
+          status: clientGone ? 0 : upstreamRes.status,
+          streamed: true,
+          estimated,
+          error: clientGone ? 'client_aborted' : `stream_interrupted: ${err?.message ?? err}`,
+        });
+        accessLog(req, client, 499, usage.total, cost, Date.now() - startedAt, pathname);
+        if (!res.writableEnded) res.end();
+        if (!aborted) log.warn(`Flux SSE interrompu : ${err?.message ?? err}`);
+        return;
+      }
+
+      clearTimeout(timeout);
+      res.off('close', onResClose);
+      if (!res.writableEnded) res.end();
+
+      const usage = streamState.usage ?? estimateUsage(rawBody ?? '', bytesStreamed);
+      const estimated = !streamState.usage;
+      const cost = computeCost(usage, streamState.model, pricing);
+      record({
+        model: streamState.model,
+        usage,
+        costUsd: cost,
+        status: upstreamRes.status,
+        streamed: true,
+        estimated,
+        error: upstreamRes.ok ? null : 'upstream_error',
+      });
+      accessLog(req, client, upstreamRes.status, usage.total, cost, Date.now() - startedAt, pathname);
+    } catch (err) {
+      // Erreurs locales (corps invalide, etc.) : la requete n'est pas facturee.
+      if (res.headersSent) {
+        if (!res.writableEnded) res.end();
+        return;
+      }
+      if (err instanceof HttpError) {
+        sendApiError(res, err.status, err.message, 'invalid_request_error', err.code, responseHeaders);
+        return;
+      }
+      log.error(`Erreur passerelle : ${err?.stack ?? err}`);
+      sendApiError(
+        res,
+        500,
+        `Erreur interne de la passerelle : ${err?.message ?? err}`,
+        'api_error',
+        'gateway_error',
+        responseHeaders,
+      );
+    } finally {
+      release();
+    }
+  }
+
+  return handleProxy;
+}

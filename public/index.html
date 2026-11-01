@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>DeepSeek Gateway — Panneau d'administration</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <!-- ============================ Connexion ============================ -->
+  <div id="login-view" class="login-screen hidden">
+    <form class="login-card" data-form="login" autocomplete="on">
+      <div class="login-logo">⚡</div>
+      <h1>DeepSeek Gateway</h1>
+      <p>Partagez votre clé API DeepSeek avec des clés dérivées à quota.</p>
+      <div class="login-error" id="login-error"></div>
+      <label class="field">
+        <span>Mot de passe administrateur</span>
+        <input type="password" name="password" id="login-password" placeholder="••••••••" autocomplete="current-password" required autofocus>
+      </label>
+      <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
+      <p class="small muted" style="margin:16px 0 0">
+        Mot de passe oublié ? Voir <code>data/admin-password.txt</code> (premier démarrage) ou définissez
+        <code>ADMIN_PASSWORD</code> dans <code>.env</code> puis supprimez la base <code>data/gateway.db</code>.
+      </p>
+    </form>
+  </div>
+
+  <!-- ============================== Panneau ============================ -->
+  <div id="app-view" class="app hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">⚡</div>
+        <div>
+          <div class="brand-name">DeepSeek Gateway</div>
+          <div class="brand-sub">Partage &amp; quotas</div>
+        </div>
+      </div>
+      <nav class="nav" id="nav">
+        <button class="nav-item" data-nav="overview"><span class="nav-icon">📊</span>Vue d'ensemble</button>
+        <button class="nav-item" data-nav="clients"><span class="nav-icon">🔑</span>Clés &amp; quotas</button>
+        <button class="nav-item" data-nav="logs"><span class="nav-icon">🧾</span>Journaux</button>
+        <button class="nav-item" data-nav="settings"><span class="nav-icon">⚙️</span>Réglages</button>
+        <button class="nav-item" data-nav="guide"><span class="nav-icon">🤝</span>Guide pour votre ami</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="provider-pill" id="provider-pill">
+          <span class="dot" id="provider-dot"></span>
+          <span class="text" id="provider-text">Fournisseur…</span>
+        </div>
+        <div class="small" style="color:var(--muted-2);padding-left:6px">v<span id="app-version">1.0.0</span></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="page-title">Vue d'ensemble</h1>
+          <div class="topbar-sub" id="page-sub"></div>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-ghost" data-action="logout">Se déconnecter</button>
+        </div>
+      </header>
+      <div id="view"></div>
+    </main>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toasts" aria-live="polite"></div>
+  <script src="/assets/app.js" defer></script>
+</body>
+</html>

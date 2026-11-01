@@ -1,0 +1,244 @@
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+import { APP_VERSION, loadConfig } from './config.js';
+import { closeDb, getSetting, openDb, setSetting, cleanupAdminSessions } from './db.js';
+import { bootstrapAdmin, resolveProviderConfig } from './settings.js';
+import { createAdminApi } from './admin-api.js';
+import { createProxyHandler, isProxyPath } from './proxy.js';
+import { DEFAULT_PRICING } from './pricing.js';
+import { applySecurityHeaders, sendJson } from './http-utils.js';
+
+const LEVELS = { debug: 10, info: 20, warn: 30, error: 40 };
+
+export function createLogger(level = 'info') {
+  const threshold = LEVELS[level] ?? LEVELS.info;
+  const emit = (name, message) => {
+    if ((LEVELS[name] ?? 20) < threshold) return;
+    const line = `${new Date().toISOString()} [${name.toUpperCase()}] ${message}`;
+    if (name === 'error' || name === 'warn') console.error(line);
+    else console.log(line);
+  };
+  return {
+    level,
+    debug: (m) => emit('debug', m),
+    info: (m) => emit('info', m),
+    warn: (m) => emit('warn', m),
+    error: (m) => emit('error', m),
+  };
+}
+
+const ASSETS = {
+  '/': { file: 'index.html', type: 'text/html; charset=utf-8' },
+  '/index.html': { file: 'index.html', type: 'text/html; charset=utf-8' },
+  '/assets/app.js': { file: 'app.js', type: 'text/javascript; charset=utf-8' },
+  '/assets/styles.css': { file: 'styles.css', type: 'text/css; charset=utf-8' },
+  '/favicon.svg': { file: 'favicon.svg', type: 'image/svg+xml' },
+};
+
+function serveAsset(req, res, config, asset) {
+  fs.readFile(path.join(config.publicDir, asset.file), (err, buffer) => {
+    if (err) {
+      sendJson(res, 404, { error: { message: 'Fichier introuvable.', type: 'invalid_request_error', code: 'not_found' } });
+      return;
+    }
+    res.writeHead(200, {
+      'content-type': asset.type,
+      'content-length': buffer.length,
+      'cache-control': 'no-cache',
+    });
+    if (req.method === 'HEAD') res.end();
+    else res.end(buffer);
+  });
+}
+
+function listen(server, host, port) {
+  return new Promise((resolve, reject) => {
+    const onError = (err) => {
+      server.off('error', onError);
+      reject(err);
+    };
+    server.once('error', onError);
+    server.listen(port, host, () => {
+      server.off('error', onError);
+      resolve(server.address());
+    });
+  });
+}
+
+/**
+ * Demarre la passerelle complete.
+ * `overrides` : { dataDir, host, port, providerApiKey, providerBaseUrl, publicBaseUrl,
+ *                 adminPassword, logLevel, logger, upstreamTimeoutMs }
+ */
+export async function startGateway(overrides = {}) {
+  const config = loadConfig(overrides);
+  const log = overrides.logger ?? createLogger(config.logLevel);
+  const db = openDb(config.dataDir);
+
+  // Tarification par defaut si premiere utilisation.
+  if (getSetting(db, 'pricing', null) == null) {
+    setSetting(db, 'pricing', DEFAULT_PRICING);
+  }
+
+  // Mot de passe administrateur (premiere utilisation).
+  const adminBootstrap = bootstrapAdmin(db, config);
+  let generatedPasswordFile = null;
+  if (adminBootstrap.generatedPassword) {
+    generatedPasswordFile = path.join(config.dataDir, 'admin-password.txt');
+    fs.writeFileSync(
+      generatedPasswordFile,
+      [
+        'Mot de passe administrateur DeepSeek Gateway (genere au premier demarrage)',
+        '',
+        adminBootstrap.generatedPassword,
+        '',
+        'Changez-le dans le panneau > Reglages, puis supprimez ce fichier.',
+        '',
+      ].join('\n'),
+      { encoding: 'utf8', mode: 0o600 },
+    );
+  }
+
+  const resolveProvider = (database, cfg) => resolveProviderConfig(database, cfg);
+  const adminApi = createAdminApi({ config, db, log });
+  const proxyHandler = createProxyHandler({ config, db, log, resolveProvider });
+
+  async function route(req, res) {
+    applySecurityHeaders(res);
+    const host = req.headers.host ?? `${config.host}:${config.port}`;
+    let url;
+    try {
+      url = new URL(req.url ?? '/', `http://${host}`);
+    } catch {
+      sendJson(res, 400, { error: { message: 'URL invalide.', type: 'invalid_request_error', code: 'bad_request' } });
+      return;
+    }
+    const pathname = url.pathname.replace(/\/{2,}/g, '/');
+
+    if (pathname === '/healthz') {
+      const provider = resolveProvider(db, config);
+      sendJson(res, 200, {
+        ok: true,
+        name: 'deepseek-gateway',
+        version: APP_VERSION,
+        uptimeSeconds: Math.round(process.uptime()),
+        providerConfigured: Boolean(provider.apiKey),
+      });
+      return;
+    }
+
+    if (pathname.startsWith('/admin/api')) {
+      await adminApi.handle(req, res, url, pathname);
+      return;
+    }
+
+    if (pathname.startsWith('/admin')) {
+      sendJson(res, 404, { error: { message: 'Page introuvable.', type: 'invalid_request_error', code: 'not_found' } });
+      return;
+    }
+
+    if ((req.method === 'GET' || req.method === 'HEAD') && ASSETS[pathname]) {
+      serveAsset(req, res, config, ASSETS[pathname]);
+      return;
+    }
+
+    if (isProxyPath(pathname)) {
+      await proxyHandler(req, res, url);
+      return;
+    }
+
+    sendJson(res, 404, {
+      error: {
+        message: 'Route inconnue. L API est disponible sous /v1/... et le panneau sur /.',
+        type: 'invalid_request_error',
+        code: 'not_found',
+      },
+    });
+  }
+
+  const server = http.createServer((req, res) => {
+    route(req, res).catch((err) => {
+      log.error(`Erreur non geree : ${err?.stack ?? err}`);
+      if (!res.headersSent) {
+        sendJson(res, 500, {
+          error: { message: 'Erreur interne.', type: 'api_error', code: 'internal_error' },
+        });
+      } else if (!res.writableEnded) {
+        res.end();
+      }
+    });
+  });
+  server.requestTimeout = 120_000;
+  server.headersTimeout = 65_000;
+
+  // Nettoyage periodique (sessions expirees, fenetres de debit).
+  const maintenance = setInterval(() => {
+    try {
+      cleanupAdminSessions(db, new Date().toISOString());
+    } catch (err) {
+      log.warn(`Maintenance : ${err.message}`);
+    }
+  }, 60 * 60 * 1000);
+  maintenance.unref();
+
+  let address;
+  try {
+    address = await listen(server, config.host, config.port);
+  } catch (err) {
+    closeDb(db);
+    throw err;
+  }
+
+  const actualPort = address.port;
+  const close = async () => {
+    clearInterval(maintenance);
+    await new Promise((resolve) => {
+      server.close(() => resolve());
+      if (typeof server.closeAllConnections === 'function') server.closeAllConnections();
+    });
+    closeDb(db);
+  };
+
+  return {
+    config,
+    db,
+    server,
+    log,
+    port: actualPort,
+    host: config.host,
+    url: `http://${config.host}:${actualPort}`,
+    adminBootstrap,
+    generatedPasswordFile,
+    close,
+  };
+}
+
+/** Affiche le message de demarrage convivial (utilise par server.js). */
+export function printStartupBanner(started, log = console.log) {
+  const { config, port, host } = started;
+  const displayHost = host === '0.0.0.0' || host === '::' || host === '' ? '127.0.0.1' : host;
+  log('');
+  log('  ============================================================');
+  log('   DeepSeek Gateway - partage de cle API avec quotas');
+  log('  ============================================================');
+  log(`   Panneau       : http://${displayHost}:${port}/`);
+  log(`   API (ami)     : http://${displayHost}:${port}/v1`);
+  log(`   Donnees       : ${config.dataDir}`);
+  if (started.adminBootstrap.generatedPassword) {
+    log('');
+    log('   PREMIER DEMARRAGE - mot de passe administrateur genere :');
+    log(`     ${started.adminBootstrap.generatedPassword}`);
+    log(`   (ecrit aussi dans : ${started.generatedPasswordFile})`);
+    log('   Pensez a le changer dans le panneau > Reglages.');
+  }
+  if (!config.providerApiKey) {
+    log('');
+    log("   ATTENTION : aucune cle DeepSeek originale detectee.");
+    log('   Renseignez DEEPSEEK_API_KEY dans .env, ou collez-la dans le');
+    log('   panneau > Reglages avant de creer des cles pour vos amis.');
+  }
+  log('');
+  log('   Ctrl+C pour arreter.');
+  log('');
+}

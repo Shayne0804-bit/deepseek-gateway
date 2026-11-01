@@ -1,0 +1,18 @@
+services:
+  gateway:
+    build: .
+    container_name: deepseek-gateway
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8787"
+      DATA_DIR: /data
+    env_file:
+      - .env
+    volumes:
+      - gateway_data:/data
+
+volumes:
+  gateway_data:
