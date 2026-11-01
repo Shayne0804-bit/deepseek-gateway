@@ -19,6 +19,7 @@ import {
   HttpError,
   readBody,
   sendApiError,
+  sendJson,
 } from './http-utils.js';
 import { APP_VERSION } from './config.js';
 
@@ -55,6 +56,53 @@ export function normalizeProxyPath(rawPathname) {
     pathname = `/anthropic${pathname}`;
   }
   return pathname;
+}
+
+/** Vrai pour les endpoints de decouverte de modeles (OpenAI ou Anthropic). */
+export function isModelsPath(pathname) {
+  return pathname === '/models' || pathname === '/v1/models' || pathname === '/anthropic/v1/models';
+}
+
+/**
+ * Construit la liste des modeles exposes par la passerelle :
+ * modeles DeepSeek factures + alias configures (ex. claude-opus-5).
+ * Anthropic ne fournit pas d'endpoint /models : on repond donc localement,
+ * ce qui permet la decouverte de modeles par Claude Desktop et les SDK.
+ */
+function buildModelsPayload(pathname, req, pricing, aliases) {
+  const ids = new Set(Object.keys(pricing.models ?? {}));
+  for (const pattern of Object.keys(aliases ?? {})) {
+    ids.add(pattern.endsWith('*') ? pattern.slice(0, -1) : pattern);
+  }
+  const modelIds = [...ids].filter(Boolean);
+  const nowSeconds = Math.floor(Date.now() / 1000);
+
+  const anthropicFormat =
+    pathname.startsWith('/anthropic') || Boolean(req.headers['anthropic-version']);
+  if (anthropicFormat) {
+    const createdAt = new Date().toISOString();
+    const data = modelIds.map((id) => ({
+      type: 'model',
+      id,
+      display_name: id,
+      created_at: createdAt,
+    }));
+    return {
+      data,
+      has_more: false,
+      first_id: data.length ? data[0].id : null,
+      last_id: data.length ? data[data.length - 1].id : null,
+    };
+  }
+  return {
+    object: 'list',
+    data: modelIds.map((id) => ({
+      id,
+      object: 'model',
+      created: nowSeconds,
+      owned_by: 'deepseek-gateway',
+    })),
+  };
 }
 
 function quotaHeaders(client) {
@@ -232,7 +280,17 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
     };
 
     try {
-      // ---- 4. Lecture et validation du corps --------------------------
+      // ---- 4. Decouverte de modeles : repondue localement -------------
+      // (DeepSeek n'expose pas /anthropic/v1/models ; Claude Desktop en a besoin.)
+      if (req.method === 'GET' && isModelsPath(pathname)) {
+        sendJson(res, 200, buildModelsPayload(pathname, req, pricing, modelAliases), {
+          ...responseHeaders,
+          'cache-control': 'public, max-age=60',
+        });
+        return;
+      }
+
+      // ---- 5. Lecture et validation du corps --------------------------
       let rawBody = null;
       let body = null;
       let isChatLike = false;

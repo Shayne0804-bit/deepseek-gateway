@@ -395,6 +395,33 @@ test('GET /v1/models passe sans consommer le quota', async () => {
   assert.equal(updated.usedRequests, 0);
 });
 
+test('decouverte de modeles : /v1/models et /anthropic/v1/models servis localement', async () => {
+  const { key } = await createClient({ name: 'Decouverte modeles', period: 'total' });
+
+  // Format OpenAI (avec alias de modeles inclus).
+  const openai = await fetch(`${base}/v1/models`, { headers: { authorization: `Bearer ${key}` } });
+  assert.equal(openai.status, 200);
+  const openaiBody = await openai.json();
+  assert.equal(openaiBody.object, 'list');
+  const openaiIds = openaiBody.data.map((model) => model.id);
+  assert.ok(openaiIds.includes('deepseek-flash'), `modeles: ${openaiIds.join(', ')}`);
+  assert.ok(openaiIds.includes('claude-opus-5'), 'les alias doivent apparaitre dans la liste');
+
+  // Format Anthropic (utilise par Claude Desktop pour la decouverte).
+  const anthropic = await fetch(`${base}/anthropic/v1/models`, {
+    headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+  });
+  assert.equal(anthropic.status, 200);
+  const anthropicBody = await anthropic.json();
+  assert.ok(Array.isArray(anthropicBody.data) && anthropicBody.data.length >= 1);
+  assert.equal(anthropicBody.data[0].type, 'model');
+  assert.ok(anthropicBody.data.some((model) => model.id === 'deepseek-flash'));
+
+  // Sans authentification : refus propre (pas de fuite ni de 404).
+  const noAuth = await fetch(`${base}/anthropic/v1/models`);
+  assert.equal(noAuth.status, 401);
+});
+
 test('preflight CORS accepte', async () => {
   const res = await fetch(`${base}/v1/chat/completions`, { method: 'OPTIONS' });
   assert.equal(res.status, 204);

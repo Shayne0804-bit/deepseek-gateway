@@ -527,12 +527,13 @@ Serveur arrêté, copiez le dossier `data/` (ou au minimum `gateway.db`). À cha
 node --test test
 ```
 
-La suite (54 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
+La suite (55 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
 normalisation `usage` OpenAI/Anthropic, quotas (tokens, requêtes, coût, reset de période),
 limites de débit et de concurrence, authentification admin (hash scrypt, sessions),
 chiffrement/hachage des clés dérivées, proxy JSON et **streaming SSE** avec comptage,
 liste de modèles autorisés, plafond `max_tokens`, limite de taille du corps (413),
-alias de modèles, **écouteur HTTPS natif** (HTTP + HTTPS en parallèle), compatibilité Claude Code
+alias de modèles, **découverte de modèles** (`/v1/models` et `/anthropic/v1/models`),
+**écouteur HTTPS natif** (HTTP + HTTPS en parallèle), compatibilité Claude Code
 (`/v1/messages` → `/anthropic/v1/messages`, alias de modèles), chemins avec slashs multiples,
 erreurs et absence de clé fournisseur.
 Les tests utilisent un faux serveur DeepSeek local : **aucun appel réseau réel, aucune clé nécessaire**.
@@ -590,6 +591,12 @@ Puis démarrez avec `ADMIN_PASSWORD=...` dans `.env` (premier démarrage de nouv
 
 **« node:sqlite introuvable » ou erreur de module** — Node.js est trop ancien : installez Node.js 24 LTS
 ou supérieur (le module `node:sqlite` est intégré et utilisable sans drapeau à partir de Node 23/24).
+
+**Claude Desktop : « /v1/models returned HTTP 404 » lors de la découverte de modèles** — Depuis
+la version 1.2.1, la passerelle répond elle-même à `GET /v1/models` et `GET /anthropic/v1/models`
+(DeepSeek ne fournit pas cet endpoint en format Anthropic). La liste contient les modèles DeepSeek
+facturés et vos alias (`claude-opus-5`…). Redéployez/mettez à jour la passerelle, puis relancez
+le test de connexion dans Claude Desktop.
 
 **Claude Desktop refuse mon URL http:// (« only https is supported »)** — Claude Desktop exige
 HTTPS. Deux solutions : un tunnel qui fournit une URL `https://` (`cloudflared tunnel --url
