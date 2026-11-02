@@ -321,6 +321,8 @@ async function main() {
   await screenshot('04-clients-desktop.png', 'Vue cles en 1440x900 : badges entre crochets, quotas en barres fines, boutons d\'action alignes sans debordement.');
   await gotoView('logs');
   await screenshot('05-logs-desktop.png', 'Vue journaux : modele demande (fable-5.1) et modele facture (deepseek-flash) lisibles, cout reel par ligne.');
+  await gotoView('audit');
+  await screenshot('05b-audit-desktop.png', 'Vue journal d\'audit : actions d\'administration tracees (connexions, cles) avec IP et horodatage.');
   await gotoView('settings');
   await screenshot('06-settings-desktop.png', 'Vue reglages : formulaires monospace, badges de source, edition JSON, focus vert.');
   await gotoView('guide');

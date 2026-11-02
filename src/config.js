@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '1.3.0';
+export const APP_VERSION = '2.0.0';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -123,6 +123,12 @@ export function loadConfig(overrides = {}) {
     tlsKeyFile: resolveFilePath(overrides.tlsKeyFile ?? raw('TLS_KEY_FILE')),
     tlsPfxFile: resolveFilePath(overrides.tlsPfxFile ?? raw('TLS_PFX_FILE')),
     tlsPfxPassphrase: overrides.tlsPfxPassphrase ?? raw('TLS_PFX_PASSPHRASE') ?? '',
+    // Garde-fous et observabilite production.
+    ipRateLimitPerMin: overrides.ipRateLimitPerMin ?? intOr(raw('IP_RATE_LIMIT_PER_MIN'), 240),
+    maxConcurrentRequests: overrides.maxConcurrentRequests ?? intOr(raw('MAX_CONCURRENT_REQUESTS'), 200),
+    logFormat: (overrides.logFormat ?? raw('LOG_FORMAT') ?? 'text') === 'json' ? 'json' : 'text',
+    usageRetentionDays: overrides.usageRetentionDays ?? intOr(raw('USAGE_RETENTION_DAYS'), 0),
+    masterKey: overrides.masterKey ?? raw('MASTER_KEY') ?? '',
   };
 
   if (!Number.isInteger(config.port) || config.port < 0 || config.port > 65535) {
@@ -138,6 +144,9 @@ export function loadConfig(overrides = {}) {
   if (config.tlsPfxFile && hasPem) {
     throw new Error('Choisissez soit TLS_PFX_FILE, soit TLS_CERT_FILE + TLS_KEY_FILE (pas les deux).');
   }
+  if (!Number.isFinite(config.ipRateLimitPerMin) || config.ipRateLimitPerMin < 0) config.ipRateLimitPerMin = 0;
+  if (!Number.isFinite(config.maxConcurrentRequests) || config.maxConcurrentRequests < 0) config.maxConcurrentRequests = 0;
+  if (!Number.isFinite(config.usageRetentionDays) || config.usageRetentionDays < 0) config.usageRetentionDays = 0;
   if (config.sessionHours < 1 || config.sessionHours > 24 * 30) {
     config.sessionHours = 12;
   }

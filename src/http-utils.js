@@ -176,12 +176,31 @@ export function originAllowed(req) {
 }
 
 /** Securite de base appliquee a toutes les reponses du panneau. */
-export function applySecurityHeaders(res) {
+export function applySecurityHeaders(res, { https = false } = {}) {
   res.setHeader('x-content-type-options', 'nosniff');
   res.setHeader('referrer-policy', 'no-referrer');
   res.setHeader('x-frame-options', 'DENY');
+  res.setHeader('cross-origin-opener-policy', 'same-origin');
+  res.setHeader('cross-origin-resource-policy', 'same-origin');
+  res.setHeader('permissions-policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
+  if (https) {
+    res.setHeader('strict-transport-security', 'max-age=31536000; includeSubDomains');
+  }
   res.setHeader(
     'content-security-policy',
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
+    [
+      "default-src 'self'",
+      "script-src 'self'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data:",
+      "connect-src 'self'",
+      "object-src 'none'",
+      "base-uri 'none'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+      https ? 'upgrade-insecure-requests' : '',
+    ]
+      .filter(Boolean)
+      .join('; '),
   );
 }

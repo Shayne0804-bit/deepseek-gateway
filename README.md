@@ -24,6 +24,7 @@ Un **panneau web** en français permet de tout gérer et de suivre la consommati
 - [HTTPS local (Claude Desktop)](#https-local-claude-desktop)
 - [Docker](#docker)
 - [Déployer sur Railway](#déployer-sur-railway)
+- [Passer en production](#passer-en-production)
 - [Données, sauvegardes et sécurité](#données-sauvegardes-et-sécurité)
 - [Tests](#tests)
 - [Structure du projet](#structure-du-projet)
@@ -60,6 +61,11 @@ Un **panneau web** en français permet de tout gérer et de suivre la consommati
 - **Interface console « terminal »** : thème vert phosphore, typographie monospace, prompts `>` et
   badges entre crochets ; états chargement / vide / erreur / partiel / succès / permission soignés,
   focus clavier visible, contraste WCAG AA et `prefers-reduced-motion` vérifiés.
+- **Durcissement production** : clé fournisseur **chiffrée au repos** (AES-256-GCM),
+  erreurs internes masquées (`x-request-id`), HSTS/Permissions-Policy, rate-limit par IP,
+  plafond global de requêtes simultanées, **journal d'audit** des actions admin,
+  **budget mensuel global**, export CSV des journaux, logs JSON et rétention configurable.
+  Voir [docs/SECURITY.md](docs/SECURITY.md) et la [revue de sécurité](docs/SECURITY-REVIEW.md).
 - **Zéro dépendance** : Node.js + SQLite intégré (`node:sqlite`). Pas de `npm install`, pas de build.
 
 ## Architecture
@@ -133,6 +139,11 @@ sauf `DEEPSEEK_API_KEY` (ou la clé saisie dans le panneau).
 | `TLS_KEY_FILE` | — | Clé privée PEM (`data/tls/server.key`). |
 | `TLS_PFX_FILE` | — | Alternative Windows : certificat PFX. |
 | `TLS_PFX_PASSPHRASE` | — | Mot de passe du PFX. |
+| `IP_RATE_LIMIT_PER_MIN` | `240` | Requêtes max par IP par minute sur `/admin/api` et `/v1` (`0` = désactivé). |
+| `MAX_CONCURRENT_REQUESTS` | `200` | Requêtes API simultanées max, toutes clés confondues (`0` = illimité). |
+| `LOG_FORMAT` | `text` | `json` pour des logs structurés (production). |
+| `USAGE_RETENTION_DAYS` | `0` | Purge des journaux d'usage au-delà de N jours (`0` = illimité). |
+| `MASTER_KEY` | — | Clé maître de chiffrement (32 octets base64) ; sinon `data/master.key`. |
 
 ## Créer une clé pour votre ami
 
@@ -505,6 +516,24 @@ Notes :
   Vérifiez le journal de déploiement (onglet *Deployments*) si besoin.
 - Le disque du conteneur (hors `/data`) est éphémère : n'y stockez rien d'important.
 
+## Passer en production
+
+La passerelle est conçue pour un usage multi-clés fiable et exposé publiquement.
+Checklist minimale (détails complets : [docs/SECURITY.md](docs/SECURITY.md)) :
+
+1. **HTTPS** obligatoire (reverse proxy TLS avec `TRUST_PROXY=1`, ou TLS natif).
+2. **Mot de passe admin** fort (12+ caractères), en variable d'environnement au premier démarrage.
+3. **`DEEPSEEK_API_KEY`** en variable d'environnement ; sinon la clé saisie au panneau est
+   chiffrée avec `MASTER_KEY`/`data/master.key` (à sauvegarder dans un coffre).
+4. **`LOG_FORMAT=json`**, collecte centralisée, surveillance de `/healthz` et `/readyz`.
+5. **Garde-fous** : `IP_RATE_LIMIT_PER_MIN`, `MAX_CONCURRENT_REQUESTS`, quotas par clé,
+   budget mensuel global, `USAGE_RETENTION_DAYS`.
+6. **Sauvegardes** de `data/` + `master.key` (copies chiffrées).
+7. **Audit** : consulter le journal d'audit après chaque incident et exporter les CSV.
+
+La revue de sécurité interne (findings, statuts, risques acceptés) est disponible dans
+[docs/SECURITY-REVIEW.md](docs/SECURITY-REVIEW.md).
+
 ## Données, sauvegardes et sécurité
 
 ### Données
@@ -536,7 +565,7 @@ Serveur arrêté, copiez le dossier `data/` (ou au minimum `gateway.db`). À cha
 node --test test
 ```
 
-La suite (55 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
+La suite (64 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
 normalisation `usage` OpenAI/Anthropic, quotas (tokens, requêtes, coût, reset de période),
 limites de débit et de concurrence, authentification admin (hash scrypt, sessions),
 chiffrement/hachage des clés dérivées, proxy JSON et **streaming SSE** avec comptage,
@@ -544,7 +573,8 @@ liste de modèles autorisés, plafond `max_tokens`, limite de taille du corps (4
 alias de modèles, **découverte de modèles** (`/v1/models` et `/anthropic/v1/models`),
 **écouteur HTTPS natif** (HTTP + HTTPS en parallèle), compatibilité Claude Code
 (`/v1/messages` → `/anthropic/v1/messages`, alias de modèles), chemins avec slashs multiples,
-erreurs et absence de clé fournisseur.
+erreurs et absence de clé fournisseur, et les garanties production
+(**chiffrement des secrets**, rate-limit IP, budget global, audit, export CSV, HSTS).
 Les tests utilisent un faux serveur DeepSeek local : **aucun appel réseau réel, aucune clé nécessaire**.
 
 ## Structure du projet
@@ -560,12 +590,16 @@ deepseek-gateway/
 │   ├── auth.js               # clés dérivées (hash), scrypt, sessions admin
 │   ├── pricing.js            # tarifs DeepSeek, heures pleines, calcul du coût
 │   ├── quota.js              # périodes, quotas, débit, concurrence, journal d'usage
+│   ├── limits.js             # rate-limit IP + sémaphore global (production)
+│   ├── secrets.js            # chiffrement AES-256-GCM des secrets au repos
 │   ├── proxy.js              # proxy /v1/... et /anthropic/... (JSON + SSE)
 │   ├── admin-api.js          # API REST du panneau (/admin/api/...)
 │   └── http-utils.js         # helpers HTTP, cookies, erreurs, sécurité
 ├── public/                   # panneau web (HTML/CSS/JS, sans dépendance)
 ├── test/                     # tests automatisés (node --test)
 ├── test/fixtures/tls/        # certificat auto-signé réservé aux tests HTTPS
+├── docs/SECURITY.md          # politique de sécurité production
+├── docs/SECURITY-REVIEW.md   # revue de sécurité ECC (findings + statuts)
 ├── tools/capture-panel.mjs   # captures d'écran de démonstration (dev)
 ├── tools/generate-local-tls.ps1  # certificat local + CA pour HTTPS (Claude Desktop)
 ├── docs/                     # captures d'écran

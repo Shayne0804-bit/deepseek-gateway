@@ -10,9 +10,11 @@ import {
   getClientById,
   getSetting,
   insertClient,
+  listAdminAudit,
   listClients,
   listUsageLogs,
   perClientUsageSince,
+  recordAdminAudit,
   resetClientUsage,
   setSetting,
   topClientsSince,
@@ -31,8 +33,11 @@ import {
   changeAdminPassword,
   checkAdminPassword,
   getAdminPasswordSource,
+  getGlobalBudgetUsd,
+  globalBudgetStatus,
   maskApiKey,
   resolveProviderConfig,
+  saveGlobalBudgetUsd,
   saveProviderField,
   serverInfo,
 } from './settings.js';
@@ -283,6 +288,25 @@ export function createAdminApi({ config, db, log }) {
     loginAttempts.delete(ip);
   }
 
+  /** Journal d'audit des actions d'administration (production). */
+  function audit(req, action, target = null, details = null) {
+    try {
+      recordAdminAudit(db, {
+        ip: clientIp(req, config.trustProxy),
+        action,
+        target,
+        details,
+      });
+    } catch (err) {
+      log.error(`Journal d'audit impossible : ${err.message}`);
+    }
+  }
+
+  function csvCell(value) {
+    const text = value == null ? '' : String(value);
+    return /[";\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  }
+
   function readSettingsView() {
     const provider = resolveProviderConfig(db, config);
     const pricing = loadPricing(() => getSetting(db, 'pricing', null));
@@ -311,6 +335,8 @@ export function createAdminApi({ config, db, log }) {
       },
       modelAliases,
       modelAliasesMeta: { defaults: DEFAULT_MODEL_ALIASES },
+      globalBudget: globalBudgetStatus(db),
+      globalBudgetUsd: getGlobalBudgetUsd(db),
       admin: { passwordSource: getAdminPasswordSource(db) },
       server: serverInfo(config),
     };
@@ -325,6 +351,7 @@ export function createAdminApi({ config, db, log }) {
       if (route === '/login' && method === 'POST') {
         const ip = clientIp(req, config.trustProxy);
         if (loginRateLimited(ip)) {
+          audit(req, 'admin.login.rate_limited', 'admin');
           adminError(res, 429, 'Trop de tentatives. Reessayez dans quelques minutes.', 'too_many_attempts');
           return;
         }
@@ -332,6 +359,7 @@ export function createAdminApi({ config, db, log }) {
         const password = String(body.password ?? '');
         if (!checkAdminPassword(db, password)) {
           recordLoginFailure(ip);
+          audit(req, 'admin.login.failed', 'admin');
           log.warn(`Echec de connexion admin depuis ${ip}`);
           adminError(res, 401, 'Mot de passe incorrect.', 'invalid_password');
           return;
@@ -340,6 +368,7 @@ export function createAdminApi({ config, db, log }) {
         const ttlMs = config.sessionHours * 3600 * 1000;
         const { token, expiresAt } = createAdminSession(db, ttlMs);
         setSessionCookie(req, res, token, Math.floor(ttlMs / 1000));
+        audit(req, 'admin.login', 'admin');
         log.info(`Connexion admin depuis ${ip}`);
         sendJson(res, 200, { ok: true, expiresAt, server: { version: APP_VERSION } });
         return;
@@ -381,6 +410,7 @@ export function createAdminApi({ config, db, log }) {
       }
 
       if (route === '/logout' && method === 'POST') {
+        audit(req, 'admin.logout', 'admin');
         destroyAdminSession(db, auth.token);
         res.setHeader(
           'set-cookie',
@@ -421,6 +451,7 @@ export function createAdminApi({ config, db, log }) {
             peakLabel: peakWindowsLabel(pricing),
             offPeakNotice: 'Les heures creuses sont a moitie prix.',
           },
+          globalBudget: globalBudgetStatus(db),
           clientsUsingToday: [...todayByClient.entries()]
             .map(([id, usage]) => ({ id, ...usage }))
             .sort((a, b) => b.tokens - a.tokens)
@@ -471,6 +502,7 @@ export function createAdminApi({ config, db, log }) {
           createdAt: now.toISOString(),
         };
         insertClient(db, client);
+        audit(req, 'client.create', client.name, client.id);
         log.info(`Cle derivee creee pour "${client.name}".`);
         sendJson(res, 201, { client: publicClient(getClientById(db, client.id)), key: apiKey });
         return;
@@ -505,6 +537,7 @@ export function createAdminApi({ config, db, log }) {
           if (payload.period && payload.period !== existing.period) {
             resetClientUsage(db, clientId, periodKeyFor(payload.period));
           }
+          audit(req, 'client.update', existing.name, Object.keys(payload).join(','));
           log.info(`Cle "${existing.name}" mise a jour.`);
           sendJson(res, 200, { client: publicClient(getClientById(db, clientId)) });
           return;
@@ -512,6 +545,7 @@ export function createAdminApi({ config, db, log }) {
 
         if (!subRoute && method === 'DELETE') {
           deleteClient(db, clientId);
+          audit(req, 'client.delete', existing.name, clientId);
           log.info(`Cle "${existing.name}" supprimee (avec ses journaux).`);
           sendJson(res, 200, { ok: true });
           return;
@@ -523,6 +557,7 @@ export function createAdminApi({ config, db, log }) {
             keyHash: hashApiKey(apiKey),
             keyPrefix: displayKeyPrefix(apiKey),
           });
+          audit(req, 'client.key.regenerate', existing.name);
           log.info(`Cle "${existing.name}" regeneree.`);
           sendJson(res, 200, { client: publicClient(getClientById(db, clientId)), key: apiKey });
           return;
@@ -530,6 +565,7 @@ export function createAdminApi({ config, db, log }) {
 
         if (subRoute === '/reset' && method === 'POST') {
           resetClientUsage(db, clientId, periodKeyFor(existing.period));
+          audit(req, 'client.usage.reset', existing.name);
           log.info(`Compteurs de "${existing.name}" remis a zero.`);
           sendJson(res, 200, { client: publicClient(getClientById(db, clientId)) });
           return;
@@ -556,6 +592,49 @@ export function createAdminApi({ config, db, log }) {
         return;
       }
 
+      // Export CSV des journaux (production / comptabilite).
+      if (route === '/export/logs.csv' && method === 'GET') {
+        const clientId = url.searchParams.get('clientId') || null;
+        const { rows } = listUsageLogs(db, { limit: 5000, offset: 0, clientId });
+        const lines = [[
+          'date', 'cle', 'modele_demande', 'modele_facture', 'tokens_entree', 'tokens_sortie',
+          'tokens_total', 'cout_usd', 'statut', 'latence_ms', 'streaming', 'estime',
+        ].join(';')];
+        for (const row of rows) {
+          lines.push([
+            row.createdAt,
+            row.clientName,
+            row.requestedModel ?? '',
+            row.model ?? '',
+            row.promptTokens,
+            row.completionTokens,
+            row.totalTokens,
+            String(row.costUsd).replace('.', ','),
+            row.status,
+            row.latencyMs ?? '',
+            row.streamed ? 'oui' : 'non',
+            row.estimated ? 'oui' : 'non',
+          ].map(csvCell).join(';'));
+        }
+        const csv = `\uFEFF${lines.join('\r\n')}`;
+        res.writeHead(200, {
+          'content-type': 'text/csv; charset=utf-8',
+          'content-disposition': 'attachment; filename="journaux-deepseek-gateway.csv"',
+          'cache-control': 'no-store',
+          'content-length': Buffer.byteLength(csv),
+        });
+        res.end(csv);
+        return;
+      }
+
+      // ------------------------------- audit -----------------------------
+      if (route === '/audit' && method === 'GET') {
+        const limit = Number(url.searchParams.get('limit') ?? 100);
+        const offset = Number(url.searchParams.get('offset') ?? 0);
+        sendJson(res, 200, listAdminAudit(db, { limit, offset }));
+        return;
+      }
+
       // ----------------------------- settings ----------------------------
       if (route === '/settings' && method === 'GET') {
         sendJson(res, 200, readSettingsView());
@@ -578,7 +657,7 @@ export function createAdminApi({ config, db, log }) {
           if (value && !value.startsWith('sk-')) {
             throw new HttpError(400, 'Cle API invalide : elle doit commencer par "sk-".', 'invalid_api_key');
           }
-          saveProviderField(db, 'apiKey', value || null);
+          saveProviderField(db, 'apiKey', value || null, config);
           changed.push('providerApiKey');
         }
 
@@ -591,7 +670,7 @@ export function createAdminApi({ config, db, log }) {
             );
           }
           const value = validateHttpUrl(body.providerBaseUrl, "URL de l'API DeepSeek");
-          saveProviderField(db, 'baseUrl', value || null);
+          saveProviderField(db, 'baseUrl', value || null, config);
           changed.push('providerBaseUrl');
         }
 
@@ -632,7 +711,23 @@ export function createAdminApi({ config, db, log }) {
           }
         }
 
+        if (body.globalBudgetUsd !== undefined) {
+          const raw = body.globalBudgetUsd;
+          if (raw === null || raw === '' || Number(raw) === 0) {
+            saveGlobalBudgetUsd(db, 0);
+            changed.push('globalBudgetUsd(desactive)');
+          } else {
+            const budget = Number(raw);
+            if (!Number.isFinite(budget) || budget < 0 || budget > 10_000_000) {
+              throw new HttpError(400, 'Budget global invalide (USD, 0 = desactive).', 'invalid_budget');
+            }
+            saveGlobalBudgetUsd(db, budget);
+            changed.push('globalBudgetUsd');
+          }
+        }
+
         log.info(`Reglages mis a jour : ${changed.join(', ') || 'aucun changement'}.`);
+        audit(req, 'settings.update', 'settings', changed.join(',') || 'aucun changement');
         sendJson(res, 200, { ok: true, settings: readSettingsView() });
         return;
       }
@@ -645,8 +740,8 @@ export function createAdminApi({ config, db, log }) {
           adminError(res, 401, 'Mot de passe actuel incorrect.', 'invalid_password');
           return;
         }
-        if (newPassword.length < 10) {
-          adminError(res, 400, 'Le nouveau mot de passe doit contenir au moins 10 caracteres.', 'weak_password');
+        if (newPassword.length < 12) {
+          adminError(res, 400, 'Le nouveau mot de passe doit contenir au moins 12 caracteres.', 'weak_password');
           return;
         }
         changeAdminPassword(db, newPassword);
@@ -654,6 +749,7 @@ export function createAdminApi({ config, db, log }) {
         const ttlMs = config.sessionHours * 3600 * 1000;
         const { token } = createAdminSession(db, ttlMs);
         setSessionCookie(req, res, token, Math.floor(ttlMs / 1000));
+        audit(req, 'admin.password.change', 'admin');
         log.info('Mot de passe administrateur modifie.');
         sendJson(res, 200, { ok: true });
         return;
@@ -669,8 +765,8 @@ export function createAdminApi({ config, db, log }) {
         adminError(res, err.status, err.message, err.code);
         return;
       }
-      log.error(`Erreur API admin : ${err?.stack ?? err}`);
-      adminError(res, 500, `Erreur interne : ${err?.message ?? err}`, 'internal_error');
+      log.error(`Erreur API admin [${req.requestId ?? '-'}] : ${err?.stack ?? err}`);
+      adminError(res, 500, `Erreur interne. Reessayez. (ref ${req.requestId ?? '-'})`, 'internal_error');
     }
   }
 

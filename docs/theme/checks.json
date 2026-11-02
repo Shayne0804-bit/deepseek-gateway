@@ -190,6 +190,12 @@
     },
     {
       "tag": "BUTTON",
+      "text": "[a]Journal d'audit",
+      "visible": true,
+      "outline": "solid 2px"
+    },
+    {
+      "tag": "BUTTON",
       "text": "[c]Réglages",
       "visible": true,
       "outline": "solid 2px"
@@ -205,12 +211,6 @@
       "text": "Se déconnecter",
       "visible": true,
       "outline": "solid 2px"
-    },
-    {
-      "tag": "BUTTON",
-      "text": "+ Nouvelle clé",
-      "visible": true,
-      "outline": "solid 2px"
     }
   ],
   "reducedMotion": {
@@ -219,7 +219,7 @@
     "navTransition": "1e-06s"
   },
   "touchTargets": {
-    "total": 28,
+    "total": 29,
     "tooSmall": [],
     "minHeight": 27,
     "minWidth": 59

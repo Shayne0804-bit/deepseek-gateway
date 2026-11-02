@@ -13,6 +13,8 @@ import {
   remainingFor,
 } from './quota.js';
 import { getSetting } from './db.js';
+import { globalBudgetStatus } from './settings.js';
+import { Semaphore } from './limits.js';
 import {
   bearerToken,
   corsHeaders,
@@ -165,11 +167,13 @@ function readClientApiKey(req) {
 export function createProxyHandler({ config, db, log, resolveProvider }) {
   const limiter = new RateLimiter();
   const concurrency = new ConcurrencyTracker();
+  const globalConcurrency = new Semaphore(config.maxConcurrentRequests);
 
   function accessLog(req, client, status, tokens, cost, ms, pathname, modelLabel = null) {
     const modele = modelLabel ? ` | ${modelLabel}` : '';
+    const ref = req.requestId ? `[${req.requestId}] ` : '';
     log.info(
-      `${req.method} ${pathname} -> ${status} | ${tokens} tok | $${Number(cost).toFixed(5)} | ${ms} ms | ${client.name}${modele}`,
+      `${ref}${req.method} ${pathname} -> ${status} | ${tokens} tok | $${Number(cost).toFixed(5)} | ${ms} ms | ${client.name}${modele}`,
     );
   }
 
@@ -280,8 +284,26 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           error: opts.error ? truncate(opts.error) : null,
         });
       } catch (err) {
-        log.error(`Ecriture du journal impossible : ${err.message}`);
+        log.error(`[${req.requestId ?? '-'}] Ecriture du journal impossible : ${err.message}`);
       }
+    };
+
+    // Garde-fou global anti-surcharge (production, tous clients confondus).
+    if (!globalConcurrency.tryAcquire()) {
+      log.warn(`[${req.requestId ?? '-'}] Plafond global de requetes simultanees atteint.`);
+      sendApiError(
+        res,
+        503,
+        'Passerelle surchargee. Reessayez dans un instant.',
+        'rate_limit_error',
+        'gateway_overloaded',
+        { ...cors, 'retry-after': '2' },
+      );
+      return;
+    }
+    const releaseAll = () => {
+      release();
+      globalConcurrency.release();
     };
 
     try {
@@ -293,6 +315,25 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           'cache-control': 'public, max-age=60',
         });
         return;
+      }
+
+      // Garde-fou budget global mensuel (production, multi-utilisateurs).
+      if (req.method !== 'GET') {
+        const budget = globalBudgetStatus(db);
+        if (budget.exceeded) {
+          log.warn(
+            `[${req.requestId ?? '-'}] Budget global mensuel atteint (${budget.spentUsd} / ${budget.limitUsd} USD).`,
+          );
+          sendApiError(
+            res,
+            429,
+            `Budget global mensuel atteint (${budget.spentUsd.toFixed(2)} $ / ${budget.limitUsd.toFixed(2)} $). Contactez l'administrateur.`,
+            'insufficient_quota',
+            'global_budget_exceeded',
+            { ...responseHeaders, 'retry-after': '3600' },
+          );
+          return;
+        }
       }
 
       // ---- 5. Lecture et validation du corps --------------------------
@@ -616,17 +657,17 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
         sendApiError(res, err.status, err.message, 'invalid_request_error', err.code, responseHeaders);
         return;
       }
-      log.error(`Erreur passerelle : ${err?.stack ?? err}`);
+      log.error(`[${req.requestId ?? '-'}] Erreur passerelle : ${err?.stack ?? err}`);
       sendApiError(
         res,
         500,
-        `Erreur interne de la passerelle : ${err?.message ?? err}`,
+        `Erreur interne de la passerelle. Reessayez. (ref ${req.requestId ?? '-'})`,
         'api_error',
         'gateway_error',
         responseHeaders,
       );
     } finally {
-      release();
+      releaseAll();
     }
   }
 

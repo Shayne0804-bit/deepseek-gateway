@@ -8,6 +8,7 @@
     overview: "Vue d'ensemble",
     clients: 'Clés & quotas',
     logs: 'Journaux',
+    audit: "Journal d'audit",
     settings: 'Réglages',
     guide: 'Guide pour votre ami',
   };
@@ -15,7 +16,8 @@
     overview: 'Activité, consommation et état des quotas.',
     clients: 'Créez une clé par personne ou par projet, avec ses propres limites.',
     logs: 'Les 100 dernières requêtes traitées par la passerelle.',
-    settings: 'Clé DeepSeek originale, URL publique, tarifs et mot de passe.',
+    audit: 'Traçabilité des actions d’administration (connexions, clés, réglages).',
+    settings: 'Clé DeepSeek originale, URL publique, budget, tarifs et mot de passe.',
     guide: 'À transmettre tel quel à votre ami.',
   };
   const PERIOD_LABELS = { daily: 'par jour', monthly: 'par mois', total: 'total' };
@@ -33,6 +35,7 @@
     clients: [],
     overview: null,
     settings: null,
+    audit: null,
     logs: { rows: [], total: 0, clientId: '' },
   };
 
@@ -359,6 +362,9 @@
     } else if (view === 'logs') {
       await ensureClients();
       await loadLogs({ reset: true });
+    } else if (view === 'audit') {
+      state.audit = await api('/audit?limit=200');
+      renderAudit();
     } else if (view === 'settings') {
       await loadSettings();
     } else if (view === 'guide') {
@@ -379,6 +385,9 @@
         renderClients();
       } else if (state.view === 'logs') {
         await loadLogs({ reset: true });
+      } else if (state.view === 'audit') {
+        state.audit = await api('/audit?limit=200');
+        renderAudit();
       } else if (state.view === 'settings') {
         await loadSettings();
       } else if (state.view === 'guide' && state.settings) {
@@ -495,6 +504,18 @@
          </div>`;
 
     const chart = renderChart(series);
+    const budget = data.globalBudget || {};
+    const budgetAlert = budget.limitUsd > 0
+      ? budget.exceeded
+        ? `<div class="alert danger">
+             <strong>Budget global mensuel atteint :</strong> ${fmtUsd(budget.spentUsd)} / ${fmtUsd(budget.limitUsd)}.
+             Les requêtes API sont refusées jusqu'au prochain mois ou jusqu'à un ajustement dans Réglages.
+           </div>`
+        : `<div class="alert ok">
+             Budget global mensuel : ${fmtUsd(budget.spentUsd)} / ${fmtUsd(budget.limitUsd)}
+             (${fmtUsd(budget.remainingUsd)} restants).
+           </div>`
+      : '';
     const top = data.topClients || [];
     const topRows = top.length
       ? top.map((row) => `
@@ -522,6 +543,7 @@
 
     $('#view').innerHTML = `
       ${providerAlert}
+      ${budgetAlert}
       <section class="stat-grid">
         ${statCard('Requêtes (30 jours)', fmtInt(requests30), `${fmtInt(data.today?.requests || 0)} aujourd'hui`)}
         ${statCard('Tokens (30 jours)', fmtCompact(tokens30), `${fmtCompact(data.today?.tokens || 0)} aujourd'hui`)}
@@ -856,11 +878,38 @@
           <div><h2>Journal des requêtes</h2><span class="hint">${fmtInt(state.logs.total)} requête(s) — 100 par page</span></div>
           <div class="panel-head-actions">
             ${filter}
+            <a class="btn btn-ghost btn-sm" href="/admin/api/export/logs.csv" download>Exporter CSV</a>
             <button class="btn btn-ghost btn-sm" data-action="refresh-logs">Actualiser</button>
           </div>
         </div>
         ${logsTable(state.logs.rows)}
         ${hasMore ? `<div style="text-align:center;margin-top:16px"><button class="btn btn-ghost" data-action="load-more-logs">Charger plus</button></div>` : ''}
+      </section>`;
+  }
+
+  /* ------------------------------ vue audit ----------------------------- */
+
+  function renderAudit() {
+    const rows = state.audit?.rows ?? [];
+    const body = rows.length
+      ? rows.map((row) => `
+          <tr>
+            <td class="nowrap muted small">${fmtDate(row.createdAt)}</td>
+            <td class="mono small">${esc(row.action)}</td>
+            <td>${esc(row.target || '—')}</td>
+            <td class="mono small muted">${esc(row.ip || '—')}</td>
+            <td class="small muted">${esc(row.details || '')}</td>
+          </tr>`).join('')
+      : '';
+    $('#view').innerHTML = `
+      <section class="panel">
+        <div class="panel-head">
+          <div><h2>Journal d'audit</h2><span class="hint">${fmtInt(state.audit?.total || 0)} événement(s) — connexions, clés, réglages</span></div>
+          <div class="panel-head-actions"><button class="btn btn-ghost btn-sm" data-action="refresh-audit">Actualiser</button></div>
+        </div>
+        ${rows.length
+          ? `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Action</th><th>Cible</th><th>IP</th><th>Détails</th></tr></thead><tbody>${body}</tbody></table></div>`
+          : emptyState("Aucun événement", "Les actions d'administration (connexions, clés, réglages) seront tracées ici.")}
       </section>`;
   }
 
@@ -900,7 +949,7 @@
           </div>
         </div>
         ${provider.configured
-          ? `<div class="alert ok">Clé actuelle : <span class="mono">${esc(provider.masked)}</span> — elle est stockée ${provider.source === 'env' ? 'dans <code>.env</code>' : 'dans la base locale'}.</div>`
+          ? `<div class="alert ok">Clé actuelle : <span class="mono">${esc(provider.masked)}</span> — elle est stockée ${provider.source === 'env' ? 'dans <code>.env</code>' : 'dans la base locale, <strong>chiffrée (AES-256-GCM)</strong>'}.</div>`
           : `<div class="alert danger">Aucune clé originale configurée : les requêtes seront refusées (503). Ajoutez-la ci-dessous ou dans <code>.env</code>.</div>`}
         <form data-form="settings-provider">
           <div class="form-grid">
@@ -935,6 +984,25 @@
             <label class="field"><span>URL publique</span>
               <input name="publicBaseUrl" value="${esc(s.publicBaseUrl)}" placeholder="${esc(window.location.origin)}" ${s.publicBaseUrlSource === 'env' ? 'disabled' : ''}>
               <small>Ex : <code>https://api.mondomaine.fr</code> — vide = adresse actuelle du navigateur.</small>
+            </label>
+            <button type="submit" class="btn btn-primary">Enregistrer</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Budget global mensuel</h2>
+            <span class="hint">Plafond de coût estimé pour toutes les clés, remis à zéro le 1er du mois (UTC).</span>
+          </div>
+          <span class="badge badge-muted">${s.globalBudget?.limitUsd > 0 ? `consommé : ${fmtUsd(s.globalBudget.spentUsd)}` : 'désactivé'}</span>
+        </div>
+        <form data-form="settings-budget">
+          <div class="inline-form">
+            <label class="field"><span>Budget mensuel (USD, 0 = désactivé)</span>
+              <input type="number" step="0.01" min="0" name="globalBudgetUsd" value="${s.globalBudgetUsd > 0 ? s.globalBudgetUsd : ''}" placeholder="ex : 20">
+              <small>Au-delà du budget, les requêtes API sont refusées (429 <code>global_budget_exceeded</code>).</small>
             </label>
             <button type="submit" class="btn btn-primary">Enregistrer</button>
           </div>
@@ -1044,6 +1112,15 @@
     const value = form.elements.publicBaseUrl.value.trim();
     await api('/settings', { method: 'PUT', body: { publicBaseUrl: value } });
     toast('URL publique enregistrée.', 'success');
+    await loadSettings();
+  }
+
+  async function handleBudgetSave(form) {
+    const raw = String(form.elements.globalBudgetUsd.value ?? '').trim();
+    const value = raw === '' ? 0 : Number(raw);
+    if (!Number.isFinite(value) || value < 0) throw new Error('Budget global invalide.');
+    await api('/settings', { method: 'PUT', body: { globalBudgetUsd: value } });
+    toast('Budget global enregistré.', 'success');
     await loadSettings();
   }
 
@@ -1267,6 +1344,11 @@
       await loadLogs({ reset: true });
       return;
     }
+    if (action === 'refresh-audit') {
+      state.audit = await api('/audit?limit=200');
+      renderAudit();
+      return;
+    }
     if (action === 'load-more-logs') {
       await loadLogs({ append: true });
       return;
@@ -1423,6 +1505,7 @@
       else if (kind === 'client-edit') await handleClientEdit(form);
       else if (kind === 'settings-provider') await handleProviderSave(form);
       else if (kind === 'settings-public') await handlePublicUrlSave(form);
+      else if (kind === 'settings-budget') await handleBudgetSave(form);
       else if (kind === 'settings-pricing') await handlePricingSave(form);
       else if (kind === 'settings-aliases') await handleAliasesSave(form);
       else if (kind === 'settings-password') await handlePasswordSave(form);

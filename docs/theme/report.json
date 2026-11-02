@@ -10,7 +10,7 @@
   },
   "responsive": {
     "status": "pass",
-    "evidence": "5 vues teste��es en 390x844 et 1440x900 : largeur document <= viewport partout (aucun debordement), tableaux contenus dans .table-wrap scrollable. Cibles tactiles mobiles : 28 controles, minimum 27px de haut (seuil 24px)."
+    "evidence": "5 vues teste��es en 390x844 et 1440x900 : largeur document <= viewport partout (aucun debordement), tableaux contenus dans .table-wrap scrollable. Cibles tactiles mobiles : 29 controles, minimum 27px de haut (seuil 24px)."
   },
   "contentStates": {
     "loading": {
@@ -63,6 +63,11 @@
       "viewport": "1440x900",
       "artifact": "05-logs-desktop.png",
       "observation": "Vue journaux : modele demande (fable-5.1) et modele facture (deepseek-flash) lisibles, cout reel par ligne."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "05b-audit-desktop.png",
+      "observation": "Vue journal d'audit : actions d'administration tracees (connexions, cles) avec IP et horodatage."
     },
     {
       "viewport": "1440x900",

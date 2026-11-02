@@ -1,27 +1,49 @@
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
 import path from 'node:path';
 import { APP_VERSION, loadConfig } from './config.js';
-import { closeDb, getSetting, openDb, setSetting, cleanupAdminSessions } from './db.js';
-import { bootstrapAdmin, resolveProviderConfig } from './settings.js';
+import {
+  cleanupAdminSessions,
+  closeDb,
+  deleteUsageLogsBefore,
+  getSetting,
+  openDb,
+  setSetting,
+} from './db.js';
+import { bootstrapAdmin, migrateProviderSecret, resolveProviderConfig } from './settings.js';
 import { createAdminApi } from './admin-api.js';
 import { createProxyHandler, isProxyPath } from './proxy.js';
 import { DEFAULT_PRICING } from './pricing.js';
-import { applySecurityHeaders, sendJson } from './http-utils.js';
+import { IpRateLimiter } from './limits.js';
+import {
+  applySecurityHeaders,
+  clientIp,
+  corsHeaders,
+  isHttpsRequest,
+  sendJson,
+} from './http-utils.js';
 
 const LEVELS = { debug: 10, info: 20, warn: 30, error: 40 };
 
-export function createLogger(level = 'info') {
+export function createLogger(level = 'info', format = 'text') {
   const threshold = LEVELS[level] ?? LEVELS.info;
   const emit = (name, message) => {
     if ((LEVELS[name] ?? 20) < threshold) return;
+    if (format === 'json') {
+      const line = JSON.stringify({ ts: new Date().toISOString(), level: name, msg: String(message) });
+      if (name === 'error' || name === 'warn') console.error(line);
+      else console.log(line);
+      return;
+    }
     const line = `${new Date().toISOString()} [${name.toUpperCase()}] ${message}`;
     if (name === 'error' || name === 'warn') console.error(line);
     else console.log(line);
   };
   return {
     level,
+    format,
     debug: (m) => emit('debug', m),
     info: (m) => emit('info', m),
     warn: (m) => emit('warn', m),
@@ -103,7 +125,7 @@ export function buildTlsOptions(config) {
  */
 export async function startGateway(overrides = {}) {
   const config = loadConfig(overrides);
-  const log = overrides.logger ?? createLogger(config.logLevel);
+  const log = overrides.logger ?? createLogger(config.logLevel, config.logFormat);
   const db = openDb(config.dataDir);
 
   // Tarification par defaut si premiere utilisation.
@@ -131,11 +153,43 @@ export async function startGateway(overrides = {}) {
   }
 
   const resolveProvider = (database, cfg) => resolveProviderConfig(database, cfg);
+  migrateProviderSecret(db, config, log);
   const adminApi = createAdminApi({ config, db, log });
   const proxyHandler = createProxyHandler({ config, db, log, resolveProvider });
+  const ipLimiter = new IpRateLimiter();
+
+  /** Avertissements de configuration a afficher au demarrage (production). */
+  function computeStartupWarnings(startedInfo) {
+    const warnings = [];
+    const loopback = ['127.0.0.1', '::1', 'localhost', ''].includes(config.host);
+    const httpsOn = Boolean(startedInfo.tlsEnabled);
+    if (!loopback && !httpsOn && !config.trustProxy) {
+      warnings.push(
+        "Interface exposee en HTTP non chiffre : placez un reverse proxy HTTPS (TRUST_PROXY=1) ou activez le HTTPS natif (TLS_*).",
+      );
+    }
+    if (!loopback && config.trustProxy && !httpsOn) {
+      warnings.push(
+        'TRUST_PROXY=1 : verifiez que le reverse proxy termine bien le TLS et transmet X-Forwarded-Proto.',
+      );
+    }
+    if (startedInfo.adminBootstrap?.generatedPassword) {
+      warnings.push('Mot de passe admin genere au premier demarrage : changez-le dans Reglages.');
+    }
+    if (config.maxBodyBytes === Number.POSITIVE_INFINITY) {
+      warnings.push('MAX_BODY_BYTES=0 (illimite) : risque memoire en production.');
+    }
+    return warnings;
+  }
+
+  let startupWarnings = [];
 
   async function route(req, res) {
-    applySecurityHeaders(res);
+    const requestId = crypto.randomBytes(6).toString('hex');
+    req.requestId = requestId;
+    res.setHeader('x-request-id', requestId);
+    const httpsRequest = isHttpsRequest(req, config.trustProxy);
+    applySecurityHeaders(res, { https: httpsRequest });
     const host = req.headers.host ?? `${config.host}:${config.port}`;
     let url;
     try {
@@ -146,7 +200,29 @@ export async function startGateway(overrides = {}) {
     }
     const pathname = url.pathname.replace(/\/{2,}/g, '/');
 
-    if (pathname === '/healthz') {
+    const isApi = isProxyPath(pathname);
+    if (isApi || pathname.startsWith('/admin/api')) {
+      const limited = ipLimiter.hit(clientIp(req, config.trustProxy), config.ipRateLimitPerMin);
+      if (!limited.ok) {
+        log.warn(`[${requestId}] Limite IP atteinte (${clientIp(req, config.trustProxy)})`);
+        sendJson(
+          res,
+          429,
+          {
+            error: {
+              message: `Trop de requetes. Reessayez dans ${limited.retryAfter} s.`,
+              type: 'rate_limit_error',
+              code: 'ip_rate_limit',
+              param: null,
+            },
+          },
+          { ...(isApi ? corsHeaders() : {}), 'retry-after': String(limited.retryAfter), 'cache-control': 'no-store' },
+        );
+        return;
+      }
+    }
+
+    if (pathname === '/healthz' || pathname === '/readyz') {
       const provider = resolveProvider(db, config);
       sendJson(res, 200, {
         ok: true,
@@ -154,6 +230,7 @@ export async function startGateway(overrides = {}) {
         version: APP_VERSION,
         uptimeSeconds: Math.round(process.uptime()),
         providerConfigured: Boolean(provider.apiKey),
+        warnings: startupWarnings,
       });
       return;
     }
@@ -173,7 +250,7 @@ export async function startGateway(overrides = {}) {
       return;
     }
 
-    if (isProxyPath(pathname)) {
+    if (isApi) {
       await proxyHandler(req, res, url);
       return;
     }
@@ -189,10 +266,14 @@ export async function startGateway(overrides = {}) {
 
   const handleRequest = (req, res) => {
     route(req, res).catch((err) => {
-      log.error(`Erreur non geree : ${err?.stack ?? err}`);
+      log.error(`[${req.requestId ?? '-'}] Erreur non geree : ${err?.stack ?? err}`);
       if (!res.headersSent) {
         sendJson(res, 500, {
-          error: { message: 'Erreur interne.', type: 'api_error', code: 'internal_error' },
+          error: {
+            message: `Erreur interne. Reessayez. (ref ${req.requestId ?? '-'})`,
+            type: 'api_error',
+            code: 'internal_error',
+          },
         });
       } else if (!res.writableEnded) {
         res.end();
@@ -220,10 +301,16 @@ export async function startGateway(overrides = {}) {
 
   let httpsServer = null;
 
-  // Nettoyage periodique (sessions expirees, fenetres de debit).
+  // Nettoyage periodique : sessions, fenetres de debit, retention des journaux.
   const maintenance = setInterval(() => {
     try {
       cleanupAdminSessions(db, new Date().toISOString());
+      ipLimiter.prune();
+      if (config.usageRetentionDays > 0) {
+        const cutoff = new Date(Date.now() - config.usageRetentionDays * 86_400_000).toISOString();
+        const deleted = deleteUsageLogsBefore(db, cutoff);
+        if (deleted > 0) log.info(`Retention : ${deleted} ligne(s) de journal supprimee(s) (> ${config.usageRetentionDays} j).`);
+      }
     } catch (err) {
       log.warn(`Maintenance : ${err.message}`);
     }
@@ -249,6 +336,9 @@ export async function startGateway(overrides = {}) {
 
   const actualPort = address.port;
   const actualHttpsPort = httpsAddress ? httpsAddress.port : null;
+  startupWarnings = computeStartupWarnings({ tlsEnabled: Boolean(tlsOptions), adminBootstrap });
+  for (const warning of startupWarnings) log.warn(`PRODUCTION : ${warning}`);
+
   const close = async () => {
     clearInterval(maintenance);
     await Promise.all(
@@ -277,6 +367,7 @@ export async function startGateway(overrides = {}) {
     httpsUrl: actualHttpsPort ? `https://${config.host}:${actualHttpsPort}` : null,
     adminBootstrap,
     generatedPasswordFile,
+    startupWarnings,
     close,
   };
 }
@@ -311,7 +402,13 @@ export function printStartupBanner(started, log = console.log) {
     log('   Renseignez DEEPSEEK_API_KEY dans .env, ou collez-la dans le');
     log('   panneau > Reglages avant de creer des cles pour vos amis.');
   }
+  if (started.startupWarnings?.length) {
+    log('');
+    log('   AVERTISSEMENTS PRODUCTION :');
+    for (const warning of started.startupWarnings) log(`     - ${warning}`);
+  }
   log('');
+  log(`   Sante         : http://${displayHost}:${port}/healthz (et /readyz)`);
   log('   Ctrl+C pour arreter.');
   log('');
 }

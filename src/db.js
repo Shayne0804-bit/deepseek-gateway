@@ -56,6 +56,16 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
   created_at TEXT NOT NULL,
   expires_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS admin_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at TEXT NOT NULL,
+  ip TEXT,
+  action TEXT NOT NULL,
+  target TEXT,
+  details TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_audit_created ON admin_audit (created_at);
 `;
 
 export function openDb(dataDir) {
@@ -435,6 +445,40 @@ export function insertAdminSession(db, tokenHash, createdAt, expiresAt) {
   db.prepare(
     'INSERT INTO admin_sessions (token_hash, created_at, expires_at) VALUES (?, ?, ?)',
   ).run(tokenHash, createdAt, expiresAt);
+}
+
+/* -------------------------------- audit --------------------------------- */
+
+export function recordAdminAudit(db, { ip = null, action, target = null, details = null, now = new Date() }) {
+  db.prepare(
+    'INSERT INTO admin_audit (created_at, ip, action, target, details) VALUES (?, ?, ?, ?, ?)',
+  ).run(now.toISOString(), ip, String(action), target == null ? null : String(target), details == null ? null : String(details));
+}
+
+export function listAdminAudit(db, { limit = 100, offset = 0 } = {}) {
+  const safeLimit = Math.max(1, Math.min(500, Number(limit) || 100));
+  const safeOffset = Math.max(0, Number(offset) || 0);
+  const rows = db
+    .prepare('SELECT * FROM admin_audit ORDER BY id DESC LIMIT ? OFFSET ?')
+    .all(safeLimit, safeOffset);
+  const total = Number(db.prepare('SELECT COUNT(*) AS n FROM admin_audit').get().n);
+  return {
+    total,
+    rows: rows.map((row) => ({
+      id: Number(row.id),
+      createdAt: row.created_at,
+      ip: row.ip,
+      action: row.action,
+      target: row.target,
+      details: row.details,
+    })),
+  };
+}
+
+/** Purge des journaux d'usage anterieurs a une date (retention). */
+export function deleteUsageLogsBefore(db, isoDate) {
+  const result = db.prepare('DELETE FROM usage_logs WHERE created_at < ?').run(isoDate);
+  return Number(result.changes ?? 0);
 }
 
 export function getAdminSession(db, tokenHash) {

@@ -17,7 +17,11 @@ function httpsGet(url, ca, timeoutMs = 10000) {
     const req = https.get(url, { ca }, (res) => {
       const chunks = [];
       res.on('data', (chunk) => chunks.push(chunk));
-      res.on('end', () => resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString('utf8') }));
+      res.on('end', () => resolve({
+        status: res.statusCode,
+        headers: res.headers,
+        body: Buffer.concat(chunks).toString('utf8'),
+      }));
     });
     req.on('error', reject);
     req.setTimeout(timeoutMs, () => req.destroy(new Error('timeout HTTPS')));
@@ -33,6 +37,7 @@ test('HTTPS natif : HTTP et HTTPS servis en parallele', async () => {
     httpsPort: 0,
     tlsCertFile: TLS_CERT,
     tlsKeyFile: TLS_KEY,
+    ipRateLimitPerMin: 0,
     providerApiKey: 'sk-test-tls',
     providerBaseUrl: 'http://127.0.0.1:1',
     adminPassword: 'mot-de-passe-test-123',
@@ -54,6 +59,8 @@ test('HTTPS natif : HTTP et HTTPS servis en parallele', async () => {
     assert.equal(health.status, 200);
     assert.equal(JSON.parse(health.body).ok, true);
     assert.equal(JSON.parse(health.body).version.length > 0, true);
+    // HSTS uniquement en HTTPS.
+    assert.match(health.headers['strict-transport-security'] ?? '', /max-age=31536000/);
 
     // Le panneau et l'API sont aussi servis en HTTPS.
     const panel = await httpsGet(`https://localhost:${local.httpsPort}/`, ca);
