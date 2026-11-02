@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS usage_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   client_id TEXT,
   model TEXT,
+  requested_model TEXT,
   prompt_tokens INTEGER NOT NULL DEFAULT 0,
   completion_tokens INTEGER NOT NULL DEFAULT 0,
   total_tokens INTEGER NOT NULL DEFAULT 0,
@@ -65,7 +66,20 @@ export function openDb(dataDir) {
   db.exec('PRAGMA busy_timeout = 5000;');
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
+  migrateDb(db);
   return db;
+}
+
+/**
+ * Migrations legeres pour les bases existantes (ajout de colonnes).
+ * `requested_model` : nom de modele demande par le client (ex. fable-5.1)
+ * quand il differe du modele DeepSeek reellement facture (ex. deepseek-flash).
+ */
+function migrateDb(db) {
+  const logColumns = db.prepare('PRAGMA table_info(usage_logs)').all();
+  if (!logColumns.some((column) => column.name === 'requested_model')) {
+    db.exec('ALTER TABLE usage_logs ADD COLUMN requested_model TEXT');
+  }
 }
 
 export function closeDb(db) {
@@ -253,12 +267,13 @@ export function deleteClient(db, id) {
 export function insertUsageLog(db, logRow) {
   db.prepare(
     `INSERT INTO usage_logs (
-       client_id, model, prompt_tokens, completion_tokens, total_tokens, cost_usd,
+       client_id, model, requested_model, prompt_tokens, completion_tokens, total_tokens, cost_usd,
        status, streamed, estimated, latency_ms, error, created_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     logRow.clientId,
     logRow.model,
+    logRow.requestedModel ?? null,
     logRow.promptTokens,
     logRow.completionTokens,
     logRow.totalTokens,
@@ -399,6 +414,7 @@ export function listUsageLogs(db, { limit = 50, offset = 0, clientId = null } = 
       clientId: r.client_id,
       clientName: r.client_name,
       model: r.model,
+      requestedModel: r.requested_model ?? null,
       promptTokens: Number(r.prompt_tokens),
       completionTokens: Number(r.completion_tokens),
       totalTokens: Number(r.total_tokens),

@@ -205,6 +205,7 @@ export function recordUsage(
   clientId,
   {
     model = null,
+    requestedModel = null,
     usage = null,
     costUsd = 0,
     status = 0,
@@ -226,6 +227,7 @@ export function recordUsage(
     insertUsageLog(db, {
       clientId,
       model,
+      requestedModel,
       promptTokens,
       completionTokens,
       totalTokens,

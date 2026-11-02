@@ -517,7 +517,7 @@ test('journaux pagines et filtrables', async () => {
 });
 
 test('alias de modele : claude-opus-5 est servi par deepseek-flash', async () => {
-  const { key } = await createClient({ name: 'Alias opus 5', period: 'total' });
+  const { client, key } = await createClient({ name: 'Alias opus 5', period: 'total' });
   const res = await proxyChat(key, { model: 'claude-opus-5' });
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('x-gateway-requested-model'), 'claude-opus-5');
@@ -535,6 +535,23 @@ test('alias de modele : claude-opus-5 est servi par deepseek-flash', async () =>
     await fableRes.text();
     assert.equal(mock.seen.at(-1).body.model, 'deepseek-flash');
   }
+
+  // Journal de facturation reelle : modele demande + modele facture + cout.
+  const { data: logs } = await api(`/admin/api/clients/${client.id}/logs?limit=20`);
+  const aliasRows = logs.rows.filter((row) => row.requestedModel);
+  assert.ok(
+    aliasRows.some((row) => row.requestedModel === 'claude-opus-5' && row.model === 'deepseek-flash'),
+    'journal : claude-opus-5 doit etre trace comme demande, deepseek-flash comme facture',
+  );
+  assert.ok(
+    aliasRows.some((row) => row.requestedModel === 'fable-5' && row.model === 'deepseek-flash'),
+    'journal : fable-5 doit etre trace',
+  );
+  assert.ok(
+    aliasRows.some((row) => row.requestedModel === 'fable-5.1' && row.model === 'deepseek-flash'),
+    'journal : fable-5.1 doit etre trace',
+  );
+  assert.ok(aliasRows.every((row) => row.costUsd > 0), 'cout reel enregistre pour les alias');
 });
 
 test('alias de modele : variante datee et format Anthropic (Claude Code)', async () => {

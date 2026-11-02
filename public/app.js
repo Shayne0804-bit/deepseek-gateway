@@ -445,7 +445,9 @@
       <tr>
         <td class="nowrap muted small">${fmtDate(row.createdAt)}</td>
         <td>${esc(row.clientName || '(supprimé)')}</td>
-        <td class="mono small">${esc(row.model || '—')}</td>
+        <td class="mono small">${row.requestedModel
+          ? `${esc(row.requestedModel)}<br><span class="muted">facturé : ${esc(row.model || '—')}</span>`
+          : esc(row.model || '—')}</td>
         <td class="right nowrap small">${fmtInt(row.promptTokens)} / ${fmtInt(row.completionTokens)}</td>
         <td class="right nowrap small">${fmtUsd(row.costUsd)}</td>
         <td class="right nowrap small">${fmtMs(row.latencyMs)}</td>
@@ -500,7 +502,9 @@
           <tr>
             <td class="nowrap muted small">${fmtDate(row.createdAt)}</td>
             <td>${esc(row.clientName || '—')}</td>
-            <td class="mono small">${esc(row.model || '—')}</td>
+            <td class="mono small">${row.requestedModel
+          ? `${esc(row.requestedModel)}<br><span class="muted">facturé : ${esc(row.model || '—')}</span>`
+          : esc(row.model || '—')}</td>
             <td class="right small nowrap">${fmtCompact(row.totalTokens)}</td>
             <td class="right small nowrap">${fmtUsd(row.costUsd)}</td>
           </tr>`).join('')

@@ -166,9 +166,10 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
   const limiter = new RateLimiter();
   const concurrency = new ConcurrencyTracker();
 
-  function accessLog(req, client, status, tokens, cost, ms, pathname) {
+  function accessLog(req, client, status, tokens, cost, ms, pathname, modelLabel = null) {
+    const modele = modelLabel ? ` | ${modelLabel}` : '';
     log.info(
-      `${req.method} ${pathname} -> ${status} | ${tokens} tok | $${Number(cost).toFixed(5)} | ${ms} ms | ${client.name}`,
+      `${req.method} ${pathname} -> ${status} | ${tokens} tok | $${Number(cost).toFixed(5)} | ${ms} ms | ${client.name}${modele}`,
     );
   }
 
@@ -260,12 +261,16 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
     const modelAliases = loadModelAliases(() => getSetting(db, 'model_aliases', null));
 
     let recorded = false;
+    // Nom de modele demande par le client quand il differe du modele facture
+    // (ex. fable-5.1 -> deepseek-flash), pour un journal de facturation reel.
+    let logRequestedModel = null;
     const record = (opts) => {
       if (recorded) return;
       recorded = true;
       try {
         recordUsage(db, client.id, {
           model: opts.model ?? null,
+          requestedModel: opts.requestedModel ?? logRequestedModel,
           usage: opts.usage ?? null,
           costUsd: opts.costUsd ?? 0,
           status: opts.status ?? 0,
@@ -317,6 +322,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           if (requestedModel && model !== requestedModel) {
             body.model = model;
             bodyMutated = true;
+            logRequestedModel = requestedModel;
             // Permet au client de connaitre le modele reellement facture.
             responseHeaders['x-gateway-requested-model'] = requestedModel;
             responseHeaders['x-gateway-billed-model'] = model;
@@ -491,7 +497,16 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
             estimated,
             error: upstreamRes.ok ? null : payload?.error?.message ?? text,
           });
-          accessLog(req, client, upstreamRes.status, billedUsage?.total ?? 0, cost, Date.now() - startedAt, pathname);
+          accessLog(
+            req,
+            client,
+            upstreamRes.status,
+            billedUsage?.total ?? 0,
+            cost,
+            Date.now() - startedAt,
+            pathname,
+            logRequestedModel ? `${logRequestedModel} -> ${modelFromRequest ?? payload?.model}` : modelFromRequest ?? payload?.model,
+          );
         }
 
         if (res.headersSent) {
@@ -550,7 +565,16 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           estimated,
           error: clientGone ? 'client_aborted' : `stream_interrupted: ${err?.message ?? err}`,
         });
-        accessLog(req, client, 499, usage.total, cost, Date.now() - startedAt, pathname);
+        accessLog(
+          req,
+          client,
+          499,
+          usage.total,
+          cost,
+          Date.now() - startedAt,
+          pathname,
+          logRequestedModel ? `${logRequestedModel} -> ${streamState.model}` : streamState.model,
+        );
         if (!res.writableEnded) res.end();
         if (!aborted) log.warn(`Flux SSE interrompu : ${err?.message ?? err}`);
         return;
@@ -572,7 +596,16 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
         estimated,
         error: upstreamRes.ok ? null : 'upstream_error',
       });
-      accessLog(req, client, upstreamRes.status, usage.total, cost, Date.now() - startedAt, pathname);
+      accessLog(
+        req,
+        client,
+        upstreamRes.status,
+        usage.total,
+        cost,
+        Date.now() - startedAt,
+        pathname,
+        logRequestedModel ? `${logRequestedModel} -> ${streamState.model}` : streamState.model,
+      );
     } catch (err) {
       // Erreurs locales (corps invalide, etc.) : la requete n'est pas facturee.
       if (res.headersSent) {

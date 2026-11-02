@@ -311,6 +311,9 @@ par défaut : ajoutez-les explicitement si vous les conservez.
 **Ce qui reste réel (par transparence) :**
 
 - Les **quotas, le coût estimé et les journaux** utilisent le modèle DeepSeek réellement facturé.
+- Le **journal** enregistre aussi le **modèle demandé** : dans le panneau, la colonne « Modèle »
+  affiche par exemple `fable-5.1` avec, en dessous, `facturé : deepseek-flash`, et le coût réel
+  correspondant. L'API des journaux expose `requestedModel` (nom demandé) et `model` (modèle facturé).
 - Le client reçoit les en-têtes `x-gateway-requested-model` (nom demandé) et
   `x-gateway-billed-model` (modèle réel).
 - La réponse de l'API contient le nom du modèle DeepSeek (le « déguisement » se fait au niveau
