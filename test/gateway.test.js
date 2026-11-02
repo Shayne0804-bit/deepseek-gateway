@@ -406,6 +406,8 @@ test('decouverte de modeles : /v1/models et /anthropic/v1/models servis localeme
   const openaiIds = openaiBody.data.map((model) => model.id);
   assert.ok(openaiIds.includes('deepseek-flash'), `modeles: ${openaiIds.join(', ')}`);
   assert.ok(openaiIds.includes('claude-opus-5'), 'les alias doivent apparaitre dans la liste');
+  assert.ok(openaiIds.includes('fable-5'), 'fable-5 doit apparaitre dans la liste');
+  assert.ok(openaiIds.includes('fable-5.1'), 'fable-5.1 doit apparaitre dans la liste');
 
   // Format Anthropic (utilise par Claude Desktop pour la decouverte).
   const anthropic = await fetch(`${base}/anthropic/v1/models`, {
@@ -523,6 +525,16 @@ test('alias de modele : claude-opus-5 est servi par deepseek-flash', async () =>
   const body = await res.json();
   assert.equal(body.model, 'deepseek-flash');
   assert.equal(mock.seen.at(-1).body.model, 'deepseek-flash');
+
+  // fable-5 et fable-5.1 sont aussi des alias par defaut, servis par flash.
+  for (const fable of ['fable-5', 'fable-5.1']) {
+    const fableRes = await proxyChat(key, { model: fable });
+    assert.equal(fableRes.status, 200, fable);
+    assert.equal(fableRes.headers.get('x-gateway-requested-model'), fable);
+    assert.equal(fableRes.headers.get('x-gateway-billed-model'), 'deepseek-flash');
+    await fableRes.text();
+    assert.equal(mock.seen.at(-1).body.model, 'deepseek-flash');
+  }
 });
 
 test('alias de modele : variante datee et format Anthropic (Claude Code)', async () => {

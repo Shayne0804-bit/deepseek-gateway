@@ -291,15 +291,18 @@ celui réellement utilisé par DeepSeek. Un alias est une simple règle
 
 ```json
 {
-  "claude-opus-5*": "deepseek-flash"
+  "claude-opus-5*": "deepseek-flash",
+  "fable-5": "deepseek-flash",
+  "fable-5.1": "deepseek-flash"
 }
 ```
 
 - `claude-opus-5*` est un motif : il couvre `claude-opus-5`, `claude-opus-5-20260101`, etc.
 - Un alias exact (`"mon-modele": "deepseek-flash"`) est aussi possible ; le motif le plus précis gagne.
-- **Par défaut**, l'alias `claude-opus-5* → deepseek-flash` est déjà actif : le nom « Opus 5 »
-  utilise le modèle DeepSeek économique, jamais le pro. Pour utiliser le pro, remplacez la cible
-  par `deepseek-v4-pro` dans le panneau.
+- **Par défaut**, les alias `claude-opus-5*`, `fable-5` et `fable-5.1` sont déjà actifs et
+  pointent tous vers `deepseek-flash` : ces noms utilisent le modèle DeepSeek économique,
+  jamais le pro. Pour utiliser le pro, remplacez la cible par `deepseek-v4-pro` dans le panneau.
+- Ils apparaissent aussi dans la découverte de modèles (`/v1/models` et `/anthropic/v1/models`).
 
 Modifiable dans le panneau : **Réglages → Alias de modèles** (JSON). Videz le champ puis
 enregistrez pour revenir aux alias par défaut. Le remplacement de la table annule les alias
