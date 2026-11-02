@@ -1042,8 +1042,8 @@
           </div>
         </div>
         <div class="alert">
-          Par défaut : <span class="mono">claude-opus-5*</span>, <span class="mono">fable-5</span> et
-          <span class="mono">fable-5.1</span> → <span class="mono">deepseek-flash</span>.
+          Par défaut : <span class="mono">claude-opus-5*</span>, <span class="mono">claude-opus-5.5</span>,
+          <span class="mono">fable-5</span> et <span class="mono">fable-5.1</span> → <span class="mono">deepseek-flash</span>.
           Un client qui demande <span class="mono">claude-opus-5</span> (ou <span class="mono">claude-opus-5-20260101</span>)
           est donc servi par DeepSeek Flash (le modèle économique). Les quotas, le coût estimé et les journaux utilisent le
           <strong>modèle réellement facturé</strong> ; le client reçoit les en-têtes

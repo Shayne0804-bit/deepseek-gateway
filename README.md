@@ -306,14 +306,16 @@ celui réellement utilisé par DeepSeek. Un alias est une simple règle
 ```json
 {
   "claude-opus-5*": "deepseek-flash",
+  "claude-opus-5.5": "deepseek-flash",
   "fable-5": "deepseek-flash",
   "fable-5.1": "deepseek-flash"
 }
 ```
 
 - `claude-opus-5*` est un motif : il couvre `claude-opus-5`, `claude-opus-5-20260101`, etc.
+- `claude-opus-5.5` est un alias exact explicite (il apparaît tel quel dans la découverte de modèles).
 - Un alias exact (`"mon-modele": "deepseek-flash"`) est aussi possible ; le motif le plus précis gagne.
-- **Par défaut**, les alias `claude-opus-5*`, `fable-5` et `fable-5.1` sont déjà actifs et
+- **Par défaut**, les alias `claude-opus-5*`, `claude-opus-5.5`, `fable-5` et `fable-5.1` sont déjà actifs et
   pointent tous vers `deepseek-flash` : ces noms utilisent le modèle DeepSeek économique,
   jamais le pro. Pour utiliser le pro, remplacez la cible par `deepseek-v4-pro` dans le panneau.
 - Ils apparaissent aussi dans la découverte de modèles (`/v1/models` et `/anthropic/v1/models`).
@@ -478,43 +480,97 @@ docker run -d --name deepseek-gateway -p 8787:8787 \
   deepseek-gateway
 ```
 
-## Déployer sur Railway
+## Déployer sur Railway (production)
 
-Le dépôt est prêt pour Railway : `railway.json` configure le build Dockerfile, le
-healthcheck `/healthz` et le redémarrage automatique. Le volume n'est **pas** déclaré
-dans le Dockerfile (Railway le refuse) : il se crée dans le tableau de bord et se monte
-sur `/data`.
+Le dépôt est prêt pour Railway : `railway.json` fixe le build Dockerfile, le healthcheck
+`/healthz` et le redémarrage automatique. Le volume n'est **pas** déclaré dans le Dockerfile
+(Railway le refuse) : il se crée dans le tableau de bord et se monte sur `/data`.
 
-1. **Créer le projet** — Railway → *New Project* → *Deploy from GitHub repo* →
-   choisissez `Shayne0804-bit/deepseek-gateway` (autorisez l'accès au dépôt privé).
-   Railway détecte automatiquement le `Dockerfile`.
-2. **Variables** (service → onglet *Variables*) :
-   ```env
-   DEEPSEEK_API_KEY=sk-votre-cle-originale
-   ADMIN_PASSWORD=un-mot-de-passe-long-et-unique
-   TRUST_PROXY=1
-   DATA_DIR=/data
-   HOST=0.0.0.0
-   PUBLIC_BASE_URL=https://VOTRE-DOMAINE.up.railway.app
-   ```
-   > Ne fixez pas `PORT` : Railway l'injecte automatiquement et l'application l'utilise.
-   > `PUBLIC_BASE_URL` peut être renseignée après l'étape 4, puis redéployée.
-3. **Volume** — clic droit sur le service → *Attach Volume* (ou *Volumes* → *Add Volume*),
-   **Mount path : `/data`** (doit correspondre à `DATA_DIR`). Sans volume, la base SQLite
-   (clés dérivées, quotas, journaux) est perdue à chaque redéploiement.
-4. **Domaine public** — service → *Settings* → *Networking* → *Generate Domain*.
-   Copiez l'URL `https://…up.railway.app`, mettez-la dans `PUBLIC_BASE_URL` et redéployez.
-5. **Utiliser** — ouvrez `https://VOTRE-DOMAINE/` : le panneau demande votre
-   `ADMIN_PASSWORD`. Créez une clé dérivée, puis donnez à votre ami
-   `https://VOTRE-DOMAINE/v1` (ou `…/anthropic` pour Claude Code) et la clé.
+### 1. Créer le service
 
-Notes :
+- Railway → **New Project** → **Deploy from GitHub repo** → `Shayne0804-bit/deepseek-gateway`
+  (autorisez l'application GitHub à accéder au dépôt privé).
+- Railway détecte le `Dockerfile`. Le premier build peut échouer tant que le volume et les
+  variables ne sont pas configurés : c'est normal.
 
-- Le volume est monté par la plateforme avant le démarrage : l'entrypoint du conteneur
-  ajuste ses droits puis lance l'application en utilisateur non privilégié `node`.
-- Sur l'offre d'essai, le service peut se mettre en veille ; il redémarre à la demande.
-  Vérifiez le journal de déploiement (onglet *Deployments*) si besoin.
-- Le disque du conteneur (hors `/data`) est éphémère : n'y stockez rien d'important.
+### 2. Attacher le volume persistant
+
+- Service → clic droit → **Attach Volume** (ou *Volumes* → *Add Volume*).
+- **Mount path : `/data`** (doit correspondre à `DATA_DIR`).
+- Sans volume, la base SQLite (clés dérivées, quotas, journaux) est perdue à chaque redéploiement.
+
+### 3. Variables d'environnement (service → Variables)
+
+```env
+# --- Fournisseur / panneau -------------------------------------------
+DEEPSEEK_API_KEY=sk-votre-cle-originale
+ADMIN_PASSWORD=mot-de-passe-long-et-unique-12+
+# --- Reseau (Railway termine le TLS) ---------------------------------
+HOST=0.0.0.0
+DATA_DIR=/data
+TRUST_PROXY=1
+PUBLIC_BASE_URL=https://VOTRE-DOMAINE.up.railway.app
+# --- Production -------------------------------------------------------
+LOG_FORMAT=json
+MASTER_KEY=CleDe32OctetsEnBase64GenereeUneSeuleFois
+IP_RATE_LIMIT_PER_MIN=240
+MAX_CONCURRENT_REQUESTS=200
+USAGE_RETENTION_DAYS=90
+SESSION_HOURS=12
+```
+
+- **Ne définissez pas `PORT`** : Railway l'injecte automatiquement et l'application l'utilise.
+- **Ne mettez pas de variables `TLS_*`** : Railway fournit HTTPS et termine le TLS.
+- **`MASTER_KEY`** : générez-la une fois et conservez-la dans un coffre-fort
+  (`node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`).
+  Elle chiffre la clé fournisseur stockée en base (si saisie dans le panneau). La changer rend
+  cette clé illisible (il faudra la ressaisir).
+- `ADMIN_PASSWORD` ne sert qu'au **premier démarrage** : ensuite, changez-le dans le panneau.
+
+### 4. Domaine HTTPS
+
+- Service → *Settings* → **Networking** → **Generate Domain**.
+- Copiez l'URL `https://…up.railway.app`, mettez-la dans `PUBLIC_BASE_URL`, puis **Redeploy**.
+- Vérifiez `https://VOTRE-DOMAINE/healthz` (200, `providerConfigured: true`) et
+  `https://VOTRE-DOMAINE/readyz`.
+- HSTS est émis automatiquement (TLS terminé par Railway + `TRUST_PROXY=1`).
+
+### 5. Sécuriser et régler le panneau
+
+1. Ouvrez `https://VOTRE-DOMAINE/` et connectez-vous avec `ADMIN_PASSWORD`.
+2. **Réglages** → changez le mot de passe (12+ caractères).
+3. Vérifiez le badge fournisseur « connecté ».
+4. **Clés & quotas** → une clé par utilisateur (tokens/requêtes/USD, période, RPM, modèles autorisés).
+5. **Réglages → Budget global** : plafond mensuel toutes clés confondues (0 = désactivé).
+6. Donnez aux utilisateurs `https://VOTRE-DOMAINE/v1` (ou `…/anthropic` pour Claude Code/Desktop)
+   et leur clé `sk-dsk-…`.
+
+### 6. Vérifications production
+
+| Vérification | Attendu |
+|---|---|
+| Santé | `GET /healthz` → 200, `providerConfigured: true`, `warnings: []` |
+| Prêt | `GET /readyz` → 200 |
+| En-têtes | HSTS, CSP, `X-Frame-Options: DENY` sur le panneau |
+| Audit | Panneau → **Journal d'audit** : connexions et créations de clés tracées |
+| Export | Panneau → **Journaux** → *Exporter CSV* |
+| Redémarrage | *Deployments* → Restart : clés et quotas conservés (volume `/data`) |
+
+### 7. Sauvegardes, surveillance, mises à jour
+
+- Sauvegardez régulièrement `/data` hors de Railway (base + `master.key` s'il a été généré) ;
+  restaurez avec le même `MASTER_KEY`.
+- `USAGE_RETENTION_DAYS` limite la croissance des journaux.
+- Surveillez *Metrics* Railway (CPU/RAM), les logs JSON et le solde DeepSeek.
+- Mise à jour : `git push` → build/déploiement automatiques ; les données restent sur le volume.
+- En cas d'incident sécurité : voir [docs/SECURITY.md](docs/SECURITY.md#incidents).
+
+### Notes Railway
+
+- Désactivez **App Sleeping** : une API doit répondre immédiatement.
+- Restez en **mono-réplique** : les compteurs de débit en mémoire ne sont pas partagés.
+- Le disque du conteneur hors `/data` est éphémère ; n'y stockez rien.
+- Les logs sont consultables dans *Deployments/Logs* (JSON si `LOG_FORMAT=json`).
 
 ## Passer en production
 

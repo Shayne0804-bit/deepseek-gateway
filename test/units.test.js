@@ -211,6 +211,7 @@ test('alias de modeles : resolution, wildcard et validation', () => {
   // Defaut : claude-opus-5 (et variantes datees) -> deepseek-flash (modele economique).
   assert.equal(resolveModelAlias('claude-opus-5', DEFAULT_MODEL_ALIASES), 'deepseek-flash');
   assert.equal(resolveModelAlias('claude-opus-5-20260101', DEFAULT_MODEL_ALIASES), 'deepseek-flash');
+  assert.equal(resolveModelAlias('claude-opus-5.5', DEFAULT_MODEL_ALIASES), 'deepseek-flash');
   assert.equal(resolveModelAlias('fable-5', DEFAULT_MODEL_ALIASES), 'deepseek-flash');
   assert.equal(resolveModelAlias('fable-5.1', DEFAULT_MODEL_ALIASES), 'deepseek-flash');
   assert.equal(resolveModelAlias('deepseek-flash', DEFAULT_MODEL_ALIASES), 'deepseek-flash');

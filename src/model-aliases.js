@@ -4,8 +4,8 @@
  *
  * Exemple par defaut : un client qui demande `claude-opus-5` (ou une variante
  * datee `claude-opus-5-20260101`) est servi par `deepseek-flash` (le modele
- * economique), et non par deepseek-v4-pro. Les noms `fable-5` et `fable-5.1`
- * sont egalement exposes et servis par `deepseek-flash`.
+ * economique), et non par deepseek-v4-pro. Les noms `claude-opus-5.5`, `fable-5`
+ * et `fable-5.1` sont egalement exposes et servis par `deepseek-flash`.
  *
  * Formats acceptes :
  * - correspondance exacte :  { "mon-modele": "deepseek-flash" }
@@ -17,6 +17,7 @@
 
 export const DEFAULT_MODEL_ALIASES = Object.freeze({
   'claude-opus-5*': 'deepseek-flash',
+  'claude-opus-5.5': 'deepseek-flash',
   'fable-5': 'deepseek-flash',
   'fable-5.1': 'deepseek-flash',
 });
