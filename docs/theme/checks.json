@@ -1,0 +1,261 @@
+{
+  "contrast": [
+    {
+      "selector": "#login-view .login-kicker",
+      "ratio": 4.95,
+      "required": 4.5,
+      "size": 10.5,
+      "weight": 400,
+      "text": "console d'administration",
+      "page": "login"
+    },
+    {
+      "selector": "#login-view h1",
+      "ratio": 17.57,
+      "required": 4.5,
+      "size": 20,
+      "weight": 600,
+      "text": "DeepSeek Gateway",
+      "page": "login"
+    },
+    {
+      "selector": "#login-view .login-card > p",
+      "ratio": 8.74,
+      "required": 4.5,
+      "size": 12.5,
+      "weight": 400,
+      "text": "Partagez votre clé API DeepSeek avec des",
+      "page": "login"
+    },
+    {
+      "selector": "#login-view .field > span",
+      "ratio": 8.74,
+      "required": 4.5,
+      "size": 11,
+      "weight": 600,
+      "text": "Mot de passe administrateur",
+      "page": "login"
+    },
+    {
+      "selector": "#login-view .small.muted",
+      "ratio": 8.74,
+      "required": 4.5,
+      "size": 12.5,
+      "weight": 400,
+      "text": "Mot de passe oublié ? Voir data/admin-pa",
+      "page": "login"
+    },
+    {
+      "selector": "#login-view .btn-primary",
+      "ratio": 11.8,
+      "required": 4.5,
+      "size": 11.5,
+      "weight": 600,
+      "text": "Se connecter",
+      "page": "login"
+    },
+    {
+      "selector": "#login-view input",
+      "ratio": 16.82,
+      "required": 4.5,
+      "size": 12.5,
+      "weight": 400,
+      "text": "",
+      "page": "login"
+    },
+    {
+      "selector": ".topbar-sub",
+      "ratio": 8.74,
+      "required": 4.5,
+      "size": 12,
+      "weight": 400,
+      "text": "Créez une clé par personne ou par projet",
+      "page": "clients"
+    },
+    {
+      "selector": ".nav-item.active",
+      "ratio": 10.95,
+      "required": 4.5,
+      "size": 12.5,
+      "weight": 400,
+      "text": "[k]Clés & quotas",
+      "page": "clients"
+    },
+    {
+      "selector": ".nav-item:not(.active)",
+      "ratio": 8.74,
+      "required": 4.5,
+      "size": 12.5,
+      "weight": 400,
+      "text": "[~]Vue d'ensemble",
+      "page": "clients"
+    },
+    {
+      "selector": ".stat-label",
+      "missing": true,
+      "page": "clients"
+    },
+    {
+      "selector": ".stat-foot",
+      "missing": true,
+      "page": "clients"
+    },
+    {
+      "selector": ".panel-head .hint",
+      "ratio": 4.95,
+      "required": 4.5,
+      "size": 11.5,
+      "weight": 400,
+      "text": "5 active(s) · 1 désactivée(s) · 0 épuisé",
+      "page": "clients"
+    },
+    {
+      "selector": "#view th",
+      "ratio": 4.95,
+      "required": 4.5,
+      "size": 10,
+      "weight": 600,
+      "text": "Nom",
+      "page": "clients"
+    },
+    {
+      "selector": "#view td",
+      "ratio": 17.57,
+      "required": 4.5,
+      "size": 12.5,
+      "weight": 400,
+      "text": "Client au nom très long qui revient à la",
+      "page": "clients"
+    },
+    {
+      "selector": ".btn-primary",
+      "ratio": 11.8,
+      "required": 4.5,
+      "size": 11.5,
+      "weight": 600,
+      "text": "Se connecter",
+      "page": "clients"
+    },
+    {
+      "selector": ".btn-ghost",
+      "ratio": 8.74,
+      "required": 4.5,
+      "size": 11.5,
+      "weight": 600,
+      "text": "Se déconnecter",
+      "page": "clients"
+    },
+    {
+      "selector": ".badge-ok",
+      "ratio": 14.24,
+      "required": 4.5,
+      "size": 10,
+      "weight": 600,
+      "text": "Active",
+      "page": "clients"
+    },
+    {
+      "selector": ".badge-warn",
+      "missing": true,
+      "page": "clients"
+    },
+    {
+      "selector": ".badge-danger",
+      "missing": true,
+      "page": "clients"
+    },
+    {
+      "selector": ".badge-muted",
+      "ratio": 8.11,
+      "required": 4.5,
+      "size": 10,
+      "weight": 600,
+      "text": "Désactivée",
+      "page": "clients"
+    }
+  ],
+  "labels": [],
+  "focus": [
+    {
+      "tag": "BUTTON",
+      "text": "[k]Clés & quotas",
+      "visible": true,
+      "outline": "solid 2px"
+    },
+    {
+      "tag": "BUTTON",
+      "text": "[l]Journaux",
+      "visible": true,
+      "outline": "solid 2px"
+    },
+    {
+      "tag": "BUTTON",
+      "text": "[c]Réglages",
+      "visible": true,
+      "outline": "solid 2px"
+    },
+    {
+      "tag": "BUTTON",
+      "text": "[?]Guide pour votre ami",
+      "visible": true,
+      "outline": "solid 2px"
+    },
+    {
+      "tag": "BUTTON",
+      "text": "Se déconnecter",
+      "visible": true,
+      "outline": "solid 2px"
+    },
+    {
+      "tag": "BUTTON",
+      "text": "+ Nouvelle clé",
+      "visible": true,
+      "outline": "solid 2px"
+    }
+  ],
+  "reducedMotion": {
+    "scanlinesHidden": true,
+    "buttonTransition": "1e-06s",
+    "navTransition": "1e-06s"
+  },
+  "touchTargets": {
+    "total": 28,
+    "tooSmall": [],
+    "minHeight": 27,
+    "minWidth": 59
+  },
+  "overflow": {
+    "desktop": {
+      "docWidth": 1440,
+      "viewport": 1440,
+      "tablesContained": true
+    },
+    "mobile:overview": {
+      "docWidth": 390,
+      "viewport": 390,
+      "tablesContained": true
+    },
+    "mobile:clients": {
+      "docWidth": 390,
+      "viewport": 390,
+      "tablesContained": true
+    },
+    "mobile:logs": {
+      "docWidth": 390,
+      "viewport": 390,
+      "tablesContained": true
+    },
+    "mobile:settings": {
+      "docWidth": 390,
+      "viewport": 390,
+      "tablesContained": true
+    },
+    "mobile:guide": {
+      "docWidth": 390,
+      "viewport": 390,
+      "tablesContained": true
+    }
+  },
+  "errorMessage": "La passerelle ne répond pas. Vérifiez qu'elle est démarrée, puis réessayez.",
+  "errorRecovery": true
+}

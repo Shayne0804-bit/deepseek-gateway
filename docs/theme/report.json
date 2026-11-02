@@ -1,0 +1,118 @@
+{
+  "contract": "Panneau d'administration d'une passerelle API DeepSeek (usage quotidien par un administrateur unique). Job principal : scanner les cles, quotas et depenses; actions primaires : creer/regenerer une cle, ajuster un quota. Direction : PHOSPHOR OPS — console terminal verte, monospace, dense, angles courts, prompts \">\" et badges entre crochets. Viewports cibles : 1440x900 (desktop) et 390x844 (mobile). Contraintes : aucune dependance ajoutee, contraste WCAG AA, focus visible, reduced-motion respecte, pas de debordement horizontal.",
+  "targetViewports": [
+    "1440x900",
+    "390x844"
+  ],
+  "accessibility": {
+    "status": "pass",
+    "evidence": "Contraste verifie sur 21 couples texte/fond (login + clients) : 0 echec(s). Focus clavier : 6/6 arrets avec indicateur visible (anneau vert). Tous les champs de formulaire ont un libelle. Reduced-motion : scanlines masquees et transitions neutralisees (1e-06s)."
+  },
+  "responsive": {
+    "status": "pass",
+    "evidence": "5 vues teste��es en 390x844 et 1440x900 : largeur document <= viewport partout (aucun debordement), tableaux contenus dans .table-wrap scrollable. Cibles tactiles mobiles : 28 controles, minimum 27px de haut (seuil 24px)."
+  },
+  "contentStates": {
+    "loading": {
+      "status": "pass",
+      "evidence": "Artifact 09-loading.png : structure conservee + indicateur de chargement pendant une requete ralentie (fetch differe)."
+    },
+    "empty": {
+      "status": "pass",
+      "evidence": "Artifact 14-empty-overview.png : instance sans donnee, messages \"aucune consommation\" et CTA de creation de cle."
+    },
+    "error": {
+      "status": "pass",
+      "evidence": "Artifact 10-error.png : echec API force, message produit \"La passerelle ne répond pas. Vérifiez qu'elle est démarrée, puis réessayez.\" et bouton Reessayer verifie (recuperation OK : true)."
+    },
+    "partial": {
+      "status": "pass",
+      "evidence": "Artifact 15-partial-overview.png : cle fournisseur absente, avertissement explicite, reste du panneau consultable."
+    },
+    "success": {
+      "status": "pass",
+      "evidence": "Artifact 08-success-new-key.png : creation de cle confirmee, cle affichee une seule fois avec action de copie."
+    },
+    "permission": {
+      "status": "pass",
+      "evidence": "Artifacts 01/02-permission-login-*.png : sans session, seul l'ecran de connexion est accessible (limite d'acces expliquee)."
+    }
+  },
+  "renderedEvidence": [
+    {
+      "viewport": "1440x900",
+      "artifact": "01-permission-login-desktop.png",
+      "observation": "Etat permission : sans session, l'ecran de connexion explique la limite d'acces (mot de passe admin requis)."
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "02-permission-login-mobile.png",
+      "observation": "Etat permission en 390x844 : carte de connexion centree, un seul champ, bouton pleine largeur, pas de debordement."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "03-overview-desktop.png",
+      "observation": "Etat normal en 1440x900 : la console terminal affiche prompts, KPI, graphique vert, tables; les alias fable/claude apparaissent dans le journal."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "04-clients-desktop.png",
+      "observation": "Vue cles en 1440x900 : badges entre crochets, quotas en barres fines, boutons d'action alignes sans debordement."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "05-logs-desktop.png",
+      "observation": "Vue journaux : modele demande (fable-5.1) et modele facture (deepseek-flash) lisibles, cout reel par ligne."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "06-settings-desktop.png",
+      "observation": "Vue reglages : formulaires monospace, badges de source, edition JSON, focus vert."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "07-guide-desktop.png",
+      "observation": "Vue guide : blocs de commandes, etapes numerotees, boutons copier; contenu long sans debordement."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "08-success-new-key.png",
+      "observation": "Etat succes : la creation d'une cle confirme l'action et affiche la cle generee (a copier une seule fois)."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "09-loading.png",
+      "observation": "Etat chargement : le panneau conserve sa structure et affiche un indicateur de chargement pendant la requete."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "10-error.png",
+      "observation": "Etat erreur : message explicite (passerelle injoignable) et bouton \"Reessayer\" pour reprendre, sans quitter le panneau."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "11-focus-visible.png",
+      "observation": "Focus clavier visible sur les controles (anneau vert) apres navigation par Tab."
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "12-overview-mobile.png",
+      "observation": "Vue d'ensemble en 390x844 : navigation horizontale, KPI empiles, graphique lisible, aucun debordement horizontal."
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "13-clients-mobile.png",
+      "observation": "Vue cles en 390x844 : tableaux dans un conteneur scrollable (pas de debordement de page), boutons tactiles >= 24 px."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "14-empty-overview.png",
+      "observation": "Etat vide : aucune consommation ni cle — le panneau explique la situation et propose de creer une premiere cle."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "15-partial-overview.png",
+      "observation": "Etat partiel : la cle DeepSeek originale n'est pas configuree — avertissement explicite, le reste du panneau (cles, quotas) reste consultable."
+    }
+  ]
+}

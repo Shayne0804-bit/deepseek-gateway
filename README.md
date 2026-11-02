@@ -57,6 +57,9 @@ Un **panneau web** en français permet de tout gérer et de suivre la consommati
   calculés sur le modèle facturé.
 - **HTTP + HTTPS** : HTTP sur `8787` et, si un certificat est fourni, HTTPS sur `8788`
   (requis par Claude Desktop). Voir [HTTPS local](#https-local-claude-desktop).
+- **Interface console « terminal »** : thème vert phosphore, typographie monospace, prompts `>` et
+  badges entre crochets ; états chargement / vide / erreur / partiel / succès / permission soignés,
+  focus clavier visible, contraste WCAG AA et `prefers-reduced-motion` vérifiés.
 - **Zéro dépendance** : Node.js + SQLite intégré (`node:sqlite`). Pas de `npm install`, pas de build.
 
 ## Architecture

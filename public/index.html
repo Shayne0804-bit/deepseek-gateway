@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>DeepSeek Gateway — Panneau d'administration</title>
+  <meta name="theme-color" content="#040705">
+  <title>DeepSeek Gateway — Console d'administration</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/styles.css">
 </head>
@@ -12,7 +13,8 @@
   <!-- ============================ Connexion ============================ -->
   <div id="login-view" class="login-screen hidden">
     <form class="login-card" data-form="login" autocomplete="on">
-      <div class="login-logo">⚡</div>
+      <div class="login-kicker">console d'administration</div>
+      <div class="login-logo" aria-hidden="true">&gt;_</div>
       <h1>DeepSeek Gateway</h1>
       <p>Partagez votre clé API DeepSeek avec des clés dérivées à quota.</p>
       <div class="login-error" id="login-error"></div>
@@ -32,23 +34,23 @@
   <div id="app-view" class="app hidden">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-logo">⚡</div>
+        <div class="brand-logo" aria-hidden="true">&gt;_</div>
         <div>
           <div class="brand-name">DeepSeek Gateway</div>
-          <div class="brand-sub">Partage &amp; quotas</div>
+          <div class="brand-sub">partage &amp; quotas</div>
         </div>
       </div>
       <nav class="nav" id="nav">
-        <button class="nav-item" data-nav="overview"><span class="nav-icon">📊</span>Vue d'ensemble</button>
-        <button class="nav-item" data-nav="clients"><span class="nav-icon">🔑</span>Clés &amp; quotas</button>
-        <button class="nav-item" data-nav="logs"><span class="nav-icon">🧾</span>Journaux</button>
-        <button class="nav-item" data-nav="settings"><span class="nav-icon">⚙️</span>Réglages</button>
-        <button class="nav-item" data-nav="guide"><span class="nav-icon">🤝</span>Guide pour votre ami</button>
+        <button class="nav-item" data-nav="overview"><span class="nav-icon" aria-hidden="true">[~]</span>Vue d'ensemble</button>
+        <button class="nav-item" data-nav="clients"><span class="nav-icon" aria-hidden="true">[k]</span>Clés &amp; quotas</button>
+        <button class="nav-item" data-nav="logs"><span class="nav-icon" aria-hidden="true">[l]</span>Journaux</button>
+        <button class="nav-item" data-nav="settings"><span class="nav-icon" aria-hidden="true">[c]</span>Réglages</button>
+        <button class="nav-item" data-nav="guide"><span class="nav-icon" aria-hidden="true">[?]</span>Guide pour votre ami</button>
       </nav>
       <div class="sidebar-foot">
         <div class="provider-pill" id="provider-pill">
           <span class="dot" id="provider-dot"></span>
-          <span class="text" id="provider-text">Fournisseur…</span>
+          <span class="text" id="provider-text">fournisseur…</span>
         </div>
         <div class="small" style="color:var(--muted-2);padding-left:6px">v<span id="app-version">1.0.0</span></div>
       </div>

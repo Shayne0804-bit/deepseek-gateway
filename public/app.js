@@ -123,12 +123,17 @@
   }
 
   async function api(path, options = {}) {
-    const res = await fetch(`/admin/api${path}`, {
-      method: options.method || 'GET',
-      headers: { 'content-type': 'application/json', 'x-requested-with': 'dsk-admin' },
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-      credentials: 'same-origin',
-    });
+    let res;
+    try {
+      res = await fetch(`/admin/api${path}`, {
+        method: options.method || 'GET',
+        headers: { 'content-type': 'application/json', 'x-requested-with': 'dsk-admin' },
+        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+        credentials: 'same-origin',
+      });
+    } catch {
+      throw new Error("La passerelle ne répond pas. Vérifiez qu'elle est démarrée, puis réessayez.");
+    }
     const text = await res.text();
     let data = {};
     try {
@@ -332,7 +337,12 @@
     try {
       await loadView(view);
     } catch (err) {
-      $('#view').innerHTML = `<div class="panel"><div class="alert danger">${esc(err.message)}</div></div>`;
+      $('#view').innerHTML = `<div class="panel">
+        <div class="alert danger">${esc(err.message)}</div>
+        <div class="form-actions" style="justify-content:flex-start">
+          <button class="btn btn-ghost btn-sm" data-action="retry-view">Réessayer</button>
+        </div>
+      </div>`;
     }
   }
 
@@ -583,27 +593,30 @@
     const padT = 12;
     const n = Math.max(1, series.length);
     const max = Math.max(1, ...series.map((row) => row.tokens));
+    if (series.every((row) => row.tokens === 0)) {
+      return '<div class="chart chart-empty"><span class="muted small">Aucune consommation sur les 30 derniers jours.</span></div>';
+    }
     const slot = (W - padL) / n;
     const barW = Math.max(2, slot * 0.55);
     const bars = series.map((row, i) => {
       const h = row.tokens > 0 ? Math.max(2, (row.tokens / max) * (H - padB - padT)) : 0;
       const x = padL + i * slot + (slot - barW) / 2;
       const y = H - padB - h;
-      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="2.5" fill="url(#barGrad)"><title>${esc(shortDay(row.day))} — ${fmtInt(row.tokens)} tokens, ${fmtInt(row.requests)} requêtes, ${fmtUsd(row.cost)}</title></rect>`;
+      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="1" fill="url(#barGrad)"><title>${esc(shortDay(row.day))} — ${fmtInt(row.tokens)} tokens, ${fmtInt(row.requests)} requêtes, ${fmtUsd(row.cost)}</title></rect>`;
     }).join('');
     const labels = series.map((row, i) => {
       if (i % 5 !== 0 && i !== n - 1) return '';
-      return `<text x="${(padL + i * slot + slot / 2).toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="9" fill="#64748b">${esc(shortDay(row.day))}</text>`;
+      return `<text x="${(padL + i * slot + slot / 2).toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="9" fill="#5d8769" font-family="Consolas, monospace">${esc(shortDay(row.day))}</text>`;
     }).join('');
     return `<div class="chart">
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Consommation de tokens par jour">
         <defs>
           <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#6d8dff"/>
-            <stop offset="1" stop-color="#4f7cff" stop-opacity="0.3"/>
+            <stop offset="0" stop-color="#3ee97f"/>
+            <stop offset="1" stop-color="#1f9e57" stop-opacity="0.35"/>
           </linearGradient>
         </defs>
-        <line x1="${padL}" y1="${H - padB}" x2="${W}" y2="${H - padB}" stroke="#1e2839" stroke-width="1"/>
+        <line x1="${padL}" y1="${H - padB}" x2="${W}" y2="${H - padB}" stroke="#14341f" stroke-width="1"/>
         ${bars}
         ${labels}
       </svg>
@@ -1239,6 +1252,10 @@
   async function handleAction(action, id) {
     if (action === 'logout') {
       await handleLogout();
+      return;
+    }
+    if (action === 'retry-view') {
+      await setView(state.view);
       return;
     }
     if (action === 'create-client') {
