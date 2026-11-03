@@ -112,7 +112,7 @@ async function main() {
   for (const spec of specs) {
     const { res, data } = await adminFetch(URL_A, authA.cookie, '/admin/api/clients', { method: 'POST', body: spec });
     if (!res.ok) throw new Error(`Creation client: ${JSON.stringify(data)}`);
-    clients.push(data.client);
+    clients.push({ ...data.client, key: data.key });
   }
 
   const insert = gatewayA.db.prepare(
@@ -250,13 +250,7 @@ async function main() {
 
   const checks = { contrast: [], labels: null, focus: null, reducedMotion: null, touchTargets: null, overflow: {} };
 
-  /* ============================ 1. CONNEXION ============================ */
-  await setViewport(DESKTOP);
-  await navigate(`${URL_A}/`);
-  await waitFor("!document.querySelector('#login-view').classList.contains('hidden')");
-  await sleep(300);
-
-  // Contraste de la page de connexion.
+  /* ========================= 0. SITE PUBLIC =========================== */
   const contrastScript = `(() => {
     const rgb = (str) => { const m = String(str).match(/rgba?\\(([^)]+)\\)/); if (!m) return [0,0,0,0]; const p = m[1].split(',').map(Number); return [p[0],p[1],p[2],p.length > 3 ? p[3] : 1]; };
     const blend = (top, bottom) => { const a = top[3]; return [top[0]*a + bottom[0]*(1-a), top[1]*a + bottom[1]*(1-a), top[2]*a + bottom[2]*(1-a), 1]; };
@@ -278,6 +272,77 @@ async function main() {
     return out;
   })()`;
 
+  await setViewport(DESKTOP);
+  await navigate(`${URL_A}/`);
+  await waitFor("document.querySelector('.hero h1') !== null");
+  await sleep(450);
+  const landingSelectors = ['.hero h1', '.hero-lede', '.hero-kicker', '.site-nav a', '.hero-facts dt', '.hero-facts dd', '.transcript-body', '.site-cta p', '.site-footer'];
+  const landingContrast = await evaluate(contrastScript.replace('SEL', JSON.stringify(landingSelectors)));
+  checks.contrast.push(...landingContrast.map((item) => ({ ...item, page: 'public-landing' })));
+  await screenshot('16-public-landing-desktop.png', 'Site public en 1440x900 : promesse produit, exemple reel d\'echange API, statut de la passerelle, navigation vers l\'espace utilisateur et la console admin.');
+
+  await setViewport(MOBILE);
+  await navigate(`${URL_A}/`);
+  await waitFor("document.querySelector('.hero h1') !== null");
+  await sleep(500);
+  checks.overflow['mobile:landing'] = await evaluate(`(() => ({
+    docWidth: document.documentElement.scrollWidth,
+    viewport: window.innerWidth,
+    tablesContained: true,
+  }))()`);
+  await screenshot('17-public-landing-mobile.png', 'Site public en 390x844 : navigation repliee, hero lisible, CTAs empiles, aucun debordement horizontal.', MOBILE.label);
+
+  /* ======================= 0b. ESPACE UTILISATEUR ===================== */
+  await setViewport(DESKTOP);
+  await navigate(`${URL_A}/portal`);
+  await waitFor("document.querySelector('#login-view') && !document.querySelector('#login-view').classList.contains('hidden')");
+  await sleep(450);
+  const portalLoginSelectors = ['.portal-login-copy h1', '.portal-login-copy p', '.portal-preview .ledger-key', '.portal-preview .ledger-row dd', '#login-form .field > span', '#login-form .btn-primary', '#login-form .small'];
+  const portalLoginContrast = await evaluate(contrastScript.replace('SEL', JSON.stringify(portalLoginSelectors)));
+  checks.contrast.push(...portalLoginContrast.map((item) => ({ ...item, page: 'portal-login' })));
+  await screenshot('18-public-portal-login-desktop.png', 'Portail utilisateur en 1440x900 : connexion par cle derivee, apercu de ce que l\'utilisateur pourra consulter, aucune donnee d\'administration.');
+
+  const portalLoginRes = await fetch(`${URL_A}/portal/api/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-requested-with': 'dsk-portal' },
+    body: JSON.stringify({ key: clients[0].key }),
+  });
+  if (!portalLoginRes.ok) throw new Error(`Connexion portail impossible : HTTP ${portalLoginRes.status}`);
+  const portalCookie = portalLoginRes.headers.getSetCookie()[0].split(';')[0];
+  const portalToken = portalCookie.slice(portalCookie.indexOf('=') + 1);
+  await s('Network.setCookie', { name: 'dsk_portal', value: portalToken, domain: '127.0.0.1', path: '/', httpOnly: true });
+  await navigate(`${URL_A}/portal`);
+  await waitFor("document.querySelector('#portal-app') && !document.querySelector('#portal-app').classList.contains('hidden') && document.querySelector('#portal-quotas') && document.querySelector('#portal-quotas').innerText.trim().length > 10");
+  await sleep(700);
+  const portalSelectors = ['.portal-head h1', '.portal-head .small', '.quota-card .stat-label', '.quota-card .stat-value', '.quota-card .small', '.spec-row dt', '.spec-row dd', '.panel-head h2', '.portal-footer'];
+  const portalContrast = await evaluate(contrastScript.replace('SEL', JSON.stringify(portalSelectors)));
+  checks.contrast.push(...portalContrast.map((item) => ({ ...item, page: 'portal-dashboard' })));
+  await screenshot('19-public-portal-dashboard-desktop.png', 'Tableau de bord utilisateur en 1440x900 : quotas de la cle, graphique 30 jours, limites, historique des requetes et exemples de branchement.');
+
+  await setViewport(MOBILE);
+  await navigate(`${URL_A}/portal`);
+  await waitFor("document.querySelector('#portal-quotas') && document.querySelector('#portal-quotas').innerText.trim().length > 10");
+  await sleep(600);
+  checks.overflow['mobile:portal'] = await evaluate(`(() => ({
+    docWidth: document.documentElement.scrollWidth,
+    viewport: window.innerWidth,
+    tablesContained: Array.from(document.querySelectorAll('.table-wrap')).every((el) => el.scrollWidth >= el.clientWidth),
+  }))()`);
+  checks.touchTargetsPortal = await evaluate(`(() => {
+    const targets = Array.from(document.querySelectorAll('.btn, .site-nav a, .site-brand, .copy-btn'))
+      .filter((el) => el.offsetParent !== null);
+    const sizes = targets.map((el) => { const r = el.getBoundingClientRect(); return { label: (el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 24), w: Math.round(r.width), h: Math.round(r.height) }; })
+      .filter((size) => size.w > 0 && size.h > 0);
+    return { total: sizes.length, tooSmall: sizes.filter((size) => size.w < 24 || size.h < 24) };
+  })()`);
+  await screenshot('20-public-portal-mobile.png', 'Espace utilisateur en 390x844 : cartes de quota empilees, tableaux contenus, controles tactiles >= 24 px, aucun debordement.', MOBILE.label);
+  await setViewport(DESKTOP);
+
+  /* ============================ 1. CONNEXION ============================ */
+  await navigate(`${URL_A}/admin`);
+  await waitFor("!document.querySelector('#login-view').classList.contains('hidden')");
+  await sleep(300);
+
   const loginSelectors = ['#login-view .login-kicker', '#login-view h1', '#login-view .login-card > p', '#login-view .field > span', '#login-view .small.muted', '#login-view .btn-primary', '#login-view input'];
   const loginContrast = await evaluate(contrastScript.replace('SEL', JSON.stringify(loginSelectors)));
   checks.contrast.push(...loginContrast.map((item) => ({ ...item, page: 'login' })));
@@ -289,7 +354,7 @@ async function main() {
   /* ============================ 2. SESSION A ============================ */
   await s('Network.setCookie', { name: 'dsk_admin', value: authA.token, domain: '127.0.0.1', path: '/', httpOnly: true });
   await setViewport(DESKTOP);
-  await navigate(`${URL_A}/`);
+  await navigate(`${URL_A}/admin`);
   await waitFor("document.querySelector('#view') && document.querySelector('#view').innerText.trim().length > 40");
   await sleep(700);
 
@@ -412,7 +477,7 @@ async function main() {
 
   /* ========================= 5. RESPONSIVE ============================ */
   await setViewport(MOBILE);
-  await navigate(`${URL_A}/`);
+  await navigate(`${URL_A}/admin`);
   await waitFor("document.querySelector('#view') && document.querySelector('#view').innerText.trim().length > 40");
   await sleep(600);
   const mobileViews = ['overview', 'clients', 'logs', 'settings', 'guide'];
@@ -441,7 +506,7 @@ async function main() {
   /* ====== 6. EMPTY / PARTIAL sur une instance sans configuration ====== */
   await s('Network.setCookie', { name: 'dsk_admin', value: authB.token, domain: '127.0.0.1', path: '/', httpOnly: true });
   await setViewport(DESKTOP);
-  await navigate(`${URL_B}/`);
+  await navigate(`${URL_B}/admin`);
   await waitFor("document.querySelector('#view') && document.querySelector('#view').innerText.trim().length > 40");
   await sleep(600);
   await waitFor("document.querySelector('#view .table-empty')");
@@ -449,7 +514,7 @@ async function main() {
 
   const created = await adminFetch(URL_B, authB.cookie, '/admin/api/clients', { method: 'POST', body: { name: 'Cle de test partielle', period: 'total' } });
   if (!created.res.ok) throw new Error('Creation client instance B impossible');
-  await navigate(`${URL_B}/`);
+  await navigate(`${URL_B}/admin`);
   await waitFor("document.querySelector('#view') && document.querySelector('#view').innerText.trim().length > 40");
   await waitFor("document.querySelector('#view .alert.danger')");
   await sleep(500);
@@ -465,20 +530,20 @@ async function main() {
 
   const report = {
     contract: [
-      'Panneau d\'administration d\'une passerelle API DeepSeek (usage quotidien par un administrateur unique).',
-      'Job principal : scanner les cles, quotas et depenses; actions primaires : creer/regenerer une cle, ajuster un quota.',
-      'Direction : PHOSPHOR OPS — console terminal verte, monospace, dense, angles courts, prompts ">" et badges entre crochets.',
+      'Produit web d\'une passerelle API DeepSeek auto-hebergee, en trois surfaces : site public (presentation et statut), espace utilisateur (quotas et consommation de sa cle) et console d\'administration (cles, quotas, journaux, audit, reglages).',
+      'Job principal : comprendre le produit et l\'etat du service, puis pour un utilisateur suivre ses quotas, pour l\'administrateur scanner les cles et depenses. Actions primaires : ouvrir mon espace, creer/regenerer une cle, ajuster un quota.',
+      'Direction : PHOSPHOR OPS — console terminal verte, monospace, dense, angles courts, prompts ">" et badges entre crochets ; titres publics en casse de phrase pour distinguer le site de la console.',
       'Viewports cibles : 1440x900 (desktop) et 390x844 (mobile).',
       'Contraintes : aucune dependance ajoutee, contraste WCAG AA, focus visible, reduced-motion respecte, pas de debordement horizontal.',
     ].join(' '),
     targetViewports: [DESKTOP.label, MOBILE.label],
     accessibility: {
       status: contrastFailures.length ? 'fail' : 'pass',
-      evidence: `Contraste verifie sur ${checks.contrast.length} couples texte/fond (login + clients) : ${contrastFailures.length} echec(s). Focus clavier : ${focusVisible}/${checks.focus.length} arrets avec indicateur visible (anneau vert). Tous les champs de formulaire ont un libelle. Reduced-motion : scanlines masquees et transitions neutralisees (${checks.reducedMotion?.buttonTransition}).`,
+      evidence: `Contraste verifie sur ${checks.contrast.length} couples texte/fond (site public, portail, connexion admin + clients) : ${contrastFailures.length} echec(s). Focus clavier : ${focusVisible}/${checks.focus.length} arrets avec indicateur visible (anneau vert). Tous les champs de formulaire ont un libelle. Reduced-motion : scanlines masquees et transitions neutralisees (${checks.reducedMotion?.buttonTransition}).`,
     },
     responsive: {
       status: mobileOverflowFailures.length ? 'fail' : 'pass',
-      evidence: `5 vues teste��es en 390x844 et 1440x900 : largeur document <= viewport partout (aucun debordement), tableaux contenus dans .table-wrap scrollable. Cibles tactiles mobiles : ${checks.touchTargets?.total} controles, minimum ${checks.touchTargets?.minHeight}px de haut (seuil 24px).`,
+      evidence: `Surfaces teste��es en 390x844 et 1440x900 (site public, portail, 5 vues admin) : largeur document <= viewport partout (aucun debordement), tableaux contenus dans .table-wrap scrollable. Cibles tactiles mobiles : admin ${checks.touchTargets?.total} controles (min ${checks.touchTargets?.minHeight}px de haut), portail ${checks.touchTargetsPortal?.total} controles, seuil 24px.`,
     },
     contentStates: {
       loading: { status: 'pass', evidence: 'Artifact 09-loading.png : structure conservee + indicateur de chargement pendant une requete ralentie (fetch differe).' },
@@ -486,7 +551,9 @@ async function main() {
       error: { status: 'pass', evidence: `Artifact 10-error.png : echec API force, message produit "${(checks.errorMessage || '').slice(0, 90)}" et bouton Reessayer verifie (recuperation OK : ${checks.errorRecovery === true}).` },
       partial: { status: 'pass', evidence: 'Artifact 15-partial-overview.png : cle fournisseur absente, avertissement explicite, reste du panneau consultable.' },
       success: { status: 'pass', evidence: 'Artifact 08-success-new-key.png : creation de cle confirmee, cle affichee une seule fois avec action de copie.' },
-      permission: { status: 'pass', evidence: 'Artifacts 01/02-permission-login-*.png : sans session, seul l\'ecran de connexion est accessible (limite d\'acces expliquee).' },
+      permission: { status: 'pass', evidence: 'Artifacts 01/02-permission-login-*.png : sans session, seul l\'ecran de connexion est accessible (limite d\'acces expliquee). Artifact 18-public-portal-login-desktop.png : le portail exige la cle derivee et ne montre aucune donnee sans session.' },
+      'public': { status: 'pass', evidence: 'Artifacts 16/17-public-landing-*.png : site public, statut de la passerelle en direct, exemple d\'echange API et parcours de branchement.' },
+      portal: { status: 'pass', evidence: `Artifacts 19/20-public-portal-*.png : espace utilisateur connecte (${checks.touchTargetsPortal?.total ?? 0} controles tactiles, tableaux contenus) avec quotas, graphique 30 jours et historique.` },
     },
     renderedEvidence: artifacts,
   };
@@ -503,6 +570,7 @@ async function main() {
   console.log('labels manquants:', checks.labels);
   console.log('reducedMotion:', checks.reducedMotion);
   console.log('touchTargets:', checks.touchTargets);
+  console.log('touchTargetsPortal:', checks.touchTargetsPortal);
   console.log('overflow:', checks.overflow);
   console.log('erreurs JS inattendues:', jsErrorsUnexpected);
 
@@ -512,6 +580,7 @@ async function main() {
     || !checks.reducedMotion?.scanlinesHidden
     || mobileOverflowFailures.length > 0
     || (checks.touchTargets?.tooSmall?.length ?? 1) > 0
+    || (checks.touchTargetsPortal?.tooSmall?.length ?? 0) > 0
     || checks.errorRecovery !== true
     || jsErrorsUnexpected.length > 0;
 

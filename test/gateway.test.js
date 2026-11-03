@@ -208,12 +208,38 @@ test('healthz repond et voit la cle fournisseur', async () => {
   assert.equal(body.providerConfigured, true);
 });
 
-test('le panneau est servi sur /', async () => {
-  const res = await fetch(`${base}/`);
-  assert.equal(res.status, 200);
-  assert.match(res.headers.get('content-type'), /text\/html/);
-  const html = await res.text();
-  assert.match(html, /DeepSeek Gateway/);
+test('les trois surfaces web sont servies : site public, console admin, espace utilisateur', async () => {
+  const landing = await fetch(`${base}/`);
+  assert.equal(landing.status, 200);
+  assert.match(landing.headers.get('content-type'), /text\/html/);
+  const landingHtml = await landing.text();
+  assert.match(landingHtml, /DeepSeek Gateway/);
+  assert.match(landingHtml, /partagée sous contrôle/);
+
+  const admin = await fetch(`${base}/admin`);
+  assert.equal(admin.status, 200);
+  assert.match(await admin.text(), /Console d'administration/);
+
+  const portal = await fetch(`${base}/portal`);
+  assert.equal(portal.status, 200);
+  assert.match(await portal.text(), /Mon espace/);
+
+  const robots = await fetch(`${base}/robots.txt`);
+  assert.equal(robots.status, 200);
+  assert.match(await robots.text(), /Disallow: \//);
+});
+
+test('les assets texte sont servis compresses (gzip) avec cache navigateur', async () => {
+  const res = await new Promise((resolve, reject) => {
+    http.get(`${base}/assets/styles.css`, { headers: { 'accept-encoding': 'gzip' } }, (response) => {
+      response.resume();
+      resolve(response);
+    }).on('error', reject);
+  });
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.headers['content-encoding'], 'gzip');
+  assert.match(String(res.headers['cache-control']), /max-age=300/);
+  assert.match(String(res.headers['vary']), /accept-encoding/i);
 });
 
 test('l API admin exige une session', async () => {

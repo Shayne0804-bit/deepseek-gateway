@@ -3,9 +3,11 @@ import fs from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import { APP_VERSION, loadConfig } from './config.js';
 import {
   cleanupAdminSessions,
+  cleanupPortalSessions,
   closeDb,
   deleteUsageLogsBefore,
   getSetting,
@@ -14,6 +16,7 @@ import {
 } from './db.js';
 import { bootstrapAdmin, migrateProviderSecret, resolveProviderConfig } from './settings.js';
 import { createAdminApi } from './admin-api.js';
+import { createPortalApi } from './portal-api.js';
 import { createProxyHandler, isProxyPath } from './proxy.js';
 import { DEFAULT_PRICING } from './pricing.js';
 import { IpRateLimiter } from './limits.js';
@@ -52,12 +55,33 @@ export function createLogger(level = 'info', format = 'text') {
 }
 
 const ASSETS = {
-  '/': { file: 'index.html', type: 'text/html; charset=utf-8' },
-  '/index.html': { file: 'index.html', type: 'text/html; charset=utf-8' },
+  // Site public
+  '/': { file: 'landing.html', type: 'text/html; charset=utf-8' },
+  '/index.html': { file: 'landing.html', type: 'text/html; charset=utf-8' },
+  '/assets/landing.js': { file: 'landing.js', type: 'text/javascript; charset=utf-8' },
+  // Console d'administration
+  '/admin': { file: 'index.html', type: 'text/html; charset=utf-8' },
+  '/admin/': { file: 'index.html', type: 'text/html; charset=utf-8' },
   '/assets/app.js': { file: 'app.js', type: 'text/javascript; charset=utf-8' },
+  // Espace utilisateur
+  '/portal': { file: 'portal.html', type: 'text/html; charset=utf-8' },
+  '/portal/': { file: 'portal.html', type: 'text/html; charset=utf-8' },
+  '/assets/portal.js': { file: 'portal.js', type: 'text/javascript; charset=utf-8' },
+  // Communs
   '/assets/styles.css': { file: 'styles.css', type: 'text/css; charset=utf-8' },
   '/favicon.svg': { file: 'favicon.svg', type: 'image/svg+xml' },
 };
+
+// Compression des assets texte (sans dependance) : cache par fichier.
+const gzipCache = new Map();
+
+function gzipAsset(asset, buffer) {
+  const cached = gzipCache.get(asset.file);
+  if (cached && cached.rawSize === buffer.length) return cached.gz;
+  const gz = zlib.gzipSync(buffer);
+  gzipCache.set(asset.file, { rawSize: buffer.length, gz });
+  return gz;
+}
 
 function serveAsset(req, res, config, asset) {
   fs.readFile(path.join(config.publicDir, asset.file), (err, buffer) => {
@@ -65,13 +89,21 @@ function serveAsset(req, res, config, asset) {
       sendJson(res, 404, { error: { message: 'Fichier introuvable.', type: 'invalid_request_error', code: 'not_found' } });
       return;
     }
-    res.writeHead(200, {
+    const isHtml = asset.type.startsWith('text/html');
+    const headers = {
       'content-type': asset.type,
-      'content-length': buffer.length,
-      'cache-control': 'no-cache',
-    });
+      'cache-control': isHtml ? 'no-cache' : 'public, max-age=300',
+      vary: 'accept-encoding',
+    };
+    let payload = buffer;
+    if (/\bgzip\b/.test(String(req.headers['accept-encoding'] ?? ''))) {
+      payload = gzipAsset(asset, buffer);
+      headers['content-encoding'] = 'gzip';
+    }
+    headers['content-length'] = payload.length;
+    res.writeHead(200, headers);
     if (req.method === 'HEAD') res.end();
-    else res.end(buffer);
+    else res.end(payload);
   });
 }
 
@@ -155,6 +187,7 @@ export async function startGateway(overrides = {}) {
   const resolveProvider = (database, cfg) => resolveProviderConfig(database, cfg);
   migrateProviderSecret(db, config, log);
   const adminApi = createAdminApi({ config, db, log });
+  const portalApi = createPortalApi({ config, db, log });
   const proxyHandler = createProxyHandler({ config, db, log, resolveProvider });
   const ipLimiter = new IpRateLimiter();
 
@@ -201,7 +234,9 @@ export async function startGateway(overrides = {}) {
     const pathname = url.pathname.replace(/\/{2,}/g, '/');
 
     const isApi = isProxyPath(pathname);
-    if (isApi || pathname.startsWith('/admin/api')) {
+    const isAdminApi = pathname.startsWith('/admin/api');
+    const isPortalApi = pathname.startsWith('/portal/api');
+    if (isApi || isAdminApi || isPortalApi) {
       const limited = ipLimiter.hit(clientIp(req, config.trustProxy), config.ipRateLimitPerMin);
       if (!limited.ok) {
         log.warn(`[${requestId}] Limite IP atteinte (${clientIp(req, config.trustProxy)})`);
@@ -235,18 +270,32 @@ export async function startGateway(overrides = {}) {
       return;
     }
 
-    if (pathname.startsWith('/admin/api')) {
+    if (pathname === '/robots.txt') {
+      res.writeHead(200, {
+        'content-type': 'text/plain; charset=utf-8',
+        'cache-control': 'public, max-age=3600',
+      });
+      res.end('User-agent: *\nDisallow: /\n');
+      return;
+    }
+
+    if (isAdminApi) {
       await adminApi.handle(req, res, url, pathname);
       return;
     }
 
-    if (pathname.startsWith('/admin')) {
-      sendJson(res, 404, { error: { message: 'Page introuvable.', type: 'invalid_request_error', code: 'not_found' } });
+    if (isPortalApi) {
+      await portalApi.handle(req, res, url, pathname);
       return;
     }
 
     if ((req.method === 'GET' || req.method === 'HEAD') && ASSETS[pathname]) {
       serveAsset(req, res, config, ASSETS[pathname]);
+      return;
+    }
+
+    if (pathname.startsWith('/admin') || pathname.startsWith('/portal')) {
+      sendJson(res, 404, { error: { message: 'Page introuvable.', type: 'invalid_request_error', code: 'not_found' } });
       return;
     }
 
@@ -257,7 +306,7 @@ export async function startGateway(overrides = {}) {
 
     sendJson(res, 404, {
       error: {
-        message: 'Route inconnue. L API est disponible sous /v1/... et le panneau sur /.',
+        message: 'Route inconnue. L API est disponible sous /v1/... ; le site sur / et la console sur /admin.',
         type: 'invalid_request_error',
         code: 'not_found',
       },
@@ -304,7 +353,9 @@ export async function startGateway(overrides = {}) {
   // Nettoyage periodique : sessions, fenetres de debit, retention des journaux.
   const maintenance = setInterval(() => {
     try {
-      cleanupAdminSessions(db, new Date().toISOString());
+      const nowIso = new Date().toISOString();
+      cleanupAdminSessions(db, nowIso);
+      cleanupPortalSessions(db, nowIso);
       ipLimiter.prune();
       if (config.usageRetentionDays > 0) {
         const cutoff = new Date(Date.now() - config.usageRetentionDays * 86_400_000).toISOString();
@@ -380,7 +431,9 @@ export function printStartupBanner(started, log = console.log) {
   log('  ============================================================');
   log('   DeepSeek Gateway - partage de cle API avec quotas');
   log('  ============================================================');
-  log(`   Panneau       : http://${displayHost}:${port}/`);
+  log(`   Site public   : http://${displayHost}:${port}/`);
+  log(`   Espace perso  : http://${displayHost}:${port}/portal`);
+  log(`   Console admin : http://${displayHost}:${port}/admin`);
   log(`   API (ami)     : http://${displayHost}:${port}/v1`);
   if (httpsPort) {
     log(`   HTTPS         : https://${displayHost}:${httpsPort}/`);

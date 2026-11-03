@@ -57,6 +57,14 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
   expires_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS portal_sessions (
+  token_hash TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_portal_expires ON portal_sessions (expires_at);
+
 CREATE TABLE IF NOT EXISTS admin_audit (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   created_at TEXT NOT NULL,
@@ -497,4 +505,64 @@ export function deleteAllAdminSessions(db) {
 
 export function cleanupAdminSessions(db, nowIso) {
   db.prepare('DELETE FROM admin_sessions WHERE expires_at <= ?').run(nowIso);
+}
+
+/* ----------------------------- portal sessions -------------------------- */
+
+export function insertPortalSession(db, tokenHash, clientId, createdAt, expiresAt) {
+  db.prepare(
+    'INSERT INTO portal_sessions (token_hash, client_id, created_at, expires_at) VALUES (?, ?, ?, ?)',
+  ).run(tokenHash, clientId, createdAt, expiresAt);
+}
+
+export function getPortalSession(db, tokenHash) {
+  return db.prepare('SELECT * FROM portal_sessions WHERE token_hash = ?').get(tokenHash);
+}
+
+export function deletePortalSession(db, tokenHash) {
+  db.prepare('DELETE FROM portal_sessions WHERE token_hash = ?').run(tokenHash);
+}
+
+export function cleanupPortalSessions(db, nowIso) {
+  db.prepare('DELETE FROM portal_sessions WHERE expires_at <= ?').run(nowIso);
+}
+
+/* ------------------------ usage par client (portail) -------------------- */
+
+export function countClientUsageSince(db, clientId, sinceIso) {
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS requests,
+              COALESCE(SUM(total_tokens), 0) AS tokens,
+              COALESCE(SUM(cost_usd), 0) AS cost
+         FROM usage_logs
+        WHERE client_id = ? AND created_at >= ?`,
+    )
+    .get(clientId, sinceIso);
+  return {
+    requests: Number(row.requests),
+    tokens: Number(row.tokens),
+    cost: Math.round(Number(row.cost) * 1e6) / 1e6,
+  };
+}
+
+export function clientUsageSeriesSince(db, clientId, sinceIso) {
+  return db
+    .prepare(
+      `SELECT substr(created_at, 1, 10) AS day,
+              COUNT(*) AS requests,
+              COALESCE(SUM(total_tokens), 0) AS tokens,
+              COALESCE(SUM(cost_usd), 0) AS cost
+         FROM usage_logs
+        WHERE client_id = ? AND created_at >= ?
+        GROUP BY day
+        ORDER BY day ASC`,
+    )
+    .all(clientId, sinceIso)
+    .map((row) => ({
+      day: row.day,
+      requests: Number(row.requests),
+      tokens: Number(row.tokens),
+      cost: Math.round(Number(row.cost) * 1e6) / 1e6,
+    }));
 }

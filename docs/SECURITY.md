@@ -32,6 +32,10 @@ procédures d'exploitation pour un déploiement en production.
   la modification, mot de passe initial aléatoire de 16 caractères.
 - Sessions : jeton 256 bits haché en base, cookie `HttpOnly`, `SameSite=Strict`,
   `Secure` en HTTPS, expiration configurable (12 h par défaut).
+- **Portail utilisateur** : connexion par clé dérivée (`sk-dsk-…`), session dédiée
+  7 jours (cookie `HttpOnly`, `SameSite=Strict`), rate-limit des tentatives par IP,
+  aucune route d'administration accessible avec une session portail, et données
+  limitées à la clé authentifiée.
 - Verrouillage : 10 tentatives/15 min par IP ; échecs journalisés (audit).
 - Changement de mot de passe : toutes les sessions sont invalidées.
 
@@ -56,7 +60,8 @@ procédures d'exploitation pour un déploiement en production.
 - En-tête `x-request-id` sur chaque réponse, repris dans les logs.
 - `GET /healthz` et `GET /readyz` (sans authentification, sans donnée sensible).
 - `LOG_FORMAT=json` pour les agrégateurs (Railway/Docker/Loki…).
-- **Journal d'audit** des actions d'administration (connexion, clés, réglages, mot de passe), consultable dans le panneau.
+- **Journal d'audit** des actions d'administration (connexion, clés, réglages, mot de passe) et
+  des connexions/déconnexions du portail, consultable dans le panneau.
 - Export CSV des journaux d'usage pour la comptabilité.
 
 ## Checklist de mise en production

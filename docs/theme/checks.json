@@ -1,6 +1,227 @@
 {
   "contrast": [
     {
+      "selector": ".hero h1",
+      "ratio": 17.57,
+      "required": 3,
+      "size": 46,
+      "weight": 600,
+      "text": "Votre clé DeepSeek, partagée sous contrô",
+      "page": "public-landing"
+    },
+    {
+      "selector": ".hero-lede",
+      "ratio": 17.57,
+      "required": 4.5,
+      "size": 16,
+      "weight": 400,
+      "text": "Une clé originale reste sur le serveur. ",
+      "page": "public-landing"
+    },
+    {
+      "selector": ".hero-kicker",
+      "ratio": 12.69,
+      "required": 4.5,
+      "size": 12,
+      "weight": 400,
+      "text": "Passerelle auto-hébergée · API DeepSeek",
+      "page": "public-landing"
+    },
+    {
+      "selector": ".site-nav a",
+      "ratio": 8.74,
+      "required": 4.5,
+      "size": 12,
+      "weight": 400,
+      "text": "Capacités",
+      "page": "public-landing"
+    },
+    {
+      "selector": ".hero-facts dt",
+      "ratio": 4.95,
+      "required": 4.5,
+      "size": 11,
+      "weight": 400,
+      "text": "clés",
+      "page": "public-landing"
+    },
+    {
+      "selector": ".hero-facts dd",
+      "ratio": 17.57,
+      "required": 4.5,
+      "size": 12.5,
+      "weight": 400,
+      "text": "dérivées, révocables",
+      "page": "public-landing"
+    },
+    {
+      "selector": ".transcript-body",
+      "ratio": 16.66,
+      "required": 4.5,
+      "size": 12.5,
+      "weight": 400,
+      "text": "$ curl https://votre-domaine/v1/chat/com",
+      "page": "public-landing"
+    },
+    {
+      "selector": ".site-cta p",
+      "ratio": 16.66,
+      "required": 4.5,
+      "size": 14.5,
+      "weight": 400,
+      "text": "Les clés sont émises par l'administrateu",
+      "page": "public-landing"
+    },
+    {
+      "selector": ".site-footer",
+      "ratio": 4.95,
+      "required": 4.5,
+      "size": 11.5,
+      "weight": 400,
+      "text": "DeepSeek Gateway · passerelle auto-héber",
+      "page": "public-landing"
+    },
+    {
+      "selector": ".portal-login-copy h1",
+      "ratio": 17.57,
+      "required": 3,
+      "size": 40,
+      "weight": 600,
+      "text": "Mon espace",
+      "page": "portal-login"
+    },
+    {
+      "selector": ".portal-login-copy p",
+      "ratio": 17.57,
+      "required": 4.5,
+      "size": 12,
+      "weight": 400,
+      "text": "Espace utilisateur",
+      "page": "portal-login"
+    },
+    {
+      "selector": ".portal-preview .ledger-key",
+      "ratio": 12.69,
+      "required": 4.5,
+      "size": 12,
+      "weight": 400,
+      "text": "quotas",
+      "page": "portal-login"
+    },
+    {
+      "selector": ".portal-preview .ledger-row dd",
+      "ratio": 17.57,
+      "required": 4.5,
+      "size": 13,
+      "weight": 400,
+      "text": "Tokens, requêtes et coût restants pour l",
+      "page": "portal-login"
+    },
+    {
+      "selector": "#login-form .field > span",
+      "ratio": 8.74,
+      "required": 4.5,
+      "size": 11,
+      "weight": 600,
+      "text": "Clé API",
+      "page": "portal-login"
+    },
+    {
+      "selector": "#login-form .btn-primary",
+      "ratio": 11.8,
+      "required": 4.5,
+      "size": 11.5,
+      "weight": 600,
+      "text": "Ouvrir mon espace",
+      "page": "portal-login"
+    },
+    {
+      "selector": "#login-form .small",
+      "missing": true,
+      "page": "portal-login"
+    },
+    {
+      "selector": ".portal-head h1",
+      "ratio": 17.57,
+      "required": 3,
+      "size": 32,
+      "weight": 600,
+      "text": "Mon espace",
+      "page": "portal-dashboard"
+    },
+    {
+      "selector": ".portal-head .small",
+      "ratio": 8.74,
+      "required": 4.5,
+      "size": 11.5,
+      "weight": 400,
+      "text": "Léa — projet perso · clé sk-dsk-na48z… ·",
+      "page": "portal-dashboard"
+    },
+    {
+      "selector": ".quota-card .stat-label",
+      "ratio": 4.95,
+      "required": 4.5,
+      "size": 10.5,
+      "weight": 400,
+      "text": "Tokens",
+      "page": "portal-dashboard"
+    },
+    {
+      "selector": ".quota-card .stat-value",
+      "ratio": 17.57,
+      "required": 3,
+      "size": 24,
+      "weight": 700,
+      "text": "0 / 2.0 M",
+      "page": "portal-dashboard"
+    },
+    {
+      "selector": ".quota-card .small",
+      "ratio": 8.74,
+      "required": 4.5,
+      "size": 11.5,
+      "weight": 400,
+      "text": "0% utilisé · restant : 2.0 M",
+      "page": "portal-dashboard"
+    },
+    {
+      "selector": ".spec-row dt",
+      "ratio": 4.95,
+      "required": 4.5,
+      "size": 11.5,
+      "weight": 400,
+      "text": "période",
+      "page": "portal-dashboard"
+    },
+    {
+      "selector": ".spec-row dd",
+      "ratio": 17.57,
+      "required": 4.5,
+      "size": 13,
+      "weight": 400,
+      "text": "par mois",
+      "page": "portal-dashboard"
+    },
+    {
+      "selector": ".panel-head h2",
+      "ratio": 17.57,
+      "required": 4.5,
+      "size": 13,
+      "weight": 600,
+      "text": "Consommation — 30 derniers jours",
+      "page": "portal-dashboard"
+    },
+    {
+      "selector": ".portal-footer",
+      "ratio": 4.95,
+      "required": 4.5,
+      "size": 11.5,
+      "weight": 400,
+      "text": "DeepSeek Gateway v2.1.0\n        Les donn",
+      "page": "portal-dashboard"
+    },
+    {
       "selector": "#login-view .login-kicker",
       "ratio": 4.95,
       "required": 4.5,
@@ -142,7 +363,7 @@
       "required": 4.5,
       "size": 11.5,
       "weight": 600,
-      "text": "Se déconnecter",
+      "text": "Espace utilisateur",
       "page": "clients"
     },
     {
@@ -207,8 +428,8 @@
       "outline": "solid 2px"
     },
     {
-      "tag": "BUTTON",
-      "text": "Se déconnecter",
+      "tag": "A",
+      "text": "← Site public",
       "visible": true,
       "outline": "solid 2px"
     }
@@ -219,12 +440,22 @@
     "navTransition": "1e-06s"
   },
   "touchTargets": {
-    "total": 29,
+    "total": 30,
     "tooSmall": [],
     "minHeight": 27,
     "minWidth": 59
   },
   "overflow": {
+    "mobile:landing": {
+      "docWidth": 390,
+      "viewport": 390,
+      "tablesContained": true
+    },
+    "mobile:portal": {
+      "docWidth": 390,
+      "viewport": 390,
+      "tablesContained": true
+    },
     "desktop": {
       "docWidth": 1440,
       "viewport": 1440,
@@ -255,6 +486,10 @@
       "viewport": 390,
       "tablesContained": true
     }
+  },
+  "touchTargetsPortal": {
+    "total": 7,
+    "tooSmall": []
   },
   "errorMessage": "La passerelle ne répond pas. Vérifiez qu'elle est démarrée, puis réessayez.",
   "errorRecovery": true

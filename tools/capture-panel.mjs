@@ -170,6 +170,16 @@ async function main() {
     }
   }
 
+  // Session portail pour les captures de l'espace utilisateur.
+  const portalLogin = await fetch(`${ADMIN_URL}/portal/api/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-requested-with': 'dsk-portal' },
+    body: JSON.stringify({ key: clients[0].key }),
+  });
+  if (!portalLogin.ok) throw new Error(`Connexion portail : HTTP ${portalLogin.status}`);
+  const portalCookie = portalLogin.headers.getSetCookie()[0].split(';')[0];
+  const portalToken = portalCookie.slice(portalCookie.indexOf('=') + 1);
+
   /* ------------------------------ Chrome ------------------------------ */
   const profile = fs.mkdtempSync(path.join(process.env.TEMP, 'dsg-chrome-'));
   const chrome = spawn(CHROME, [
@@ -257,15 +267,49 @@ async function main() {
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
-  // 1. Page de connexion (sans cookie).
+  async function setViewport(width, height, mobile = false) {
+    await s('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile });
+  }
+
+  // 0. Site public (desktop + mobile).
   await navigate(`${ADMIN_URL}/`);
+  await waitFor("document.querySelector('.hero h1') !== null");
+  await sleep(500);
+  await screenshot('landing-desktop.png');
+  await setViewport(390, 844, true);
+  await navigate(`${ADMIN_URL}/`);
+  await waitFor("document.querySelector('.hero h1') !== null");
+  await sleep(400);
+  await screenshot('landing-mobile.png');
+  await setViewport(1440, 900);
+
+  // 0b. Espace utilisateur : connexion puis tableau de bord.
+  await navigate(`${ADMIN_URL}/portal`);
+  await waitFor("document.querySelector('#login-view') && !document.querySelector('#login-view').classList.contains('hidden')");
+  await sleep(300);
+  await screenshot('portal-login.png');
+
+  await s('Network.setCookie', { name: 'dsk_portal', value: portalToken, domain: '127.0.0.1', path: '/', httpOnly: true });
+  await navigate(`${ADMIN_URL}/portal`);
+  await waitFor("document.querySelector('#portal-app') && !document.querySelector('#portal-app').classList.contains('hidden') && document.querySelector('#portal-quotas').innerText.trim().length > 10");
+  await sleep(800);
+  await screenshot('portal-dashboard.png');
+  await setViewport(390, 844, true);
+  await navigate(`${ADMIN_URL}/portal`);
+  await waitFor("document.querySelector('#portal-quotas') && document.querySelector('#portal-quotas').innerText.trim().length > 10");
+  await sleep(700);
+  await screenshot('portal-mobile.png');
+  await setViewport(1440, 900);
+
+  // 1. Page de connexion admin (sans cookie).
+  await navigate(`${ADMIN_URL}/admin`);
   await waitFor("!document.querySelector('#login-view').classList.contains('hidden')");
   await sleep(300);
   await screenshot('panel-login.png');
 
   // 2. Session admin puis vues principales.
   await s('Network.setCookie', { name: 'dsk_admin', value: sessionToken, domain: '127.0.0.1', path: '/', httpOnly: true });
-  await navigate(`${ADMIN_URL}/`);
+  await navigate(`${ADMIN_URL}/admin`);
   await waitFor("document.querySelector('#view') && document.querySelector('#view').innerText.trim().length > 40");
   await sleep(700);
   await screenshot('panel-overview.png');

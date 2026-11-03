@@ -1,16 +1,16 @@
 {
-  "contract": "Panneau d'administration d'une passerelle API DeepSeek (usage quotidien par un administrateur unique). Job principal : scanner les cles, quotas et depenses; actions primaires : creer/regenerer une cle, ajuster un quota. Direction : PHOSPHOR OPS — console terminal verte, monospace, dense, angles courts, prompts \">\" et badges entre crochets. Viewports cibles : 1440x900 (desktop) et 390x844 (mobile). Contraintes : aucune dependance ajoutee, contraste WCAG AA, focus visible, reduced-motion respecte, pas de debordement horizontal.",
+  "contract": "Produit web d'une passerelle API DeepSeek auto-hebergee, en trois surfaces : site public (presentation et statut), espace utilisateur (quotas et consommation de sa cle) et console d'administration (cles, quotas, journaux, audit, reglages). Job principal : comprendre le produit et l'etat du service, puis pour un utilisateur suivre ses quotas, pour l'administrateur scanner les cles et depenses. Actions primaires : ouvrir mon espace, creer/regenerer une cle, ajuster un quota. Direction : PHOSPHOR OPS — console terminal verte, monospace, dense, angles courts, prompts \">\" et badges entre crochets ; titres publics en casse de phrase pour distinguer le site de la console. Viewports cibles : 1440x900 (desktop) et 390x844 (mobile). Contraintes : aucune dependance ajoutee, contraste WCAG AA, focus visible, reduced-motion respecte, pas de debordement horizontal.",
   "targetViewports": [
     "1440x900",
     "390x844"
   ],
   "accessibility": {
     "status": "pass",
-    "evidence": "Contraste verifie sur 21 couples texte/fond (login + clients) : 0 echec(s). Focus clavier : 6/6 arrets avec indicateur visible (anneau vert). Tous les champs de formulaire ont un libelle. Reduced-motion : scanlines masquees et transitions neutralisees (1e-06s)."
+    "evidence": "Contraste verifie sur 46 couples texte/fond (site public, portail, connexion admin + clients) : 0 echec(s). Focus clavier : 6/6 arrets avec indicateur visible (anneau vert). Tous les champs de formulaire ont un libelle. Reduced-motion : scanlines masquees et transitions neutralisees (1e-06s)."
   },
   "responsive": {
     "status": "pass",
-    "evidence": "5 vues teste��es en 390x844 et 1440x900 : largeur document <= viewport partout (aucun debordement), tableaux contenus dans .table-wrap scrollable. Cibles tactiles mobiles : 29 controles, minimum 27px de haut (seuil 24px)."
+    "evidence": "Surfaces teste��es en 390x844 et 1440x900 (site public, portail, 5 vues admin) : largeur document <= viewport partout (aucun debordement), tableaux contenus dans .table-wrap scrollable. Cibles tactiles mobiles : admin 30 controles (min 27px de haut), portail 7 controles, seuil 24px."
   },
   "contentStates": {
     "loading": {
@@ -35,10 +35,43 @@
     },
     "permission": {
       "status": "pass",
-      "evidence": "Artifacts 01/02-permission-login-*.png : sans session, seul l'ecran de connexion est accessible (limite d'acces expliquee)."
+      "evidence": "Artifacts 01/02-permission-login-*.png : sans session, seul l'ecran de connexion est accessible (limite d'acces expliquee). Artifact 18-public-portal-login-desktop.png : le portail exige la cle derivee et ne montre aucune donnee sans session."
+    },
+    "public": {
+      "status": "pass",
+      "evidence": "Artifacts 16/17-public-landing-*.png : site public, statut de la passerelle en direct, exemple d'echange API et parcours de branchement."
+    },
+    "portal": {
+      "status": "pass",
+      "evidence": "Artifacts 19/20-public-portal-*.png : espace utilisateur connecte (7 controles tactiles, tableaux contenus) avec quotas, graphique 30 jours et historique."
     }
   },
   "renderedEvidence": [
+    {
+      "viewport": "1440x900",
+      "artifact": "16-public-landing-desktop.png",
+      "observation": "Site public en 1440x900 : promesse produit, exemple reel d'echange API, statut de la passerelle, navigation vers l'espace utilisateur et la console admin."
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "17-public-landing-mobile.png",
+      "observation": "Site public en 390x844 : navigation repliee, hero lisible, CTAs empiles, aucun debordement horizontal."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "18-public-portal-login-desktop.png",
+      "observation": "Portail utilisateur en 1440x900 : connexion par cle derivee, apercu de ce que l'utilisateur pourra consulter, aucune donnee d'administration."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "19-public-portal-dashboard-desktop.png",
+      "observation": "Tableau de bord utilisateur en 1440x900 : quotas de la cle, graphique 30 jours, limites, historique des requetes et exemples de branchement."
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "20-public-portal-mobile.png",
+      "observation": "Espace utilisateur en 390x844 : cartes de quota empilees, tableaux contenus, controles tactiles >= 24 px, aucun debordement."
+    },
     {
       "viewport": "1440x900",
       "artifact": "01-permission-login-desktop.png",

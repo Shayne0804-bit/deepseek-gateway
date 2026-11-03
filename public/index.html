@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
+  <a class="skip-link" href="#main-view">Aller au contenu</a>
   <!-- ============================ Connexion ============================ -->
   <div id="login-view" class="login-screen hidden">
     <form class="login-card" data-form="login" autocomplete="on">
@@ -53,17 +54,19 @@
           <span class="dot" id="provider-dot"></span>
           <span class="text" id="provider-text">fournisseur…</span>
         </div>
+        <a class="small sidebar-link" href="/">← Site public</a>
         <div class="small" style="color:var(--muted-2);padding-left:6px">v<span id="app-version">1.0.0</span></div>
       </div>
     </aside>
 
-    <main class="main">
+    <main class="main" id="main-view">
       <header class="topbar">
         <div>
           <h1 id="page-title">Vue d'ensemble</h1>
           <div class="topbar-sub" id="page-sub"></div>
         </div>
         <div class="topbar-actions">
+          <a class="btn btn-ghost" href="/portal">Espace utilisateur</a>
           <button class="btn btn-ghost" data-action="logout">Se déconnecter</button>
         </div>
       </header>

@@ -1,6 +1,6 @@
 {
   "name": "deepseek-gateway",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "private": true,
   "description": "Passerelle de partage d'une cle API DeepSeek : cles derivees a quota, panneau d'administration, streaming SSE.",
   "type": "module",

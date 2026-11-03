@@ -1,11 +1,18 @@
 # DeepSeek Gateway
 
 **Partagez votre clé API DeepSeek avec un ami, sans lui donner votre clé et sans perdre le contrôle.**
-Votre clé originale reste sur votre machine. Vous créez pour votre ami une **clé dérivée** (`sk-dsk-…`)
+Votre clé originale reste sur votre machine. Vous créez pour chaque personne une **clé dérivée** (`sk-dsk-…`)
 avec ses propres quotas : tokens, requêtes, coût, débit, modèles autorisés, date d'expiration.
-Un **panneau web** en français permet de tout gérer et de suivre la consommation en temps réel.
 
-![Vue d'ensemble du panneau](docs/panel-overview.png)
+Le produit tient en **trois surfaces web** :
+
+| Surface | URL | Public |
+|---|---|---|
+| **Site public** | `/` | Présentation, statut de la passerelle, branchement d'un client. |
+| **Espace utilisateur** | `/portal` | Le porteur d'une clé voit ses quotas, sa consommation et ses requêtes (connexion par clé). |
+| **Console d'administration** | `/admin` | Gestion des clés, journaux, audit, facturation, réglages. |
+
+![Site public](docs/landing-desktop.png)
 
 ---
 
@@ -45,8 +52,12 @@ Un **panneau web** en français permet de tout gérer et de suivre la consommati
   **et pour le streaming SSE** (le dernier événement contient les statistiques). En cas de
   déconnexion, une estimation est enregistrée pour éviter les contournements de quota.
 - **Coût estimé** aux tarifs DeepSeek, avec distinction **heures pleines / heures creuses**.
-- **Panneau web complet** : tableau de bord, gestion des clés, journaux des requêtes, réglages,
-  guide prêt à envoyer à votre ami.
+- **Panneau web complet** : tableau de bord, gestion des clés, journaux des requêtes, audit,
+  réglages, budget global, export CSV, guide prêt à envoyer à votre ami.
+- **Site public + espace utilisateur** : page d'accueil avec statut en direct, et portail
+  d'auto-service où le porteur d'une clé consulte ses quotas (tokens / requêtes / USD), sa
+  consommation sur 30 jours, ses dernières requêtes et les exemples de branchement.
+  Réservé à sa clé : aucune donnée des autres utilisateurs ni des réglages admin.
 - **Compatible OpenAI et Anthropic** : `/v1/chat/completions`, `/v1/responses`, `/beta/completions`,
   `/v1/models`, et `/anthropic/...` (Chat Completions, Responses API, FIM, format compatible Claude).
 - **Claude Code prêt à l'emploi** : les requêtes Anthropic `/v1/messages` (envoyées par Claude Code)
@@ -61,6 +72,8 @@ Un **panneau web** en français permet de tout gérer et de suivre la consommati
 - **Interface console « terminal »** : thème vert phosphore, typographie monospace, prompts `>` et
   badges entre crochets ; états chargement / vide / erreur / partiel / succès / permission soignés,
   focus clavier visible, contraste WCAG AA et `prefers-reduced-motion` vérifiés.
+- **Site public et portail accessibles** : statut en direct, contenu factuel, navigation claire,
+  assets gzip, zéro dépendance tierce. Audit qualité complet : [docs/QUALITY-AUDIT.md](docs/QUALITY-AUDIT.md).
 - **Durcissement production** : clé fournisseur **chiffrée au repos** (AES-256-GCM),
   erreurs internes masquées (`x-request-id`), HSTS/Permissions-Policy, rate-limit par IP,
   plafond global de requêtes simultanées, **journal d'audit** des actions admin,
@@ -73,7 +86,7 @@ Un **panneau web** en français permet de tout gérer et de suivre la consommati
 ```
   Votre ami                        Vous
      │                              │
-     │  clé dérivée sk-dsk-…        │  panneau web http://localhost:8787
+     │  clé dérivée sk-dsk-…        │  console /admin · espace /portal · site /
      ▼                              ▼
 ┌──────────────────────────────────────────────────────┐
 │                  DeepSeek Gateway                     │
@@ -104,10 +117,12 @@ Données stockées localement dans `data/gateway.db` (SQLite). Aucun service tie
    ```powershell
    node server.js
    ```
-4. **Ouvrez le panneau** : <http://127.0.0.1:8787>
+4. **Ouvrez la console d'administration** : <http://127.0.0.1:8787/admin>
    - Mot de passe : la valeur de `ADMIN_PASSWORD` si vous en avez défini une,
    - sinon un mot de passe aléatoire a été généré et affiché dans la console ;
      il est aussi écrit dans `data/admin-password.txt`. Changez-le dans **Réglages**.
+   - Le site public est sur <http://127.0.0.1:8787/> et l'espace utilisateur sur
+     <http://127.0.0.1:8787/portal> (connexion avec une clé dérivée).
 5. **Créez une clé** dans **Clés & quotas** → **+ Nouvelle clé**, choisissez les quotas,
    puis copiez la clé (elle ne sera plus jamais affichée en entier).
 6. **Envoyez à votre ami** l'URL de base et la clé (voir [Utilisation côté ami](#utilisation-côté-ami)).
@@ -170,11 +185,33 @@ Le panneau ne conserve que son empreinte `sk-dsk-abcde…` et un hachage en base
 Actions disponibles à tout moment : **Modifier**, **Désactiver/Activer**, **Réinitialiser** les compteurs,
 **Nouvelle clé** (l'ancienne cesse immédiatement de fonctionner), **Supprimer** (efface aussi ses journaux).
 
+## Site public et espace utilisateur
+
+Le site public (`/`) présente le produit et l'état du service ; il ne contient aucune donnée
+d'administration ni secret. La console (`/admin`) reste réservée au mot de passe administrateur.
+
+L'espace utilisateur (`/portal`) authentifie le porteur de clé **par sa clé dérivée** (session
+de 7 jours, cookie `HttpOnly`), puis n'expose que **ses** données : quotas restants, consommation,
+30 derniers jours, limites de la clé, dernières requêtes et exemples prêts à copier.
+
+<table>
+<tr>
+<td><img src="docs/portal-login.png" alt="Connexion à l'espace utilisateur par clé API"></td>
+<td><img src="docs/portal-dashboard.png" alt="Tableau de bord utilisateur : quotas, graphique 30 jours, limites, requêtes"></td>
+</tr>
+</table>
+
+Sécurité : la clé n'est jamais stockée en clair côté navigateur ; le portail n'a accès à aucune
+route d'administration ; les tentatives de connexion sont limitées par IP et journalisées.
+
 ## Utilisation côté ami
 
 Votre ami reçoit deux informations :
 - **URL de base** : `https://votre-domaine/v1` (ou `http://VOTRE-IP:8787/v1` en réseau local) ;
 - **clé API** : `sk-dsk-…`.
+
+Il peut aussi ouvrir `https://votre-domaine/portal` (ou `http://127.0.0.1:8787/portal`) avec sa
+clé pour suivre ses quotas et sa consommation, sans passer par vous.
 
 ### cURL
 
@@ -250,6 +287,9 @@ CLAUDE_CODE_SUBAGENT_MODEL=deepseek-flash
 La passerelle accepte l'authentification par `Authorization: Bearer …` **ou** par `x-api-key: …`.
 
 ![Guide prêt à envoyer à votre ami](docs/panel-guide.png)
+
+Votre ami peut aussi se connecter à `https://votre-domaine/portal` avec sa clé : il y voit ses
+quotas, sa consommation sur 30 jours et ses dernières requêtes, sans accéder à l'administration.
 
 ## Limites et quotas disponibles
 
@@ -537,13 +577,14 @@ SESSION_HOURS=12
 
 ### 5. Sécuriser et régler le panneau
 
-1. Ouvrez `https://VOTRE-DOMAINE/` et connectez-vous avec `ADMIN_PASSWORD`.
+1. Ouvrez `https://VOTRE-DOMAINE/admin` et connectez-vous avec `ADMIN_PASSWORD`.
 2. **Réglages** → changez le mot de passe (12+ caractères).
 3. Vérifiez le badge fournisseur « connecté ».
 4. **Clés & quotas** → une clé par utilisateur (tokens/requêtes/USD, période, RPM, modèles autorisés).
 5. **Réglages → Budget global** : plafond mensuel toutes clés confondues (0 = désactivé).
 6. Donnez aux utilisateurs `https://VOTRE-DOMAINE/v1` (ou `…/anthropic` pour Claude Code/Desktop)
-   et leur clé `sk-dsk-…`.
+   et leur clé `sk-dsk-…`. Ils suivent leurs quotas sur `https://VOTRE-DOMAINE/portal`.
+   Le site public est `https://VOTRE-DOMAINE/`.
 
 ### 6. Vérifications production
 
@@ -552,7 +593,8 @@ SESSION_HOURS=12
 | Santé | `GET /healthz` → 200, `providerConfigured: true`, `warnings: []` |
 | Prêt | `GET /readyz` → 200 |
 | En-têtes | HSTS, CSP, `X-Frame-Options: DENY` sur le panneau |
-| Audit | Panneau → **Journal d'audit** : connexions et créations de clés tracées |
+| Surfaces | `/` (site public), `/admin` (console), `/portal` (espace utilisateur) répondent en 200 |
+| Audit | Panneau → **Journal d'audit** : connexions admin et portail, créations de clés tracées |
 | Export | Panneau → **Journaux** → *Exporter CSV* |
 | Redémarrage | *Deployments* → Restart : clés et quotas conservés (volume `/data`) |
 
@@ -621,7 +663,7 @@ Serveur arrêté, copiez le dossier `data/` (ou au minimum `gateway.db`). À cha
 node --test test
 ```
 
-La suite (64 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
+La suite (68 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
 normalisation `usage` OpenAI/Anthropic, quotas (tokens, requêtes, coût, reset de période),
 limites de débit et de concurrence, authentification admin (hash scrypt, sessions),
 chiffrement/hachage des clés dérivées, proxy JSON et **streaming SSE** avec comptage,
@@ -629,8 +671,10 @@ liste de modèles autorisés, plafond `max_tokens`, limite de taille du corps (4
 alias de modèles, **découverte de modèles** (`/v1/models` et `/anthropic/v1/models`),
 **écouteur HTTPS natif** (HTTP + HTTPS en parallèle), compatibilité Claude Code
 (`/v1/messages` → `/anthropic/v1/messages`, alias de modèles), chemins avec slashs multiples,
-erreurs et absence de clé fournisseur, et les garanties production
-(**chiffrement des secrets**, rate-limit IP, budget global, audit, export CSV, HSTS).
+erreurs et absence de clé fournisseur, les garanties production
+(**chiffrement des secrets**, rate-limit IP, budget global, audit, export CSV, HSTS), et le
+**portail utilisateur** (trois surfaces, connexion par clé, isolation des données entre clés,
+déconnexion).
 Les tests utilisent un faux serveur DeepSeek local : **aucun appel réseau réel, aucune clé nécessaire**.
 
 ## Structure du projet
@@ -649,14 +693,18 @@ deepseek-gateway/
 │   ├── limits.js             # rate-limit IP + sémaphore global (production)
 │   ├── secrets.js            # chiffrement AES-256-GCM des secrets au repos
 │   ├── proxy.js              # proxy /v1/... et /anthropic/... (JSON + SSE)
+│   ├── portal-api.js         # API de l'espace utilisateur (/portal/api/...)
 │   ├── admin-api.js          # API REST du panneau (/admin/api/...)
 │   └── http-utils.js         # helpers HTTP, cookies, erreurs, sécurité
-├── public/                   # panneau web (HTML/CSS/JS, sans dépendance)
+├── public/                   # site public, portail et console (HTML/CSS/JS, sans dépendance)
 ├── test/                     # tests automatisés (node --test)
 ├── test/fixtures/tls/        # certificat auto-signé réservé aux tests HTTPS
 ├── docs/SECURITY.md          # politique de sécurité production
 ├── docs/SECURITY-REVIEW.md   # revue de sécurité ECC (findings + statuts)
+├── docs/QUALITY-AUDIT.md     # audit qualité web (perf, a11y, SEO, bonnes pratiques)
 ├── tools/capture-panel.mjs   # captures d'écran de démonstration (dev)
+├── tools/theme-evidence.mjs  # preuves de rendu desktop/mobile + contrôles a11y
+├── tools/public-quality.mjs  # mesures HTTP + rendu des trois surfaces
 ├── tools/generate-local-tls.ps1  # certificat local + CA pour HTTPS (Claude Desktop)
 ├── docs/                     # captures d'écran
 ├── data/                     # base SQLite (créée au démarrage, ignorée par Git)

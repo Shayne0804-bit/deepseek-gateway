@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#040705">
+  <meta name="description" content="Espace utilisateur DeepSeek Gateway : quotas, consommation et dernières requêtes de votre clé API.">
+  <title>Mon espace — DeepSeek Gateway</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body class="public-page portal-page">
+  <a class="skip-link" href="#main">Aller au contenu</a>
+
+  <header class="site-header">
+    <a class="site-brand" href="/">
+      <span class="brand-logo" aria-hidden="true">&gt;_</span>
+      <span class="brand-name">DeepSeek Gateway</span>
+    </a>
+    <nav class="site-nav" aria-label="Navigation principale">
+      <a href="/">Accueil</a>
+      <a href="/admin">Console admin</a>
+    </nav>
+    <div class="site-status" id="site-status" aria-live="polite">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="status-text">vérification…</span>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- ============================== Connexion ========================= -->
+    <section id="login-view" class="portal-login" aria-labelledby="login-title">
+      <div class="portal-login-copy">
+        <p class="hero-kicker">Espace utilisateur</p>
+        <h1 id="login-title">Mon espace</h1>
+        <p>
+          Entrez la clé API fournie par l'administrateur pour consulter vos quotas,
+          votre consommation et vos dernières requêtes.
+        </p>
+        <p class="small muted">
+          La clé commence par <code>sk-dsk-</code>. Elle n'est enregistrée ni dans l'URL ni dans
+          le navigateur : la session expire après 7 jours.
+        </p>
+        <dl class="ledger portal-preview">
+          <div class="ledger-row">
+            <dt class="ledger-key">quotas</dt>
+            <dd>Tokens, requêtes et coût restants pour la période en cours.</dd>
+          </div>
+          <div class="ledger-row">
+            <dt class="ledger-key">consommation</dt>
+            <dd>Votre activité des 30 derniers jours, calculée sur le modèle réellement facturé.</dd>
+          </div>
+          <div class="ledger-row">
+            <dt class="ledger-key">requêtes</dt>
+            <dd>Vos dernières requêtes, avec le modèle demandé et le modèle facturé.</dd>
+          </div>
+          <div class="ledger-row">
+            <dt class="ledger-key">branchement</dt>
+            <dd>URL de base et exemples prêts à copier pour OpenAI, Claude Code et Claude Desktop.</dd>
+          </div>
+        </dl>
+      </div>
+      <form id="login-form" class="panel portal-login-form" novalidate>
+        <div id="portal-error" class="login-error" role="alert" aria-live="assertive"></div>
+        <label class="field full">
+          <span>Clé API</span>
+          <input type="password" id="portal-key" name="key" placeholder="sk-dsk-…" autocomplete="off" spellcheck="false" required>
+          <small>Fournie par l'administrateur, au format <code>sk-dsk-…</code>.</small>
+        </label>
+        <button type="submit" class="btn btn-primary btn-block">Ouvrir mon espace</button>
+      </form>
+    </section>
+
+    <!-- ============================ Tableau de bord ====================== -->
+    <section id="portal-app" class="hidden" aria-labelledby="portal-title">
+      <div class="portal-head">
+        <div>
+          <p class="hero-kicker">Espace utilisateur</p>
+          <h1 id="portal-title">Mon espace</h1>
+          <p class="muted small" id="portal-sub"></p>
+        </div>
+        <div class="portal-actions">
+          <a class="btn btn-ghost btn-sm" href="/">Accueil</a>
+          <button type="button" class="btn btn-ghost btn-sm" id="logout-btn">Se déconnecter</button>
+        </div>
+      </div>
+
+      <div id="portal-status" class="portal-status" role="status" aria-live="polite"></div>
+
+      <div class="stat-grid" id="portal-quotas"></div>
+
+      <div class="two-col">
+        <section class="panel">
+          <div class="panel-head">
+            <div><h2>Consommation — 30 derniers jours</h2><span class="hint" id="portal-chart-hint"></span></div>
+          </div>
+          <div id="portal-chart"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><h2>Limites de ma clé</h2></div>
+          <dl class="spec-list" id="portal-limits"></dl>
+        </section>
+      </div>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div><h2>Dernières requêtes</h2><span class="hint" id="portal-logs-hint"></span></div>
+        </div>
+        <div id="portal-logs"></div>
+      </section>
+
+      <section class="panel" id="portal-usage-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Utiliser l'API</h2>
+            <span class="hint">Remplacez <code>VOTRE_CLE</code> par la clé fournie par l'administrateur.</span>
+          </div>
+        </div>
+        <div id="portal-usage"></div>
+      </section>
+
+      <footer class="portal-footer">
+        <span>DeepSeek Gateway <span class="mono" id="portal-version"></span></span>
+        <span class="muted small">Les données affichées sont celles de votre clé uniquement.</span>
+      </footer>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>DeepSeek Gateway · passerelle auto-hébergée</span>
+    <span class="site-footer-links">
+      <a href="/">Accueil</a>
+      <a href="/admin">Console admin</a>
+    </span>
+  </footer>
+
+  <script src="/assets/portal.js" defer></script>
+</body>
+</html>

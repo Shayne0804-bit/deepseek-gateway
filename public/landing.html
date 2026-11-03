@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#040705">
+  <meta name="description" content="Passerelle auto-hébergée pour partager une clé API DeepSeek : clés dérivées à quota, compatibilité OpenAI et Anthropic, journal de facturation, budget mensuel et audit.">
+  <title>DeepSeek Gateway — votre clé DeepSeek, partagée sous contrôle</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body class="public-page">
+  <a class="skip-link" href="#main">Aller au contenu</a>
+
+  <header class="site-header">
+    <a class="site-brand" href="/">
+      <span class="brand-logo" aria-hidden="true">&gt;_</span>
+      <span class="brand-name">DeepSeek Gateway</span>
+    </a>
+    <nav class="site-nav" aria-label="Navigation principale">
+      <a href="#capacites">Capacités</a>
+      <a href="#brancher">Brancher un client</a>
+      <a href="/portal">Mon espace</a>
+      <a class="site-nav-admin" href="/admin">Console admin</a>
+    </nav>
+    <div class="site-status" id="site-status" aria-live="polite">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="status-text">vérification…</span>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="hero-kicker">Passerelle auto-hébergée · API DeepSeek</p>
+        <h1>Votre clé DeepSeek, partagée sous contrôle.</h1>
+        <p class="hero-lede">
+          Une clé originale reste sur le serveur. Chaque personne reçoit sa propre clé dérivée,
+          avec des quotas en tokens, requêtes et dollars, un débit limité et un historique de facturation réel.
+          Vos clients continuent d'utiliser les SDK OpenAI ou Anthropic.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="/portal">Ouvrir mon espace</a>
+          <a class="btn btn-ghost" href="/admin">Console administrateur</a>
+        </div>
+        <dl class="hero-facts">
+          <div><dt>clés</dt><dd>dérivées, révocables</dd></div>
+          <div><dt>quota</dt><dd>tokens · requêtes · USD</dd></div>
+          <div><dt>trace</dt><dd>journal + audit</dd></div>
+        </dl>
+      </div>
+
+      <figure class="transcript" aria-label="Exemple d'échange avec la passerelle">
+        <figcaption class="transcript-head">
+          <span>exemple · requête proxifiée</span>
+          <span class="transcript-dots" aria-hidden="true">● ● ●</span>
+        </figcaption>
+        <pre class="transcript-body"><span class="t-prompt">$</span> curl https://votre-domaine/v1/chat/completions \
+  -H "Authorization: Bearer sk-dsk-…" \
+  -d '{"model":"claude-opus-5.5","messages":[…]}'
+
+<span class="t-http">HTTP/1.1 200 OK</span>
+<span class="t-h">x-quota-tokens-remaining: <b>1 987 412</b></span>
+<span class="t-h">x-gateway-billed-model: <b>deepseek-flash</b></span>
+
+{"model":"deepseek-flash","usage":{"total_tokens":118}}<span class="t-caret" aria-hidden="true">_</span></pre>
+        <figcaption class="transcript-foot">La clé originale ne quitte jamais le serveur.</figcaption>
+      </figure>
+    </section>
+
+    <section class="site-section" id="capacites" aria-labelledby="capacites-title">
+      <h2 id="capacites-title">Ce que fait la passerelle</h2>
+      <dl class="ledger">
+        <div class="ledger-row">
+          <dt class="ledger-key">clés dérivées</dt>
+          <dd>Une clé par personne ou par projet. Révocation, régénération et désactivation immédiates ; la clé fournisseur n'est jamais exposée.</dd>
+        </div>
+        <div class="ledger-row">
+          <dt class="ledger-key">quotas</dt>
+          <dd>Plafonds en tokens, requêtes et coût estimé, par jour, mois ou total. Débit par minute et concurrence bornés par clé.</dd>
+        </div>
+        <div class="ledger-row">
+          <dt class="ledger-key">facturation</dt>
+          <dd>Chaque requête est comptée avec les tokens réels et le coût DeepSeek. Les modèles demandés sont tracés face au modèle réellement facturé.</dd>
+        </div>
+        <div class="ledger-row">
+          <dt class="ledger-key">compatibilité</dt>
+          <dd>Base URL compatible OpenAI (<code>/v1</code>) et Anthropic (<code>/anthropic</code>) : chat completions, responses, FIM, modèles.</dd>
+        </div>
+        <div class="ledger-row">
+          <dt class="ledger-key">contrôle</dt>
+          <dd>Budget mensuel global, rate-limit par IP, plafond de concurrence, journal d'audit et export CSV des consommations.</dd>
+        </div>
+        <div class="ledger-row">
+          <dt class="ledger-key">exploitation</dt>
+          <dd>HTTP et HTTPS, healthchecks <code>/healthz</code> et <code>/readyz</code>, logs JSON, sauvegardes SQLite, zéro dépendance npm.</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="site-section" id="brancher" aria-labelledby="brancher-title">
+      <h2 id="brancher-title">Brancher un client</h2>
+      <ol class="site-steps">
+        <li>
+          <h3>Recevez une clé dérivée</h3>
+          <p>L'administrateur crée une clé <code>sk-dsk-…</code> avec vos limites. Elle s'affiche une seule fois à la création.</p>
+        </li>
+        <li>
+          <h3>Pointez votre client vers la passerelle</h3>
+          <p>OpenAI SDK, Claude Code, Claude Desktop ou une simple requête HTTP : changez uniquement l'URL de base et la clé.</p>
+          <pre class="mini-code">OPENAI_BASE_URL=https://votre-domaine/v1
+OPENAI_API_KEY=sk-dsk-…
+
+# ou, format Anthropic :
+ANTHROPIC_BASE_URL=https://votre-domaine/anthropic
+ANTHROPIC_AUTH_TOKEN=sk-dsk-…</pre>
+        </li>
+        <li>
+          <h3>Suivez votre consommation</h3>
+          <p>Dans <a href="/portal">Mon espace</a>, consultez quotas restants, consommation du mois et dernières requêtes. Les en-têtes de réponse donnent le restant à chaque appel.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="site-section site-cta" aria-labelledby="cta-title">
+      <h2 id="cta-title">Prêt à brancher ?</h2>
+      <p>Les clés sont émises par l'administrateur. Votre espace affiche vos quotas, votre consommation et vos dernières requêtes.</p>
+      <a class="btn btn-primary" href="/portal">Ouvrir mon espace</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>DeepSeek Gateway · passerelle auto-hébergée</span>
+    <span class="site-footer-links">
+      <a href="/portal">Mon espace</a>
+      <a href="/admin">Console admin</a>
+    </span>
+  </footer>
+
+  <script src="/assets/landing.js" defer></script>
+</body>
+</html>
