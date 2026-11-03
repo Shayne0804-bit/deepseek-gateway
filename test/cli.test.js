@@ -50,7 +50,7 @@ test('cli init : crée .env avec secrets générés et dossier data', () => {
   try {
     const result = run(['init', '--home', home]);
     assert.equal(result.status, 0, result.stderr);
-    assert.match(result.stdout, /configuration créée/i);
+    assert.match(result.stdout, /configuration (serveur )?créée/i);
 
     const envPath = path.join(home, '.env');
     assert.ok(fs.existsSync(envPath), '.env créé');

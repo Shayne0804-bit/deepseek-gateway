@@ -1,10 +1,13 @@
 {
   "name": "valaria-gateway",
-  "version": "2.4.0",
-  "description": "VALARIA Gateway API — passerelle auto-hébergée pour partager une clé API DeepSeek avec des clés dérivées à quota (OpenAI/Anthropic, portail, audit).",
+  "version": "2.5.0",
+  "description": "Client et serveur VALARIA Gateway API : console cliente connectée à une instance hébergée (quotas, chat, logs) et passerelle auto-hébergeable.",
   "type": "module",
   "bin": {
     "valaria-gateway": "bin/valaria-gateway.js"
+  },
+  "valaria": {
+    "defaultUrl": ""
   },
   "files": [
     "bin/",

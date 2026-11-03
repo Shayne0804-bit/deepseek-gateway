@@ -140,51 +140,77 @@ Données stockées localement dans `data/gateway.db` (SQLite). Aucun service tie
 > Par défaut la passerelle n'écoute que sur `127.0.0.1` : elle n'est pas accessible depuis Internet.
 > Pour la partager, voir [Exposer la passerelle sur Internet](#exposer-la-passerelle-sur-internet).
 
-## Installer via npm (auto-hébergé)
+## Installer via npm (client connecté à votre instance)
 
-Le même produit peut s'utiliser de **deux façons** :
+Le paquet npm est une **console cliente VALARIA** : elle se connecte à l'instance **déjà
+hébergée** (Railway + domaine, par exemple). L'utilisateur n'installe **ni serveur ni base de
+données locales** — il reçoit une URL et une clé, et utilise une interface personnalisée.
 
 | Mode | Pour qui | Installation |
 |---|---|---|
-| **Site déjà déployé** (Railway + domaine HTTPS) | vos amis/utilisateurs finaux | aucune : ils ouvrent l'URL, le portail ou l'API |
-| **Paquet npm** (votre PC, VPS, NAS) | vous, pour auto-héberger | `npm install -g valaria-gateway` |
+| **Site hébergé** | utilisateurs finaux, sans terminal | aucune : ouvrir l'URL, `/portal` ou l'API |
+| **Client npm** | utilisateurs techniques | `npm install -g valaria-gateway` puis `login` |
+| **Opérateur auto-hébergé** | vous, si vous hébergez la passerelle | `init` + `serve` (section plus bas) |
 
-Prérequis : **Node.js 24 ou supérieur**.
+### Côté utilisateur (recommandé)
 
 ```bash
-# Installation globale (recommandée pour un service local)
 npm install -g valaria-gateway
-valaria-gateway init          # crée ~/.valaria-gateway/.env + data/ (secrets générés)
-# éditez ~/.valaria-gateway/.env : renseignez DEEPSEEK_API_KEY
-valaria-gateway start
+valaria-gateway login --url https://api.votre-domaine.fr --key sk-dsk-…
+valaria-gateway
 ```
 
-- `init` génère un **mot de passe administrateur** (affiché une fois) et une **clé maître**,
-  puis écrit `~/.valaria-gateway/.env` (droits 0600) et `~/.valaria-gateway/data/`.
-- `start` cherche le `.env` dans le dossier courant puis dans `~/.valaria-gateway/.env`.
-  Données par défaut : `~/.valaria-gateway/data`.
-- Ouvrez ensuite <http://127.0.0.1:8787/admin> (console), <http://127.0.0.1:8787/portal>
-  (espace utilisateur) et donnez à vos amis `http://VOTRE-ADRESSE:8787/v1` (ou `https://…`).
-- Sans installation globale : `npx valaria-gateway init` puis `npx valaria-gateway start`.
+La commande sans argument ouvre l'**interface interactive VALARIA** : tableau de bord encadré,
+quotas avec barres de progression, consommation 30 jours (sparkline), modèles autorisés,
+dernières requêtes et chat intégré.
+
+```text
+  >_ VALARIA GATEWAY API   console cliente
+  https://api.votre-domaine.fr  ·  Léa — projet perso
+
+  QUOTAS
+  Tokens     ██████████░░░░░░░░░░░░  42 %   820 k / 2 M · restant 1,2 M
+  Requêtes   ████░░░░░░░░░░░░░░░░░░  18 %    47 / 300 · restant 253
+  ────────────────────────────────────────────────
+  30 jours   ▁▂▃▅▂▇▃▁▁▂▄▆▃▁▂▅▇▃▁▂▄▅▆▃▂▁▃▅▆▇▄
+  MA CLÉ     deepseek-flash · deepseek-v4-pro · claude-opus-5.5
+  valaria> ask "Explique-moi les quotas"
+```
+
+Commandes disponibles : `status`, `ask "…"`, `models`, `logs`, `open [admin]`, `ui`, `logout`.
+
+- Configuration locale : `~/.valaria-gateway/client.json` (droits 0600), contenant l'URL et la clé.
+  `valaria-gateway logout` l'efface. Aucune donnée de consommation n'est stockée localement.
+- Variables : `VALARIA_GATEWAY_URL`, `VALARIA_API_KEY`, `VALARIA_HOME`, `NO_COLOR`.
+- Une fois publié, `npx valaria-gateway …` fonctionne sans installation globale.
+- **URL par défaut** : renseignez `"valaria": { "defaultUrl": "https://api.votre-domaine.fr" }`
+  dans `package.json` avant publication ; l'utilisateur peut alors faire simplement
+  `valaria-gateway login --key sk-dsk-…`.
 
 ### Options de la CLI
 
 ```bash
-valaria-gateway init  [--home <dir>] [--data-dir <dir>]
-valaria-gateway start [--env-file <fichier>] [--data-dir <dir>]
-                      [--host <hôte>] [--port <port>] [--home <dir>]
+valaria-gateway login --url <url> --key <clé> [--home <dir>]
+valaria-gateway status | models | logs | ask "…" | open [admin] | ui | logout
 valaria-gateway --version | --help
 ```
 
-- `--home` : dossier de configuration (défaut `~/.valaria-gateway`).
-- `--env-file` : fichier `.env` explicite (prioritaire sur la découverte).
-- `--data-dir`, `--host`, `--port` : surchargent `.env` pour ce lancement.
-- Mise à jour : `npm install -g valaria-gateway@latest`.
-- Désinstallation : `npm uninstall -g valaria-gateway` (les données de `~/.valaria-gateway` restent).
+### Mode opérateur (auto-hébergement de la passerelle)
+
+Pour héberger vous-même l'instance (hors client) :
+
+```bash
+valaria-gateway init      # crée ~/.valaria-gateway/.env (secrets générés) + data/
+# éditez ~/.valaria-gateway/.env : DEEPSEEK_API_KEY
+valaria-gateway serve     # alias : valaria-gateway start
+```
+
+- `init` génère un mot de passe administrateur et une clé maître, écrit le `.env` (0600).
+- `serve` cherche le `.env` dans le dossier courant puis `~/.valaria-gateway/.env` ; données
+  dans `~/.valaria-gateway/data`.
+- Options serveur : `--env-file`, `--data-dir`, `--host`, `--port`, `--home`.
 
 ### Publier le paquet (mainteneur)
-
-Le nom `valaria-gateway` est libre sur npm. Depuis ce dépôt :
 
 ```bash
 npm login
@@ -192,9 +218,9 @@ npm test
 npm publish --access public
 ```
 
-Le paquet publié contient uniquement `bin/`, `src/`, `public/`, `server.js`, `.env.example`,
-`README.md` et `LICENSE` (pas de tests, docs ou données). Si le nom devient indisponible,
-publiez sous scope (`@votre-scope/valaria-gateway`) et adaptez la commande d'installation.
+Le paquet publié contient `bin/`, `src/` (dont le client), `public/`, `server.js`, `.env.example`,
+`README.md` et `LICENSE` — pas de tests, docs ni données. Si le nom devient indisponible, publiez
+sous scope (`@votre-scope/valaria-gateway`).
 
 ## Configuration (.env)
 
@@ -809,7 +835,7 @@ Serveur arrêté, copiez le dossier `data/` (ou au minimum `gateway.db`). À cha
 node --test test
 ```
 
-La suite (76 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
+La suite (78 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
 normalisation `usage` OpenAI/Anthropic, quotas (tokens, requêtes, coût, reset de période),
 limites de débit et de concurrence, authentification admin (hash scrypt, sessions),
 chiffrement/hachage des clés dérivées, proxy JSON et **streaming SSE** avec comptage,
@@ -822,7 +848,9 @@ erreurs et absence de clé fournisseur, les garanties production
 **portail utilisateur** (trois surfaces, connexion par clé, isolation des données entre clés,
 déconnexion), et la **connexion par email** (code à usage unique, anti-spam, unicité, essais
 limités, transport Resend/console). La **CLI npm** est testée de bout en bout : `--version`,
-`--help`, `init` (secrets générés, `.env` non écrasé) et `start` (healthcheck réel).
+`--help`, `init` (secrets générés, `.env` non écrasé), `serve` (healthcheck réel), et le
+**client hébergé** (`login`, tableau de bord, `models`, `ask` contre une instance locale, refus
+d'une clé invalide).
 Les tests utilisent un faux serveur DeepSeek local : **aucun appel réseau réel, aucune clé nécessaire**.
 
 ## Structure du projet
@@ -843,6 +871,7 @@ valaria-gateway/
 │   ├── limits.js             # rate-limit IP + sémaphore global (production)
 │   ├── secrets.js            # chiffrement AES-256-GCM des secrets au repos
 │   ├── proxy.js              # proxy /v1/... et /anthropic/... (JSON + SSE)
+│   ├── client.js             # client npm : login, tableau de bord TUI, chat, logs
 │   ├── mailer.js             # envoi email (Resend, SMTP TLS, console) pour les codes OTP
 │   ├── portal-api.js         # API de l'espace utilisateur (/portal/api/...)
 │   ├── admin-api.js          # API REST du panneau (/admin/api/...)

@@ -39,6 +39,7 @@ import {
 import { loadPricing } from './pricing.js';
 import { loadModelAliases } from './model-aliases.js';
 import {
+  bearerToken,
   clientIp,
   HttpError,
   isHttpsRequest,
@@ -237,6 +238,17 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       return null;
     }
     return { token, session, client };
+  }
+
+  /**
+   * Authentification directe par clé derivee (CLI npm, scripts) :
+   * GET /portal/api/me et /logs acceptent `Authorization: Bearer sk-dsk-...`
+   * ou `x-api-key`, sans session cookie ni échange de mot de passe.
+   */
+  function clientFromAuthorization(req) {
+    const token = bearerToken(req) || String(req.headers['x-api-key'] ?? '').trim();
+    if (!token) return null;
+    return findClientByApiKey(db, token);
   }
 
   function setPortalCookie(req, res, token, maxAgeSeconds) {
@@ -448,11 +460,12 @@ export function createPortalApi({ config, db, log, mailer = null }) {
 
       if (route === '/me' && method === 'GET') {
         const current = sessionFromRequest(req);
-        if (!current) {
+        const authorizedClient = current ? null : clientFromAuthorization(req);
+        if (!current && !authorizedClient) {
           portalError(res, 401, 'Session portail expirée. Reconnectez-vous.', 'unauthorized');
           return;
         }
-        let client = maybeRollPeriod(db, current.client);
+        let client = maybeRollPeriod(db, current?.client ?? authorizedClient);
         client = getClientById(db, client.id) ?? client;
         sendJson(res, 200, mePayload(req, client));
         return;
@@ -460,12 +473,14 @@ export function createPortalApi({ config, db, log, mailer = null }) {
 
       if (route === '/logs' && method === 'GET') {
         const current = sessionFromRequest(req);
-        if (!current) {
+        const authorizedClient = current ? null : clientFromAuthorization(req);
+        if (!current && !authorizedClient) {
           portalError(res, 401, 'Session portail expirée. Reconnectez-vous.', 'unauthorized');
           return;
         }
         const limit = Number(url.searchParams.get('limit') ?? 50);
-        const data = listUsageLogs(db, { limit, offset: 0, clientId: current.client.id });
+        const logsClient = current?.client ?? authorizedClient;
+        const data = listUsageLogs(db, { limit, offset: 0, clientId: logsClient.id });
         sendJson(res, 200, {
           total: data.total,
           rows: data.rows.map((row) => ({
