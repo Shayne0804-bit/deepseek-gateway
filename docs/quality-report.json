@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-11-03T05:51:19.208Z",
+  "generatedAt": "2026-11-03T06:22:49.453Z",
   "target": "3 surfaces : site public (/), console admin (/admin), espace utilisateur (/portal)",
   "http": [
     {
       "name": "landing",
       "path": "/",
       "status": 200,
-      "durationMs": 31,
-      "bytes": 6788,
+      "durationMs": 9,
+      "bytes": 6761,
       "contentType": "text/html; charset=utf-8",
       "headers": {
         "csp": true,
@@ -30,7 +30,7 @@
       "name": "admin-login",
       "path": "/admin",
       "status": 200,
-      "durationMs": 7,
+      "durationMs": 4,
       "bytes": 3878,
       "contentType": "text/html; charset=utf-8",
       "headers": {
@@ -54,8 +54,8 @@
       "name": "portal-login",
       "path": "/portal",
       "status": 200,
-      "durationMs": 10,
-      "bytes": 5696,
+      "durationMs": 4,
+      "bytes": 5595,
       "contentType": "text/html; charset=utf-8",
       "headers": {
         "csp": true,
@@ -78,8 +78,8 @@
       "name": "portal-dashboard",
       "path": "/portal",
       "status": 200,
-      "durationMs": 6,
-      "bytes": 5696,
+      "durationMs": 4,
+      "bytes": 5595,
       "contentType": "text/html; charset=utf-8",
       "headers": {
         "csp": true,
@@ -115,10 +115,6 @@
     {
       "link": "/portal",
       "status": 200
-    },
-    {
-      "link": "/admin",
-      "status": 200
     }
   ],
   "rendered": {
@@ -138,14 +134,14 @@
       "imagesWithoutAlt": 0,
       "emptyLinks": 0,
       "emptyButtons": 0,
-      "domNodes": 106,
+      "domNodes": 105,
       "timing": {
-        "domContentLoadedMs": 176,
-        "loadMs": 400,
-        "responseMs": 21,
-        "transferBytes": 2774,
-        "resources": 3,
-        "resourceBytes": 9274
+        "domContentLoadedMs": 357,
+        "loadMs": 357,
+        "responseMs": 19,
+        "transferBytes": 2756,
+        "resources": 4,
+        "resourceBytes": 10060
       },
       "cls": 0,
       "longTasks": 0,
@@ -169,9 +165,9 @@
       "emptyButtons": 0,
       "domNodes": 66,
       "timing": {
-        "domContentLoadedMs": 336,
-        "loadMs": 338,
-        "responseMs": 188,
+        "domContentLoadedMs": 64,
+        "loadMs": 65,
+        "responseMs": 5,
         "transferBytes": 1670,
         "resources": 3,
         "resourceBytes": 17438
@@ -196,14 +192,14 @@
       "imagesWithoutAlt": 0,
       "emptyLinks": 0,
       "emptyButtons": 0,
-      "domNodes": 96,
+      "domNodes": 93,
       "timing": {
-        "domContentLoadedMs": 47,
-        "loadMs": 74,
-        "responseMs": 9,
-        "transferBytes": 2146,
+        "domContentLoadedMs": 31,
+        "loadMs": 55,
+        "responseMs": 5,
+        "transferBytes": 2128,
         "resources": 4,
-        "resourceBytes": 5803
+        "resourceBytes": 5795
       },
       "cls": 0,
       "longTasks": 0,
@@ -225,12 +221,12 @@
       "imagesWithoutAlt": 0,
       "emptyLinks": 0,
       "emptyButtons": 0,
-      "domNodes": 164,
+      "domNodes": 161,
       "timing": {
-        "domContentLoadedMs": 29,
-        "loadMs": 35,
-        "responseMs": 7,
-        "transferBytes": 2146,
+        "domContentLoadedMs": 23,
+        "loadMs": 27,
+        "responseMs": 5,
+        "transferBytes": 2128,
         "resources": 5,
         "resourceBytes": 3551
       },

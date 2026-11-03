@@ -81,6 +81,7 @@ Scripts : `tools/public-quality.mjs`, `tools/theme-evidence.mjs`.
 | 8 | Pas de mesure qualité publiée pour les nouvelles surfaces. | — | ✅ Corrigé : ce rapport + `quality-report.json` + preuves de rendu |
 | 9 | Mobile : navigation admin coupée hors écran, KPI très hauts, ordre formulaire/titre du portail instable. | Medium (responsive) | ✅ Corrigé : nav admin sur 2 lignes, KPI 2×2, cartes portail compactes, titre avant formulaire, zéro débordement |
 | 10 | La console d'administration était annoncée en clair sur le site public et le portail (nav, CTA, footer). | Medium (exposition) | ✅ Corrigé : aucun lien ni mention admin sur les pages publiques ; accès uniquement par URL directe `/admin` (documenté dans le README, pas dans l'UI publique) |
+| 11 | Section « Brancher un client » : le numéro d'étape était placé comme colonne de grille, le texte s'écrasait dans une colonne de ~40 px et la page débordait de 60 px en mobile. | High (contenu illisible) | ✅ Corrigé : numéro en position absolue, grille `minmax(0,1fr)`, code scrollable (retour à la ligne en mobile), captures dédiées 22/23 sous la ligne de flottaison |
 
 ## Risques résiduels et recommandations
 
@@ -99,7 +100,7 @@ Scripts : `tools/public-quality.mjs`, `tools/theme-evidence.mjs`.
 
 ```powershell
 node --test test                     # 68 tests (dont portail, gzip, sécurité)
-node tools/theme-evidence.mjs        # 22 captures + contrôles a11y/responsive -> docs/theme/
+node tools/theme-evidence.mjs        # 24 captures + contrôles a11y/responsive -> docs/theme/
 node tools/public-quality.mjs        # mesures HTTP + rendu -> docs/quality-report.json
 node "…/check-evidence.js" docs/theme/report.json   # gate frontend-design : OK
 ```

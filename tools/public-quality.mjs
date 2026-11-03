@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'docs');
 const PORT = 8898;
-const DEBUG_PORT = 9223;
+const DEBUG_PORT = 9930 + Math.floor(Math.random() * 200);
 const ADMIN_PASSWORD = 'quality-admin-password-123';
 const BASE = `http://127.0.0.1:${PORT}`;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

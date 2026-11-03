@@ -1115,15 +1115,15 @@ textarea { min-height: 120px; resize: vertical; font-family: var(--mono); font-s
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 26px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
 }
 
 .site-steps li {
   counter-increment: step;
-  display: grid;
-  grid-template-columns: 54px minmax(0, 1fr);
-  gap: 20px;
-  padding-bottom: 26px;
+  position: relative;
+  min-width: 0;
+  padding: 0 0 26px 74px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -1134,6 +1134,9 @@ textarea { min-height: 120px; resize: vertical; font-family: var(--mono); font-s
 
 .site-steps li::before {
   content: '0' counter(step);
+  position: absolute;
+  left: 0;
+  top: 0;
   font-family: var(--mono);
   font-size: 22px;
   color: var(--line-strong);
@@ -1157,6 +1160,7 @@ textarea { min-height: 120px; resize: vertical; font-family: var(--mono); font-s
 .mini-code {
   margin: 0;
   padding: 14px 16px;
+  max-width: 100%;
   background: #050d08;
   border: 1px solid var(--line);
   border-left: 2px solid var(--accent);
@@ -1520,8 +1524,14 @@ textarea { min-height: 120px; resize: vertical; font-family: var(--mono); font-s
     gap: 6px;
   }
   .site-steps li {
-    grid-template-columns: 38px minmax(0, 1fr);
-    gap: 14px;
+    padding-left: 46px;
+  }
+  .site-steps li::before {
+    font-size: 19px;
+  }
+  .mini-code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
   .site-cta {
     padding: 26px 22px;

@@ -155,7 +155,7 @@
       "required": 4.5,
       "size": 11.5,
       "weight": 400,
-      "text": "Léa — projet perso · clé sk-dsk-CcBjT… ·",
+      "text": "Léa — projet perso · clé sk-dsk-anI6f… ·",
       "page": "portal-dashboard"
     },
     {
@@ -218,7 +218,7 @@
       "required": 4.5,
       "size": 11.5,
       "weight": 400,
-      "text": "DeepSeek Gateway v2.1.1\n        Les donn",
+      "text": "DeepSeek Gateway v2.1.2\n        Les donn",
       "page": "portal-dashboard"
     },
     {
@@ -490,6 +490,19 @@
       "docWidth": 390,
       "viewport": 390,
       "tablesContained": true
+    }
+  },
+  "steps": {
+    "desktop": {
+      "liWidth": 1180,
+      "pWidth": 612,
+      "preWidth": 1106,
+      "h3Width": 1106
+    },
+    "mobile": {
+      "liWidth": 354,
+      "pWidth": 308,
+      "preWidth": 308
     }
   },
   "touchTargetsPortal": {

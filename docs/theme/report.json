@@ -39,7 +39,7 @@
     },
     "public": {
       "status": "pass",
-      "evidence": "Artifacts 16/17-public-landing-*.png : site public, statut de la passerelle en direct, exemple d'echange API et parcours de branchement."
+      "evidence": "Artifacts 16/17-public-landing-*.png : site public, statut de la passerelle en direct, exemple d'echange API et parcours de branchement. Artifacts 22/23-public-steps-*.png : section etapes verifiee sous la ligne de flottaison (texte pleine largeur, code lisible)."
     },
     "portal": {
       "status": "pass",
@@ -50,12 +50,22 @@
     {
       "viewport": "1440x900",
       "artifact": "16-public-landing-desktop.png",
-      "observation": "Site public en 1440x900 : promesse produit, exemple reel d'echange API, statut de la passerelle, navigation vers l'espace utilisateur et la console admin."
+      "observation": "Site public en 1440x900 : promesse produit, exemple reel d'echange API, statut de la passerelle, navigation vers l'espace utilisateur."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "22-public-steps-desktop.png",
+      "observation": "Etapes de branchement en 1440x900 : numero a gauche, texte et bloc de code sur toute la largeur disponible (aucune colonne de texte etroite)."
     },
     {
       "viewport": "390x844",
       "artifact": "17-public-landing-mobile.png",
       "observation": "Site public en 390x844 : navigation repliee, hero lisible, CTAs empiles, aucun debordement horizontal."
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "23-public-steps-mobile.png",
+      "observation": "Etapes de branchement en 390x844 : texte sur toute la largeur, bloc de code scrollable, aucun chevauchement."
     },
     {
       "viewport": "1440x900",

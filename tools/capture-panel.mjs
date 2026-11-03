@@ -21,7 +21,7 @@ if (!CHROME) {
   process.exit(1);
 }
 const GATEWAY_PORT = 8899;
-const DEBUG_PORT = 9222;
+const DEBUG_PORT = 9720 + Math.floor(Math.random() * 200);
 const ADMIN_PASSWORD = 'demo-password-2026';
 const ADMIN_URL = `http://127.0.0.1:${GATEWAY_PORT}`;
 

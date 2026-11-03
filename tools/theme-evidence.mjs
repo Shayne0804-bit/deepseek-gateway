@@ -26,7 +26,7 @@ if (!CHROME) {
 
 const PORT_A = 8897;
 const PORT_B = 8896;
-const DEBUG_PORT = 9223;
+const DEBUG_PORT = 9310 + Math.floor(Math.random() * 400);
 const ADMIN_PASSWORD = 'evidence-password-2026';
 const URL_A = `http://127.0.0.1:${PORT_A}`;
 const URL_B = `http://127.0.0.1:${PORT_B}`;
@@ -232,8 +232,8 @@ async function main() {
   }
 
   const artifacts = [];
-  async function screenshot(name, observation, viewportLabel = viewport.label) {
-    await evaluate('window.scrollTo(0, 0)');
+  async function screenshot(name, observation, viewportLabel = viewport.label, { keepScroll = false } = {}) {
+    if (!keepScroll) await evaluate('window.scrollTo(0, 0)');
     await sleep(200);
     const { data } = await s('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
     fs.writeFileSync(path.join(OUT_DIR, name), Buffer.from(data, 'base64'));
@@ -279,7 +279,21 @@ async function main() {
   const landingSelectors = ['.hero h1', '.hero-lede', '.hero-kicker', '.site-nav a', '.hero-facts dt', '.hero-facts dd', '.transcript-body', '.site-cta p', '.site-footer'];
   const landingContrast = await evaluate(contrastScript.replace('SEL', JSON.stringify(landingSelectors)));
   checks.contrast.push(...landingContrast.map((item) => ({ ...item, page: 'public-landing' })));
-  await screenshot('16-public-landing-desktop.png', 'Site public en 1440x900 : promesse produit, exemple reel d\'echange API, statut de la passerelle, navigation vers l\'espace utilisateur et la console admin.');
+  await screenshot('16-public-landing-desktop.png', 'Site public en 1440x900 : promesse produit, exemple reel d\'echange API, statut de la passerelle, navigation vers l\'espace utilisateur.');
+
+  // Section sous la ligne de flottaison : etapes de branchement (texte + code).
+  await evaluate("document.querySelector('#brancher').scrollIntoView({ block: 'start' })");
+  await sleep(400);
+  checks.steps = { desktop: await evaluate(`(() => {
+    const lis = Array.from(document.querySelectorAll('.site-steps li'));
+    const first = lis[0];
+    const codeLi = lis.find((li) => li.querySelector('.mini-code'));
+    const p = first.querySelector('p');
+    const pre = codeLi.querySelector('.mini-code');
+    const h3 = first.querySelector('h3');
+    return { liWidth: Math.round(first.getBoundingClientRect().width), pWidth: Math.round(p.getBoundingClientRect().width), preWidth: Math.round(pre.getBoundingClientRect().width), h3Width: Math.round(h3.getBoundingClientRect().width) };
+  })()`) };
+  await screenshot('22-public-steps-desktop.png', 'Etapes de branchement en 1440x900 : numero a gauche, texte et bloc de code sur toute la largeur disponible (aucune colonne de texte etroite).', viewport.label, { keepScroll: true });
 
   await setViewport(MOBILE);
   await navigate(`${URL_A}/`);
@@ -291,6 +305,18 @@ async function main() {
     tablesContained: true,
   }))()`);
   await screenshot('17-public-landing-mobile.png', 'Site public en 390x844 : navigation repliee, hero lisible, CTAs empiles, aucun debordement horizontal.', MOBILE.label);
+  await evaluate("document.querySelector('#brancher').scrollIntoView({ block: 'start' })");
+  await sleep(400);
+  checks.steps.mobile = await evaluate(`(() => {
+    const lis = Array.from(document.querySelectorAll('.site-steps li'));
+    const first = lis[0];
+    const codeLi = lis.find((li) => li.querySelector('.mini-code'));
+    const p = first.querySelector('p');
+    const pre = codeLi.querySelector('.mini-code');
+    return { liWidth: Math.round(first.getBoundingClientRect().width), pWidth: Math.round(p.getBoundingClientRect().width), preWidth: Math.round(pre.getBoundingClientRect().width) };
+  })()`);
+  await screenshot('23-public-steps-mobile.png', 'Etapes de branchement en 390x844 : texte sur toute la largeur, bloc de code scrollable, aucun chevauchement.', MOBILE.label, { keepScroll: true });
+  await setViewport(DESKTOP);
 
   /* ======================= 0b. ESPACE UTILISATEUR ===================== */
   await setViewport(DESKTOP);
@@ -564,7 +590,7 @@ async function main() {
       partial: { status: 'pass', evidence: 'Artifact 15-partial-overview.png : cle fournisseur absente, avertissement explicite, reste du panneau consultable.' },
       success: { status: 'pass', evidence: 'Artifact 08-success-new-key.png : creation de cle confirmee, cle affichee une seule fois avec action de copie.' },
       permission: { status: 'pass', evidence: 'Artifacts 01/02-permission-login-*.png : sans session, seul l\'ecran de connexion est accessible (limite d\'acces expliquee). Artifact 18-public-portal-login-desktop.png : le portail exige la cle derivee et ne montre aucune donnee sans session.' },
-      'public': { status: 'pass', evidence: 'Artifacts 16/17-public-landing-*.png : site public, statut de la passerelle en direct, exemple d\'echange API et parcours de branchement.' },
+      'public': { status: 'pass', evidence: 'Artifacts 16/17-public-landing-*.png : site public, statut de la passerelle en direct, exemple d\'echange API et parcours de branchement. Artifacts 22/23-public-steps-*.png : section etapes verifiee sous la ligne de flottaison (texte pleine largeur, code lisible).' },
       portal: { status: 'pass', evidence: `Artifacts 19/20-public-portal-*.png : espace utilisateur connecte (${checks.touchTargetsPortal?.total ?? 0} controles tactiles, tableaux contenus) avec quotas, graphique 30 jours et historique.` },
     },
     renderedEvidence: artifacts,
@@ -583,6 +609,7 @@ async function main() {
   console.log('reducedMotion:', checks.reducedMotion);
   console.log('touchTargets:', checks.touchTargets);
   console.log('touchTargetsPortal:', checks.touchTargetsPortal);
+  console.log('steps:', checks.steps);
   console.log('overflow:', checks.overflow);
   console.log('erreurs JS inattendues:', jsErrorsUnexpected);
 
@@ -593,6 +620,10 @@ async function main() {
     || mobileOverflowFailures.length > 0
     || (checks.touchTargets?.tooSmall?.length ?? 1) > 0
     || (checks.touchTargetsPortal?.tooSmall?.length ?? 0) > 0
+    || (checks.steps?.desktop?.pWidth ?? 0) < 400
+    || (checks.steps?.mobile?.pWidth ?? 0) < 200
+    || (checks.steps?.desktop?.preWidth ?? 0) < 400
+    || (checks.steps?.mobile?.preWidth ?? 0) < 200
     || checks.errorRecovery !== true
     || jsErrorsUnexpected.length > 0;
 
