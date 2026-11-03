@@ -10,7 +10,7 @@
   },
   "responsive": {
     "status": "pass",
-    "evidence": "Surfaces teste��es en 390x844 et 1440x900 (site public, portail, 5 vues admin) : largeur document <= viewport partout (aucun debordement), tableaux contenus dans .table-wrap scrollable. Cibles tactiles mobiles : admin 30 controles (min 27px de haut), portail 7 controles, seuil 24px."
+    "evidence": "Surfaces teste��es en 390x844 et 1440x900 (site public, portail, 5 vues admin) : largeur document <= viewport partout (aucun debordement), tableaux contenus dans .table-wrap scrollable. Cibles tactiles mobiles : admin 30 controles (min 27px de haut), portail 5 controles, seuil 24px."
   },
   "contentStates": {
     "loading": {
@@ -43,7 +43,7 @@
     },
     "portal": {
       "status": "pass",
-      "evidence": "Artifacts 19/20-public-portal-*.png : espace utilisateur connecte (7 controles tactiles, tableaux contenus) avec quotas, graphique 30 jours et historique."
+      "evidence": "Artifacts 19/20-public-portal-*.png : espace utilisateur connecte (5 controles tactiles, tableaux contenus) avec quotas, graphique 30 jours et historique."
     }
   },
   "renderedEvidence": [
@@ -61,6 +61,11 @@
       "viewport": "1440x900",
       "artifact": "18-public-portal-login-desktop.png",
       "observation": "Portail utilisateur en 1440x900 : connexion par cle derivee, apercu de ce que l'utilisateur pourra consulter, aucune donnee d'administration."
+    },
+    {
+      "viewport": "390x844",
+      "artifact": "21-public-portal-login-mobile.png",
+      "observation": "Connexion portail en 390x844 : formulaire en premier, apercu masque, un seul champ pleine largeur, aucun debordement."
     },
     {
       "viewport": "1440x900",

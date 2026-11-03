@@ -20,7 +20,6 @@
     </a>
     <nav class="site-nav" aria-label="Navigation principale">
       <a href="/">Accueil</a>
-      <a href="/admin">Console admin</a>
     </nav>
     <div class="site-status" id="site-status" aria-live="polite">
       <span class="dot" aria-hidden="true"></span>
@@ -35,7 +34,7 @@
         <p class="hero-kicker">Espace utilisateur</p>
         <h1 id="login-title">Mon espace</h1>
         <p>
-          Entrez la clé API fournie par l'administrateur pour consulter vos quotas,
+          Entrez la clé API fournie par le responsable de la passerelle pour consulter vos quotas,
           votre consommation et vos dernières requêtes.
         </p>
         <p class="small muted">
@@ -60,13 +59,12 @@
             <dd>URL de base et exemples prêts à copier pour OpenAI, Claude Code et Claude Desktop.</dd>
           </div>
         </dl>
-      </div>
-      <form id="login-form" class="panel portal-login-form" novalidate>
+      </div>      <form id="login-form" class="panel portal-login-form" novalidate>
         <div id="portal-error" class="login-error" role="alert" aria-live="assertive"></div>
         <label class="field full">
           <span>Clé API</span>
           <input type="password" id="portal-key" name="key" placeholder="sk-dsk-…" autocomplete="off" spellcheck="false" required>
-          <small>Fournie par l'administrateur, au format <code>sk-dsk-…</code>.</small>
+          <small>Fournie par le responsable de la passerelle, au format <code>sk-dsk-…</code>.</small>
         </label>
         <button type="submit" class="btn btn-primary btn-block">Ouvrir mon espace</button>
       </form>
@@ -81,7 +79,6 @@
           <p class="muted small" id="portal-sub"></p>
         </div>
         <div class="portal-actions">
-          <a class="btn btn-ghost btn-sm" href="/">Accueil</a>
           <button type="button" class="btn btn-ghost btn-sm" id="logout-btn">Se déconnecter</button>
         </div>
       </div>
@@ -114,7 +111,7 @@
         <div class="panel-head">
           <div>
             <h2>Utiliser l'API</h2>
-            <span class="hint">Remplacez <code>VOTRE_CLE</code> par la clé fournie par l'administrateur.</span>
+            <span class="hint">Remplacez <code>VOTRE_CLE</code> par la clé fournie par le responsable de la passerelle.</span>
           </div>
         </div>
         <div id="portal-usage"></div>
@@ -131,7 +128,6 @@
     <span>DeepSeek Gateway · passerelle auto-hébergée</span>
     <span class="site-footer-links">
       <a href="/">Accueil</a>
-      <a href="/admin">Console admin</a>
     </span>
   </footer>
 

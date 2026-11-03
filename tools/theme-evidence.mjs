@@ -302,6 +302,18 @@ async function main() {
   checks.contrast.push(...portalLoginContrast.map((item) => ({ ...item, page: 'portal-login' })));
   await screenshot('18-public-portal-login-desktop.png', 'Portail utilisateur en 1440x900 : connexion par cle derivee, apercu de ce que l\'utilisateur pourra consulter, aucune donnee d\'administration.');
 
+  await setViewport(MOBILE);
+  await navigate(`${URL_A}/portal`);
+  await waitFor("document.querySelector('#login-view') && !document.querySelector('#login-view').classList.contains('hidden')");
+  await sleep(450);
+  checks.overflow['mobile:portal-login'] = await evaluate(`(() => ({
+    docWidth: document.documentElement.scrollWidth,
+    viewport: window.innerWidth,
+    tablesContained: true,
+  }))()`);
+  await screenshot('21-public-portal-login-mobile.png', 'Connexion portail en 390x844 : formulaire en premier, apercu masque, un seul champ pleine largeur, aucun debordement.', MOBILE.label);
+  await setViewport(DESKTOP);
+
   const portalLoginRes = await fetch(`${URL_A}/portal/api/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-requested-with': 'dsk-portal' },

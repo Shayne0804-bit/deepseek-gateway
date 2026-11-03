@@ -42,8 +42,11 @@ Scripts : `tools/public-quality.mjs`, `tools/theme-evidence.mjs`.
 - **Structure** : `lang="fr"`, un `h1` visible par état, landmarks `header`/`nav`/`main`/`footer`,
   skip link « Aller au contenu » sur les trois surfaces.
 - **Mouvement** : `prefers-reduced-motion` désactive scanlines et transitions (vérifié).
-- **Cibles tactiles** : 30 contrôles admin (min 27 px de haut) et 7 contrôles portail — 0 sous le seuil 24 px.
+- **Cibles tactiles** : 30 contrôles admin (min 27 px de haut) et 5 contrôles portail — 0 sous le seuil 24 px.
 - **Responsive** : aucun débordement horizontal en 390×844 sur les 3 surfaces et les 5 vues admin.
+- **Mobile** : navigation admin repliée sur deux lignes (plus de barre coupée), KPI admin en grille
+  2×2, cartes de quota portail compactes (2 + 1 pleine largeur), formulaire de connexion portail
+  affiché **après** son titre, footer aligné, menu public limité aux liens utiles.
 - Limite connue : les vues alternatives masquées (`display:none`) contiennent chacune leur `h1`
   d'état ; elles sont exclues de l'arbre d'accessibilité, donc un seul `h1` est perçu à la fois.
 
@@ -76,6 +79,8 @@ Scripts : `tools/public-quality.mjs`, `tools/theme-evidence.mjs`.
 | 6 | Page de connexion portail trop vide (grand blanc). | Low (design) | ✅ Corrigé : aperçu de ce que l'utilisateur verra + footer |
 | 7 | Assets non compressés (~105 Ko CSS/JS transférés). | Medium (perf) | ✅ Corrigé : gzip + cache 5 min → 3,5–17,4 Ko/page |
 | 8 | Pas de mesure qualité publiée pour les nouvelles surfaces. | — | ✅ Corrigé : ce rapport + `quality-report.json` + preuves de rendu |
+| 9 | Mobile : navigation admin coupée hors écran, KPI très hauts, ordre formulaire/titre du portail instable. | Medium (responsive) | ✅ Corrigé : nav admin sur 2 lignes, KPI 2×2, cartes portail compactes, titre avant formulaire, zéro débordement |
+| 10 | La console d'administration était annoncée en clair sur le site public et le portail (nav, CTA, footer). | Medium (exposition) | ✅ Corrigé : aucun lien ni mention admin sur les pages publiques ; accès uniquement par URL directe `/admin` (documenté dans le README, pas dans l'UI publique) |
 
 ## Risques résiduels et recommandations
 
@@ -94,7 +99,7 @@ Scripts : `tools/public-quality.mjs`, `tools/theme-evidence.mjs`.
 
 ```powershell
 node --test test                     # 68 tests (dont portail, gzip, sécurité)
-node tools/theme-evidence.mjs        # 21 captures + contrôles a11y/responsive -> docs/theme/
+node tools/theme-evidence.mjs        # 22 captures + contrôles a11y/responsive -> docs/theme/
 node tools/public-quality.mjs        # mesures HTTP + rendu -> docs/quality-report.json
 node "…/check-evidence.js" docs/theme/report.json   # gate frontend-design : OK
 ```

@@ -69,7 +69,7 @@
       "required": 4.5,
       "size": 14.5,
       "weight": 400,
-      "text": "Les clés sont émises par l'administrateu",
+      "text": "Les clés sont émises par le responsable ",
       "page": "public-landing"
     },
     {
@@ -155,7 +155,7 @@
       "required": 4.5,
       "size": 11.5,
       "weight": 400,
-      "text": "Léa — projet perso · clé sk-dsk-na48z… ·",
+      "text": "Léa — projet perso · clé sk-dsk-CcBjT… ·",
       "page": "portal-dashboard"
     },
     {
@@ -182,7 +182,7 @@
       "required": 4.5,
       "size": 11.5,
       "weight": 400,
-      "text": "0% utilisé · restant : 2.0 M",
+      "text": "restant : 2.0 M",
       "page": "portal-dashboard"
     },
     {
@@ -218,7 +218,7 @@
       "required": 4.5,
       "size": 11.5,
       "weight": 400,
-      "text": "DeepSeek Gateway v2.1.0\n        Les donn",
+      "text": "DeepSeek Gateway v2.1.1\n        Les donn",
       "page": "portal-dashboard"
     },
     {
@@ -451,6 +451,11 @@
       "viewport": 390,
       "tablesContained": true
     },
+    "mobile:portal-login": {
+      "docWidth": 390,
+      "viewport": 390,
+      "tablesContained": true
+    },
     "mobile:portal": {
       "docWidth": 390,
       "viewport": 390,
@@ -488,7 +493,7 @@
     }
   },
   "touchTargetsPortal": {
-    "total": 7,
+    "total": 5,
     "tooSmall": []
   },
   "errorMessage": "La passerelle ne répond pas. Vérifiez qu'elle est démarrée, puis réessayez.",

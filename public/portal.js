@@ -76,7 +76,7 @@
       <div class="stat-label">${esc(label)}</div>
       <div class="stat-value">${formatter(used)} <span class="stat-sub">/ ${formatter(limit)}</span></div>
       <div class="quota-bar ${level}"><span style="width:${pct}%"></span></div>
-      <div class="small muted">${pct}% utilisé · restant : ${formatter(Math.max(0, quota.remaining ?? 0))}</div>
+      <div class="small muted">restant : ${formatter(Math.max(0, quota.remaining ?? 0))}</div>
     </article>`;
   }
 
