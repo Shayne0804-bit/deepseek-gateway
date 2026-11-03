@@ -465,6 +465,13 @@ quotas, sa consommation sur 30 jours et ses dernières requêtes, sans accéder 
 
 ## Limites et quotas disponibles
 
+> **Modèle d'accès « pass »** : chaque clé correspond à un pass. L'accès s'arrête **à sa date de
+> fin (`expiresAt`) OU à l'épuisement du quota** (tokens, requêtes ou coût), au premier des deux.
+> Aucun renouvellement automatique par défaut. Pour renouveler : prolongez la date d'expiration et
+> remettez le quota à zéro (ou émettez un nouveau pass). Le portail affiche la date de fin, les
+> jours restants et le restant de quota ; l'API renvoie 429 `insufficient_quota` ou une erreur
+> d'expiration quand l'une des deux limites est atteinte.
+
 | Limite | Champ | Remis à zéro |
 |---|---|---|
 | Tokens consommés | `quotaTokens` | période choisie |

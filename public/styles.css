@@ -1350,6 +1350,16 @@ textarea { min-height: 120px; resize: vertical; font-family: var(--mono); font-s
   margin-bottom: 18px;
 }
 
+.pass-line {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.pass-line.pass-expired {
+  color: var(--danger);
+}
+
 .portal-page .stat-grid {
   margin-bottom: 22px;
 }

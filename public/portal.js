@@ -208,11 +208,16 @@
   }
 
   function limitsMarkup(me) {
+    const expiresAt = me.client.expiresAt ? new Date(me.client.expiresAt) : null;
+    const daysLeft = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000) : null;
+    const expiryLabel = expiresAt
+      ? `${fmtDate(me.client.expiresAt)}${daysLeft != null ? ` — ${daysLeft > 0 ? `dans ${daysLeft} j` : 'expiré'}` : ''} ou quota épuisé`
+      : "aucune date — arrêt à l'épuisement du quota";
     const rows = [
       ['période', PERIOD_LABELS[me.client.period] || me.client.period],
+      ['fin du pass', expiryLabel],
       ['débit', me.limits.rpmLimit ? `${fmtInt(me.limits.rpmLimit)} req/min` : 'non limité'],
       ['sortie max', me.limits.maxOutputTokens ? `${fmtInt(me.limits.maxOutputTokens)} tokens` : 'non plafonnée'],
-      ['expiration', me.client.expiresAt ? fmtDate(me.client.expiresAt) : 'aucune'],
       ['depuis', fmtDate(me.client.createdAt)],
     ];
     const models = (me.limits.allowedModels ?? []).length
@@ -275,6 +280,17 @@
     showApp();
     $('#portal-sub').textContent = `${me.client.name}${me.client.email ? ` · ${me.client.email}` : ` · clé ${me.client.keyPrefix}`} · ${PERIOD_LABELS[me.client.period] || me.client.period}`;
     $('#portal-version').textContent = `v${me.server?.version ?? ''}`;
+
+    const passLine = $('#portal-pass');
+    if (me.client.expiresAt) {
+      const expiresAt = new Date(me.client.expiresAt);
+      const daysLeft = Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000);
+      passLine.textContent = `Pass valable jusqu’au ${fmtDate(me.client.expiresAt)} (${daysLeft > 0 ? `dans ${daysLeft} j` : 'expiré'}) OU jusqu’à épuisement du quota.`;
+      passLine.classList.toggle('pass-expired', daysLeft <= 0);
+    } else {
+      passLine.textContent = 'Pass sans date de fin : il s’arrête à l’épuisement du quota (tokens, requêtes ou coût).';
+      passLine.classList.remove('pass-expired');
+    }
 
     const status = $('#portal-status');
     if (me.status && me.status !== 'ok') {

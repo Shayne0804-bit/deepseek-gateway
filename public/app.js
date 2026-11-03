@@ -749,7 +749,7 @@
         </label>
         <label class="field"><span>Date d'expiration (optionnel)</span>
           <input type="datetime-local" name="expiresAt" value="${toLocalInput(client?.expiresAt)}">
-          <small>Après cette date, la clé est refusée automatiquement.</small>
+          <small>Pass : l'accès s'arrête à cette date <em>ou</em> quand le quota est épuisé, au premier des deux. Aucun renouvellement automatique.</small>
         </label>
         <label class="field full"><span>Note interne</span>
           <input name="note" maxlength="500" value="${esc(client?.note || '')}" placeholder="Visible uniquement dans ce panneau.">

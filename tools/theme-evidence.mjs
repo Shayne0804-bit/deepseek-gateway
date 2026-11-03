@@ -103,7 +103,7 @@ async function main() {
 
   /* ------------------------------ donnees A ------------------------------ */
   const specs = [
-    { name: 'Léa — projet perso', quotaTokens: 2000000, period: 'monthly', rpmLimit: 30, note: 'Amie — usage quotidien' },
+    { name: 'Léa — projet perso', quotaTokens: 2000000, period: 'monthly', rpmLimit: 30, note: 'Amie — usage quotidien', expiresAt: new Date(Date.now() + 18 * 86400000).toISOString() },
     { name: 'Marc — cours Python', quotaRequests: 300, quotaUsd: 1.5, period: 'monthly', note: 'Étudiant — quota serré' },
     { name: 'Équipe proto jeu', quotaTokens: 500000, period: 'daily', maxOutputTokens: 4096, note: 'Prototype remis à zéro chaque jour' },
     { name: 'Ancien test (désactivé)', quotaTokens: 100000, period: 'total', enabled: false, note: 'Désactivée le mois dernier' },
@@ -652,4 +652,5 @@ main().catch((error) => {
   console.error('ECHEC SCRIPT:', error);
   process.exit(1);
 });
+
 

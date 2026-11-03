@@ -41,6 +41,11 @@
           La clé commence par <code>sk-dsk-</code>. Elle n'est enregistrée ni dans l'URL ni dans
           le navigateur : la session expire après 7 jours.
         </p>
+        <p class="small muted">
+          <strong>Durée d'accès :</strong> votre pass s'arrête à sa date de fin <em>ou</em> à
+          l'épuisement de son quota (crédit, requêtes ou tokens), au premier des deux.
+          Aucun prélèvement automatique.
+        </p>
         <dl class="ledger portal-preview">
           <div class="ledger-row">
             <dt class="ledger-key">quotas</dt>
@@ -112,6 +117,7 @@
           <p class="hero-kicker">Espace utilisateur</p>
           <h1 id="portal-title">Mon espace</h1>
           <p class="muted small" id="portal-sub"></p>
+          <p class="pass-line small" id="portal-pass"></p>
         </div>
         <div class="portal-actions">
           <button type="button" class="btn btn-ghost btn-sm" id="logout-btn">Se déconnecter</button>
