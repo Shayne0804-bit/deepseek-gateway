@@ -32,10 +32,13 @@ procédures d'exploitation pour un déploiement en production.
   la modification, mot de passe initial aléatoire de 16 caractères.
 - Sessions : jeton 256 bits haché en base, cookie `HttpOnly`, `SameSite=Strict`,
   `Secure` en HTTPS, expiration configurable (12 h par défaut).
-- **Portail utilisateur** : connexion par clé dérivée (`sk-dsk-…`), session dédiée
-  7 jours (cookie `HttpOnly`, `SameSite=Strict`), rate-limit des tentatives par IP,
-  aucune route d'administration accessible avec une session portail, et données
-  limitées à la clé authentifiée.
+- **Portail utilisateur** : connexion par clé dérivée (`sk-dsk-…`) ou par **code email à usage
+  unique** (6 chiffres, 10 min, haché HMAC en base, 5 essais max, rate-limit par IP/adresse,
+  réponse anti-énumération, audit). Session dédiée 7 jours (cookie `HttpOnly`, `SameSite=Strict`),
+  aucune route d'administration accessible avec une session portail, données limitées à la clé
+  authentifiée.
+- Codes email : jamais stockés en clair ; révocation à la première utilisation ; expiration
+  nettoyée périodiquement.
 - Verrouillage : 10 tentatives/15 min par IP ; échecs journalisés (audit).
 - Changement de mot de passe : toutes les sessions sont invalidées.
 

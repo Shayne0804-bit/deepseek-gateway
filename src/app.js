@@ -7,6 +7,7 @@ import zlib from 'node:zlib';
 import { APP_VERSION, loadConfig } from './config.js';
 import {
   cleanupAdminSessions,
+  cleanupPortalEmailCodes,
   cleanupPortalSessions,
   closeDb,
   deleteUsageLogsBefore,
@@ -17,6 +18,7 @@ import {
 import { bootstrapAdmin, migrateProviderSecret, resolveProviderConfig } from './settings.js';
 import { createAdminApi } from './admin-api.js';
 import { createPortalApi } from './portal-api.js';
+import { createMailer } from './mailer.js';
 import { createProxyHandler, isProxyPath } from './proxy.js';
 import { DEFAULT_PRICING } from './pricing.js';
 import { IpRateLimiter } from './limits.js';
@@ -186,8 +188,9 @@ export async function startGateway(overrides = {}) {
 
   const resolveProvider = (database, cfg) => resolveProviderConfig(database, cfg);
   migrateProviderSecret(db, config, log);
+  const mailer = overrides.mailer ?? createMailer(config, log);
   const adminApi = createAdminApi({ config, db, log });
-  const portalApi = createPortalApi({ config, db, log });
+  const portalApi = createPortalApi({ config, db, log, mailer });
   const proxyHandler = createProxyHandler({ config, db, log, resolveProvider });
   const ipLimiter = new IpRateLimiter();
 
@@ -211,6 +214,12 @@ export async function startGateway(overrides = {}) {
     }
     if (config.maxBodyBytes === Number.POSITIVE_INFINITY) {
       warnings.push('MAX_BODY_BYTES=0 (illimite) : risque memoire en production.');
+    }
+    if (config.mailTransport === 'console') {
+      warnings.push('Connexion email en mode console : les codes s’affichent dans les logs. Configurez MAIL_TRANSPORT (resend/smtp) en production.');
+    }
+    if (config.emailLoginEnabled && !config.publicBaseUrl) {
+      warnings.push('Connexion email active mais PUBLIC_BASE_URL vide : renseignez l’URL publique.');
     }
     return warnings;
   }
@@ -356,6 +365,7 @@ export async function startGateway(overrides = {}) {
       const nowIso = new Date().toISOString();
       cleanupAdminSessions(db, nowIso);
       cleanupPortalSessions(db, nowIso);
+      cleanupPortalEmailCodes(db, nowIso);
       ipLimiter.prune();
       if (config.usageRetentionDays > 0) {
         const cutoff = new Date(Date.now() - config.usageRetentionDays * 86_400_000).toISOString();

@@ -82,6 +82,7 @@ async function main() {
     ipRateLimitPerMin: 0,
     providerApiKey: 'sk-quality',
     providerBaseUrl: mock.url,
+    mailTransport: 'console',
     adminPassword: ADMIN_PASSWORD,
     publicBaseUrl: 'https://api.mon-domaine.fr',
     logLevel: 'error',
@@ -307,3 +308,4 @@ main().catch((err) => {
   console.error('ECHEC:', err);
   process.exit(1);
 });
+

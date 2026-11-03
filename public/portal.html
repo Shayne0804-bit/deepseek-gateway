@@ -59,15 +59,50 @@
             <dd>URL de base et exemples prêts à copier pour OpenAI, Claude Code et Claude Desktop.</dd>
           </div>
         </dl>
-      </div>      <form id="login-form" class="panel portal-login-form" novalidate>
-        <div id="portal-error" class="login-error" role="alert" aria-live="assertive"></div>
-        <label class="field full">
-          <span>Clé API</span>
-          <input type="password" id="portal-key" name="key" placeholder="sk-dsk-…" autocomplete="off" spellcheck="false" required>
-          <small>Fournie par le responsable de la passerelle, au format <code>sk-dsk-…</code>.</small>
-        </label>
-        <button type="submit" class="btn btn-primary btn-block">Ouvrir mon espace</button>
-      </form>
+      </div>
+      <div class="panel portal-login-form">
+        <div class="auth-tabs" role="tablist" aria-label="Méthode de connexion">
+          <button type="button" class="auth-tab active" id="tab-key" role="tab" aria-selected="true" aria-controls="panel-key">Clé API</button>
+          <button type="button" class="auth-tab hidden" id="tab-email" role="tab" aria-selected="false" aria-controls="panel-email" tabindex="-1">Code par email</button>
+        </div>
+
+        <div id="panel-key" role="tabpanel" aria-labelledby="tab-key">
+          <form id="login-form" novalidate>
+            <div id="portal-error" class="login-error" role="alert" aria-live="assertive"></div>
+            <label class="field full">
+              <span>Clé API</span>
+              <input type="password" id="portal-key" name="key" placeholder="sk-dsk-…" autocomplete="off" spellcheck="false" required>
+              <small>Fournie par le responsable de la passerelle, au format <code>sk-dsk-…</code>.</small>
+            </label>
+            <button type="submit" class="btn btn-primary btn-block">Ouvrir mon espace</button>
+          </form>
+        </div>
+
+        <div id="panel-email" role="tabpanel" aria-labelledby="tab-email" class="hidden">
+          <div id="email-error" class="login-error" role="alert" aria-live="assertive"></div>
+          <form id="email-request-form" novalidate>
+            <label class="field full">
+              <span>Adresse email</span>
+              <input type="email" id="email-address" name="email" placeholder="vous@example.com" autocomplete="email" maxlength="254" required>
+              <small>Un code à usage unique sera envoyé à cette adresse.</small>
+            </label>
+            <button type="submit" class="btn btn-primary btn-block" id="email-request-btn">Recevoir un code</button>
+          </form>
+          <form id="email-verify-form" class="hidden" novalidate>
+            <p class="small muted email-sent-note" id="email-sent-note"></p>
+            <label class="field full">
+              <span>Code à 6 chiffres</span>
+              <input type="text" id="email-code" name="code" placeholder="000000" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="7" required>
+              <small>Valable quelques minutes, à usage unique.</small>
+            </label>
+            <button type="submit" class="btn btn-primary btn-block" id="email-verify-btn">Valider le code</button>
+            <div class="auth-links">
+              <button type="button" class="btn btn-ghost btn-sm" id="email-resend">Renvoyer un code</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="email-change">Changer d'adresse</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </section>
 
     <!-- ============================ Tableau de bord ====================== -->

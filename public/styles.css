@@ -1249,6 +1249,50 @@ textarea { min-height: 120px; resize: vertical; font-family: var(--mono); font-s
   gap: 16px;
 }
 
+.auth-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.auth-tab {
+  padding: 9px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.auth-tab:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.auth-tab.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.auth-links {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.email-sent-note {
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
 .portal-preview {
   margin-top: 30px;
 }

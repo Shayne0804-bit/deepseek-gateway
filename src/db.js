@@ -6,6 +6,7 @@ const SCHEMA = `
 CREATE TABLE IF NOT EXISTS clients (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
+  email TEXT,
   key_hash TEXT NOT NULL UNIQUE,
   key_prefix TEXT NOT NULL,
   enabled INTEGER NOT NULL DEFAULT 1,
@@ -26,6 +27,16 @@ CREATE TABLE IF NOT EXISTS clients (
   created_at TEXT NOT NULL,
   last_used_at TEXT
 );
+
+CREATE TABLE IF NOT EXISTS portal_email_codes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL,
+  code_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_email_codes_email ON portal_email_codes (email COLLATE NOCASE, created_at);
 
 CREATE TABLE IF NOT EXISTS usage_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -98,6 +109,13 @@ function migrateDb(db) {
   if (!logColumns.some((column) => column.name === 'requested_model')) {
     db.exec('ALTER TABLE usage_logs ADD COLUMN requested_model TEXT');
   }
+  const clientColumns = db.prepare('PRAGMA table_info(clients)').all();
+  if (!clientColumns.some((column) => column.name === 'email')) {
+    db.exec('ALTER TABLE clients ADD COLUMN email TEXT');
+  }
+  db.exec(
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_email ON clients (email COLLATE NOCASE) WHERE email IS NOT NULL",
+  );
 }
 
 export function closeDb(db) {
@@ -145,6 +163,7 @@ export function mapClientRow(row) {
   return {
     id: row.id,
     name: row.name,
+    email: row.email ?? null,
     keyHash: row.key_hash,
     keyPrefix: row.key_prefix,
     enabled: row.enabled === 1 || row.enabled === true,
@@ -169,6 +188,48 @@ export function mapClientRow(row) {
 
 export function getClientById(db, id) {
   return mapClientRow(db.prepare('SELECT * FROM clients WHERE id = ?').get(id));
+}
+
+export function findClientByEmail(db, email) {
+  const normalized = String(email ?? '').trim().toLowerCase();
+  if (!normalized) return null;
+  return mapClientRow(
+    db.prepare("SELECT * FROM clients WHERE email IS NOT NULL AND email = ? COLLATE NOCASE").get(normalized),
+  );
+}
+
+/* --------------------------- codes email portail ------------------------ */
+
+export function deletePortalEmailCodes(db, email) {
+  db.prepare('DELETE FROM portal_email_codes WHERE email = ? COLLATE NOCASE').run(String(email));
+}
+
+export function insertPortalEmailCode(db, { email, codeHash, createdAt, expiresAt }) {
+  db.prepare(
+    'INSERT INTO portal_email_codes (email, code_hash, created_at, expires_at, attempts) VALUES (?, ?, ?, ?, 0)',
+  ).run(String(email).toLowerCase(), codeHash, createdAt, expiresAt);
+}
+
+export function getActivePortalEmailCode(db, email) {
+  return db
+    .prepare(
+      `SELECT * FROM portal_email_codes
+        WHERE email = ? COLLATE NOCASE
+        ORDER BY id DESC LIMIT 1`,
+    )
+    .get(String(email).toLowerCase());
+}
+
+export function incrementPortalEmailCodeAttempts(db, id) {
+  db.prepare('UPDATE portal_email_codes SET attempts = attempts + 1 WHERE id = ?').run(id);
+}
+
+export function deletePortalEmailCode(db, id) {
+  db.prepare('DELETE FROM portal_email_codes WHERE id = ?').run(id);
+}
+
+export function cleanupPortalEmailCodes(db, nowIso) {
+  db.prepare('DELETE FROM portal_email_codes WHERE expires_at <= ?').run(nowIso);
 }
 
 export function getClientByKeyHash(db, keyHash) {
@@ -198,8 +259,8 @@ export function insertClient(db, client) {
        quota_tokens, quota_requests, quota_usd,
        used_tokens, used_requests, used_usd,
        period, period_start, rpm_limit, concurrency_limit,
-       max_output_tokens, allowed_models, expires_at, note, created_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       max_output_tokens, allowed_models, expires_at, note, created_at, email
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     client.id,
     client.name,
@@ -221,12 +282,14 @@ export function insertClient(db, client) {
     client.expiresAt,
     client.note,
     client.createdAt,
+    client.email ?? null,
   );
 }
 
 export function updateClientFields(db, id, fields) {
   const columns = {
     name: 'name',
+    email: 'email',
     enabled: 'enabled',
     quotaTokens: 'quota_tokens',
     quotaRequests: 'quota_requests',

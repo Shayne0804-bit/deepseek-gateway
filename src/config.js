@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '2.1.2';
+export const APP_VERSION = '2.2.0';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -129,6 +129,14 @@ export function loadConfig(overrides = {}) {
     logFormat: (overrides.logFormat ?? raw('LOG_FORMAT') ?? 'text') === 'json' ? 'json' : 'text',
     usageRetentionDays: overrides.usageRetentionDays ?? intOr(raw('USAGE_RETENTION_DAYS'), 0),
     masterKey: overrides.masterKey ?? raw('MASTER_KEY') ?? '',
+    // Connexion portail par code recu par email (OTP).
+    mailTransport: overrides.mailTransport ?? raw('MAIL_TRANSPORT') ?? '',
+    mailFrom: overrides.mailFrom ?? raw('MAIL_FROM') ?? '',
+    mailFromName: overrides.mailFromName ?? raw('MAIL_FROM_NAME') ?? 'DeepSeek Gateway',
+    smtpUrl: overrides.smtpUrl ?? raw('SMTP_URL') ?? '',
+    resendApiKey: overrides.resendApiKey ?? raw('RESEND_API_KEY') ?? '',
+    resendApiBase: stripTrailingSlash(overrides.resendApiBase ?? raw('RESEND_API_BASE') ?? 'https://api.resend.com'),
+    otpExpiresMinutes: intOr(raw('OTP_EXPIRES_MINUTES'), 10),
   };
 
   if (!Number.isInteger(config.port) || config.port < 0 || config.port > 65535) {
@@ -150,5 +158,22 @@ export function loadConfig(overrides = {}) {
   if (config.sessionHours < 1 || config.sessionHours > 24 * 30) {
     config.sessionHours = 12;
   }
+  if (!Number.isFinite(config.otpExpiresMinutes) || config.otpExpiresMinutes < 5 || config.otpExpiresMinutes > 30) {
+    config.otpExpiresMinutes = 10;
+  }
+  // Transport email effectif : explicite, sinon detecte par configuration.
+  // Sans rien : desactive (la connexion par cle API reste le mode par defaut).
+  if (!config.mailTransport) {
+    if (config.smtpUrl) config.mailTransport = 'smtp';
+    else if (config.resendApiKey) config.mailTransport = 'resend';
+    else config.mailTransport = 'disabled';
+  }
+  if (!['console', 'smtp', 'resend', 'disabled'].includes(config.mailTransport)) {
+    config.mailTransport = 'disabled';
+  }
+  config.emailLoginEnabled = ['console', 'smtp', 'resend'].includes(config.mailTransport)
+    && (config.mailTransport !== 'smtp' || Boolean(config.smtpUrl))
+    && (config.mailTransport !== 'resend' || Boolean(config.resendApiKey))
+    && (config.mailTransport === 'console' || Boolean(config.mailFrom));
   return config;
 }

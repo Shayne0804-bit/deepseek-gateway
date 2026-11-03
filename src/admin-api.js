@@ -7,6 +7,7 @@ import {
   deleteAllAdminSessions,
   deleteClient,
   deleteSetting,
+  findClientByEmail,
   getClientById,
   getSetting,
   insertClient,
@@ -85,6 +86,7 @@ function publicClient(client, today = null) {
   return {
     id: client.id,
     name: client.name,
+    email: client.email ?? null,
     keyPrefix: client.keyPrefix,
     enabled: client.enabled,
     period: client.period,
@@ -135,6 +137,19 @@ function parseClientPayload(body, { partial = false } = {}) {
       throw new HttpError(400, 'Le nom doit contenir entre 1 et 80 caracteres.', 'invalid_name');
     }
     out.name = name;
+  }
+
+  if (has('email')) {
+    const raw = body.email;
+    if (raw == null || String(raw).trim() === '') {
+      out.email = null;
+    } else {
+      const email = String(raw).trim().toLowerCase();
+      if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+        throw new HttpError(400, 'Adresse email invalide.', 'invalid_email');
+      }
+      out.email = email;
+    }
   }
 
   const intFields = [
@@ -335,6 +350,12 @@ export function createAdminApi({ config, db, log }) {
       },
       modelAliases,
       modelAliasesMeta: { defaults: DEFAULT_MODEL_ALIASES },
+      email: {
+        enabled: Boolean(config.emailLoginEnabled),
+        transport: config.mailTransport,
+        from: config.mailFrom || null,
+        otpExpiresMinutes: config.otpExpiresMinutes,
+      },
       globalBudget: globalBudgetStatus(db),
       globalBudgetUsd: getGlobalBudgetUsd(db),
       admin: { passwordSource: getAdminPasswordSource(db) },
@@ -477,11 +498,16 @@ export function createAdminApi({ config, db, log }) {
           adminError(res, 409, 'Ce nom est deja utilise par une autre cle.', 'duplicate_name');
           return;
         }
+        if (payload.email && findClientByEmail(db, payload.email)) {
+          adminError(res, 409, 'Cette adresse email est deja associee a une autre cle.', 'duplicate_email');
+          return;
+        }
         const now = new Date();
         const apiKey = generateDerivedKey();
         const client = {
           id: crypto.randomUUID(),
           name: payload.name,
+          email: payload.email ?? null,
           keyHash: hashApiKey(apiKey),
           keyPrefix: displayKeyPrefix(apiKey),
           enabled: payload.enabled !== false,
@@ -530,6 +556,13 @@ export function createAdminApi({ config, db, log }) {
             const duplicate = listClients(db).find((c) => c.id !== clientId && c.name === payload.name);
             if (duplicate) {
               adminError(res, 409, 'Ce nom est deja utilise par une autre cle.', 'duplicate_name');
+              return;
+            }
+          }
+          if (payload.email) {
+            const duplicate = findClientByEmail(db, payload.email);
+            if (duplicate && duplicate.id !== clientId) {
+              adminError(res, 409, 'Cette adresse email est deja associee a une autre cle.', 'duplicate_email');
               return;
             }
           }

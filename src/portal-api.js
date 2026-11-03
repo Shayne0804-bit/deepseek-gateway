@@ -8,13 +8,20 @@
 import crypto from 'node:crypto';
 import { APP_VERSION } from './config.js';
 import {
+  cleanupPortalEmailCodes,
   cleanupPortalSessions,
   clientUsageSeriesSince,
   countClientUsageSince,
+  deletePortalEmailCode,
+  deletePortalEmailCodes,
   deletePortalSession,
+  findClientByEmail,
+  getActivePortalEmailCode,
   getClientById,
   getPortalSession,
   getSetting,
+  incrementPortalEmailCodeAttempts,
+  insertPortalEmailCode,
   insertPortalSession,
   listUsageLogs,
   recordAdminAudit,
@@ -22,6 +29,7 @@ import {
 import {
   sha256,
 } from './auth.js';
+import { getMasterKey } from './secrets.js';
 import {
   checkClientAccess,
   findClientByApiKey,
@@ -48,6 +56,8 @@ const PORTAL_CSRF_VALUE = 'dsk-portal';
 const SESSION_TTL_MS = 7 * 24 * 3600 * 1000;
 const MAX_LOGIN_ATTEMPTS = 10;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const MAX_CODE_ATTEMPTS = 5;
 
 function utcStartOfToday(now = new Date()) {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
@@ -99,8 +109,12 @@ function quotaView(client) {
   };
 }
 
-export function createPortalApi({ config, db, log }) {
+export function createPortalApi({ config, db, log, mailer = null }) {
   const loginAttempts = new Map();
+  const emailRequestAttempts = new Map();
+  const emailVerifyAttempts = new Map();
+  const emailLastSend = new Map();
+  const emailSendWindow = new Map();
 
   function portalError(res, status, message, code = null) {
     sendApiError(res, status, message, status === 429 ? 'rate_limit_error' : 'invalid_request_error', code);
@@ -112,6 +126,82 @@ export function createPortalApi({ config, db, log }) {
     } catch (err) {
       log.error(`Audit portail impossible : ${err.message}`);
     }
+  }
+
+  function normalizeEmail(value) {
+    return String(value ?? '').trim().toLowerCase();
+  }
+
+  function otpHash(email, code) {
+    return crypto
+      .createHmac('sha256', getMasterKey(config))
+      .update(`${email}:${code}`)
+      .digest('hex');
+  }
+
+  function safeEqualHex(a, b) {
+    const left = Buffer.from(String(a), 'utf8');
+    const right = Buffer.from(String(b), 'utf8');
+    return left.length === right.length && crypto.timingSafeEqual(left, right);
+  }
+
+  function hitWindow(map, key, limit, windowMs) {
+    const now = Date.now();
+    const entry = map.get(key);
+    if (!entry || now - entry.first > windowMs) {
+      map.set(key, { first: now, count: 1 });
+      return true;
+    }
+    entry.count += 1;
+    return entry.count <= limit;
+  }
+
+  function requireCsrf(req, res) {
+    if (String(req.headers[PORTAL_CSRF_HEADER] ?? '') !== PORTAL_CSRF_VALUE) {
+      portalError(res, 403, 'Requête refusée.', 'csrf');
+      return false;
+    }
+    if (!originAllowed(req)) {
+      portalError(res, 403, 'Origine non autorisée.', 'csrf_origin');
+      return false;
+    }
+    return true;
+  }
+
+  function createSession(req, res, client, method = 'api_key') {
+    cleanupPortalSessions(db, new Date().toISOString());
+    const token = crypto.randomBytes(32).toString('base64url');
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + SESSION_TTL_MS).toISOString();
+    insertPortalSession(db, sha256(token), client.id, now.toISOString(), expiresAt);
+    setPortalCookie(req, res, token, Math.floor(SESSION_TTL_MS / 1000));
+    loginAttempts.delete(clientIp(req, config.trustProxy));
+    audit(req, method === 'email' ? 'portal.login.email' : 'portal.login', client.name);
+    log.info(`[${req.requestId ?? '-'}] Connexion portail (${method}) : ${client.name}`);
+    sendJson(res, 200, {
+      ok: true,
+      method,
+      client: { name: client.name, email: client.email ?? null, keyPrefix: client.keyPrefix },
+      expiresAt,
+    });
+  }
+
+  function emailCodeMessage() {
+    return {
+      ok: true,
+      message: 'Si un compte existe pour cette adresse, un code de connexion vient d’être envoyé.',
+      expiresMinutes: config.otpExpiresMinutes,
+    };
+  }
+
+  /** Anti-spam : 1 envoi / 60 s et 5 envois / 15 min par adresse. */
+  function saveEmailRequestMarker(email) {
+    const now = Date.now();
+    const last = emailLastSend.get(email) ?? 0;
+    if (now - last < 60_000) return false;
+    if (!hitWindow(emailSendWindow, email, 5, LOGIN_WINDOW_MS)) return false;
+    emailLastSend.set(email, now);
+    return true;
   }
 
   function loginRateLimited(ip) {
@@ -174,6 +264,7 @@ export function createPortalApi({ config, db, log }) {
     return {
       client: {
         name: client.name,
+        email: client.email ?? null,
         keyPrefix: client.keyPrefix,
         period: client.period,
         periodStart: client.periodStart,
@@ -233,19 +324,114 @@ export function createPortalApi({ config, db, log }) {
           return;
         }
         cleanupPortalSessions(db, new Date().toISOString());
-        const token = crypto.randomBytes(32).toString('base64url');
-        const now = new Date();
-        const expiresAt = new Date(now.getTime() + SESSION_TTL_MS).toISOString();
-        insertPortalSession(db, sha256(token), client.id, now.toISOString(), expiresAt);
-        setPortalCookie(req, res, token, Math.floor(SESSION_TTL_MS / 1000));
-        loginAttempts.delete(ip);
-        audit(req, 'portal.login', client.name);
-        log.info(`[${req.requestId ?? '-'}] Connexion portail : ${client.name}`);
+        createSession(req, res, client, 'api_key');
+        return;
+      }
+
+      if (route === '/config' && method === 'GET') {
         sendJson(res, 200, {
-          ok: true,
-          client: { name: client.name, keyPrefix: client.keyPrefix },
-          expiresAt,
+          emailLoginEnabled: Boolean(mailer?.enabled),
+          method: mailer?.enabled ? 'email' : null,
         });
+        return;
+      }
+
+      if (route === '/email/request' && method === 'POST') {
+        const ip = clientIp(req, config.trustProxy);
+        if (!mailer?.enabled) {
+          portalError(res, 503, 'La connexion par email n’est pas configurée sur cette passerelle.', 'email_not_configured');
+          return;
+        }
+        if (!requireCsrf(req, res)) return;
+        if (!hitWindow(emailRequestAttempts, ip, 5, LOGIN_WINDOW_MS)) {
+          audit(req, 'portal.email.request.rate_limited');
+          portalError(res, 429, 'Trop de demandes de code. Réessayez dans quelques minutes.', 'too_many_attempts');
+          return;
+        }
+        const body = await readJsonBody(req, 4 * 1024);
+        const email = normalizeEmail(body.email);
+        if (!EMAIL_RE.test(email) || email.length > 254) {
+          portalError(res, 400, 'Adresse email invalide.', 'invalid_email');
+          return;
+        }
+        const client = findClientByEmail(db, email);
+        const canSend = saveEmailRequestMarker(email) && Boolean(client);
+        if (client) {
+          if (!canSend) {
+            // Silencieux : evite le spam et ne revele pas l'existence du compte.
+            sendJson(res, 200, emailCodeMessage());
+            return;
+          }
+          const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+          const now = new Date();
+          const expiresAt = new Date(now.getTime() + config.otpExpiresMinutes * 60_000).toISOString();
+          cleanupPortalEmailCodes(db, now.toISOString());
+          deletePortalEmailCodes(db, email);
+          insertPortalEmailCode(db, {
+            email,
+            codeHash: otpHash(email, code),
+            createdAt: now.toISOString(),
+            expiresAt,
+          });
+          audit(req, 'portal.email.requested', client.name);
+          try {
+            await mailer.sendPortalCode({ to: email, code, minutes: config.otpExpiresMinutes });
+            log.info(`[${req.requestId ?? '-'}] Code de connexion email envoyé (${client.name}).`);
+          } catch (err) {
+            log.error(`[${req.requestId ?? '-'}] Envoi email impossible : ${err.message}`);
+          }
+        } else {
+          audit(req, 'portal.email.requested');
+        }
+        sendJson(res, 200, emailCodeMessage());
+        return;
+      }
+
+      if (route === '/email/verify' && method === 'POST') {
+        const ip = clientIp(req, config.trustProxy);
+        if (!mailer?.enabled) {
+          portalError(res, 503, 'La connexion par email n’est pas configurée sur cette passerelle.', 'email_not_configured');
+          return;
+        }
+        if (!requireCsrf(req, res)) return;
+        if (!hitWindow(emailVerifyAttempts, ip, 20, LOGIN_WINDOW_MS)) {
+          audit(req, 'portal.email.verify.rate_limited');
+          portalError(res, 429, 'Trop de tentatives. Réessayez dans quelques minutes.', 'too_many_attempts');
+          return;
+        }
+        const body = await readJsonBody(req, 4 * 1024);
+        const email = normalizeEmail(body.email);
+        const code = String(body.code ?? '').replace(/\s+/g, '');
+        if (!EMAIL_RE.test(email) || !/^\d{6}$/.test(code)) {
+          portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
+          return;
+        }
+        const record = getActivePortalEmailCode(db, email);
+        if (!record || new Date(record.expires_at).getTime() <= Date.now()) {
+          if (record) deletePortalEmailCode(db, record.id);
+          portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
+          return;
+        }
+        incrementPortalEmailCodeAttempts(db, record.id);
+        if (Number(record.attempts) + 1 > MAX_CODE_ATTEMPTS) {
+          deletePortalEmailCode(db, record.id);
+          audit(req, 'portal.email.failed');
+          portalError(res, 401, 'Trop de tentatives. Demandez un nouveau code.', 'too_many_attempts');
+          return;
+        }
+        if (!safeEqualHex(otpHash(email, code), record.code_hash)) {
+          audit(req, 'portal.email.failed');
+          recordLoginFailure(ip);
+          portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
+          return;
+        }
+        deletePortalEmailCode(db, record.id);
+        const client = findClientByEmail(db, email);
+        if (!client) {
+          portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
+          return;
+        }
+        createSession(req, res, client, 'email');
         return;
       }
 

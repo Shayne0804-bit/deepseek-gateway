@@ -6,7 +6,7 @@
   ],
   "accessibility": {
     "status": "pass",
-    "evidence": "Contraste verifie sur 46 couples texte/fond (site public, portail, connexion admin + clients) : 0 echec(s). Focus clavier : 6/6 arrets avec indicateur visible (anneau vert). Tous les champs de formulaire ont un libelle. Reduced-motion : scanlines masquees et transitions neutralisees (1e-06s)."
+    "evidence": "Contraste verifie sur 47 couples texte/fond (site public, portail, connexion admin + clients) : 0 echec(s). Focus clavier : 6/6 arrets avec indicateur visible (anneau vert). Tous les champs de formulaire ont un libelle. Reduced-motion : scanlines masquees et transitions neutralisees (1e-06s)."
   },
   "responsive": {
     "status": "pass",

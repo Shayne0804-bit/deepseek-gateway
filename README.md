@@ -58,6 +58,9 @@ Le produit tient en **trois surfaces web** :
   d'auto-service où le porteur d'une clé consulte ses quotas (tokens / requêtes / USD), sa
   consommation sur 30 jours, ses dernières requêtes et les exemples de branchement.
   Réservé à sa clé : aucune donnée des autres utilisateurs ni des réglages admin.
+- **Connexion par email (OTP)** : en plus de la clé API, le portail peut authentifier
+  l'utilisateur par un **code à usage unique envoyé par email** (Resend, SMTP/Gmail, ou console
+  en développement), sans exposer la clé.
 - **Compatible OpenAI et Anthropic** : `/v1/chat/completions`, `/v1/responses`, `/beta/completions`,
   `/v1/models`, et `/anthropic/...` (Chat Completions, Responses API, FIM, format compatible Claude).
 - **Claude Code prêt à l'emploi** : les requêtes Anthropic `/v1/messages` (envoyées par Claude Code)
@@ -203,6 +206,81 @@ de 7 jours, cookie `HttpOnly`), puis n'expose que **ses** données : quotas rest
 
 Sécurité : la clé n'est jamais stockée en clair côté navigateur ; le portail n'a accès à aucune
 route d'administration ; les tentatives de connexion sont limitées par IP et journalisées.
+
+## Connexion par email (code OTP) et domaine
+
+Le portail accepte **deux modes de connexion** :
+
+1. **Clé API** (`sk-dsk-…`) — toujours disponible, aucun service externe.
+2. **Code par email** — l'utilisateur saisit l'adresse email associée à sa clé, reçoit un
+   **code à 6 chiffres, valable 10 minutes et à usage unique**, puis ouvre son espace.
+
+Le code est haché en base (HMAC), limité à 5 essais, redemandé au plus une fois par minute,
+et la réponse est toujours générique (« si un compte existe… ») pour ne pas révéler les comptes.
+Chaque utilisateur doit avoir une **adresse email** renseignée dans sa fiche (panneau → clé → Email).
+
+### Choisir un transport d'envoi
+
+| Transport | Usage | Configuration |
+|---|---|---|
+| `console` | Développement : le code s'affiche dans les logs serveur. | `MAIL_TRANSPORT=console` |
+| `resend` | **Recommandé en production** avec un domaine vérifié. | `RESEND_API_KEY`, `MAIL_FROM`, `MAIL_TRANSPORT=resend` |
+| `smtp` | Gmail / Google Workspace via mot de passe d'application (TLS implicite, port 465). | `SMTP_URL=smtps://…`, `MAIL_FROM`, `MAIL_TRANSPORT=smtp` |
+
+> Sans `MAIL_TRANSPORT` configuré, la connexion par email est **désactivée** (la clé API reste
+> le seul mode). Mettez `MAIL_TRANSPORT=console` pour tester le parcours sans envoi réel.
+
+```env
+# Resend (recommandé)
+MAIL_TRANSPORT=resend
+MAIL_FROM=no-reply@mail.votre-domaine.fr
+MAIL_FROM_NAME=DeepSeek Gateway
+RESEND_API_KEY=re_…
+
+# ou Gmail (petit volume, compte personnel)
+MAIL_TRANSPORT=smtp
+SMTP_URL=smtps://adresse%40gmail.com:motdepasseapplication@smtp.gmail.com:465
+MAIL_FROM=adresse@gmail.com
+OTP_EXPIRES_MINUTES=10
+```
+
+### Domaine + Cloudflare (DNS)
+
+Cloudflare héberge le **DNS** ; il n'envoie pas d'e-mail. Pour que les codes arrivent en boîte
+de réception (et pas en spam), créez un domaine d'envoi et recopiez dans **Cloudflare → DNS**
+les enregistrements fournis par le fournisseur (Resend recommandé) :
+
+- `TXT` SPF (`v=spf1 include:_spf.resend.com ~all` ou la valeur exacte du fournisseur),
+- `TXT`/`CNAME` DKIM,
+- `MX` du sous-domaine d'envoi si le fournisseur en fournit,
+- `TXT _dmarc` recommandé (`v=DMARC1; p=none; rua=mailto:…`).
+
+Conseils concrets :
+
+- Utilisez un **sous-domaine d'envoi** (`mail.votre-domaine.fr`) pour isoler SPF/DKIM de votre
+  messagerie principale ; mettez `MAIL_FROM=no-reply@mail.votre-domaine.fr`.
+- Laissez les enregistrements email en **DNS only** (nuage gris), jamais derrière le proxy
+  Cloudflare.
+- **Cloudflare Email Routing** ne fait que *recevoir/rediriger* des emails : ne pas l'activer sur
+  le sous-domaine d'envoi.
+- Vérifiez le domaine chez le fournisseur, puis envoyez un premier code depuis `/portal` pour
+  tester la délivrabilité.
+- Le domaine est utile pour la **délivrabilité de l'expéditeur** ; les codes vont dans la boîte
+  mail de l'utilisateur (Gmail, Outlook…), pas besoin d'une boîte sur votre domaine.
+
+### Domaine du site (Railway + Cloudflare)
+
+1. Railway → votre service → *Settings → Networking → Custom Domain* : `api.votre-domaine.fr`.
+2. Cloudflare → DNS : créez le `CNAME` fourni par Railway. Commencez en **DNS only** ;
+   si vous activez le proxy (nuage orange), passez SSL/TLS en **Full (strict)**.
+3. `PUBLIC_BASE_URL=https://api.votre-domaine.fr` dans Railway, puis redéployez.
+4. Gardez `/admin` non référencé : la console est accessible par URL directe uniquement.
+
+### Sécurité de l'OTP
+
+- Codes aléatoires (`crypto.randomInt`), **hachés HMAC** en base, expiration 5–30 min, usage unique.
+- 5 essais maximum, rate-limit par IP et par adresse, réponse anti-énumération, audit des événements.
+- La clé API reste un facteur de secours ; une session portail n'ouvre **jamais** l'administration.
 
 ## Utilisation côté ami
 
@@ -557,6 +635,11 @@ IP_RATE_LIMIT_PER_MIN=240
 MAX_CONCURRENT_REQUESTS=200
 USAGE_RETENTION_DAYS=90
 SESSION_HOURS=12
+# Connexion portail par email (Resend recommande avec domaine vérifié) :
+MAIL_TRANSPORT=resend
+MAIL_FROM=no-reply@mail.VOTRE-DOMAINE
+MAIL_FROM_NAME=DeepSeek Gateway
+RESEND_API_KEY=re_...
 ```
 
 - **Ne définissez pas `PORT`** : Railway l'injecte automatiquement et l'application l'utilise.
@@ -663,7 +746,7 @@ Serveur arrêté, copiez le dossier `data/` (ou au minimum `gateway.db`). À cha
 node --test test
 ```
 
-La suite (68 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
+La suite (73 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
 normalisation `usage` OpenAI/Anthropic, quotas (tokens, requêtes, coût, reset de période),
 limites de débit et de concurrence, authentification admin (hash scrypt, sessions),
 chiffrement/hachage des clés dérivées, proxy JSON et **streaming SSE** avec comptage,
@@ -674,7 +757,8 @@ alias de modèles, **découverte de modèles** (`/v1/models` et `/anthropic/v1/m
 erreurs et absence de clé fournisseur, les garanties production
 (**chiffrement des secrets**, rate-limit IP, budget global, audit, export CSV, HSTS), et le
 **portail utilisateur** (trois surfaces, connexion par clé, isolation des données entre clés,
-déconnexion).
+déconnexion), et la **connexion par email** (code à usage unique, anti-spam, unicité, essais
+limités, transport Resend/console).
 Les tests utilisent un faux serveur DeepSeek local : **aucun appel réseau réel, aucune clé nécessaire**.
 
 ## Structure du projet
@@ -693,6 +777,7 @@ deepseek-gateway/
 │   ├── limits.js             # rate-limit IP + sémaphore global (production)
 │   ├── secrets.js            # chiffrement AES-256-GCM des secrets au repos
 │   ├── proxy.js              # proxy /v1/... et /anthropic/... (JSON + SSE)
+│   ├── mailer.js             # envoi email (Resend, SMTP TLS, console) pour les codes OTP
 │   ├── portal-api.js         # API de l'espace utilisateur (/portal/api/...)
 │   ├── admin-api.js          # API REST du panneau (/admin/api/...)
 │   └── http-utils.js         # helpers HTTP, cookies, erreurs, sécurité

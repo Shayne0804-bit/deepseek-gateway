@@ -10,7 +10,7 @@
   const DAY_LABEL = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit' });
 
   const $ = (selector) => document.querySelector(selector);
-  const state = { me: null, busy: false };
+  const state = { me: null, busy: false, emailBusy: false };
 
   function esc(value) {
     return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
@@ -51,7 +51,97 @@
     $('#portal-app').classList.add('hidden');
     $('#login-view').classList.remove('hidden');
     $('#portal-error').textContent = message;
+    resetEmailFlow();
+    setAuthTab('key');
     $('#portal-key').focus();
+  }
+
+  function setAuthTab(mode) {
+    const emailMode = mode === 'email';
+    const keyTab = $('#tab-key');
+    const emailTab = $('#tab-email');
+    const keyPanel = $('#panel-key');
+    const emailPanel = $('#panel-email');
+    if (!keyTab || !emailTab) return;
+    keyTab.classList.toggle('active', !emailMode);
+    keyTab.setAttribute('aria-selected', String(!emailMode));
+    keyTab.tabIndex = emailMode ? -1 : 0;
+    emailTab.classList.toggle('active', emailMode);
+    emailTab.setAttribute('aria-selected', String(emailMode));
+    emailTab.tabIndex = emailMode ? 0 : -1;
+    keyPanel.classList.toggle('hidden', emailMode);
+    emailPanel.classList.toggle('hidden', !emailMode);
+    $('#email-error').textContent = '';
+    if (emailMode) $('#email-address').focus();
+    else $('#portal-key').focus();
+  }
+
+  function showEmailError(message = '') {
+    $('#email-error').textContent = message;
+  }
+
+  function resetEmailFlow() {
+    $('#email-request-form').classList.remove('hidden');
+    $('#email-verify-form').classList.add('hidden');
+    $('#email-code').value = '';
+    $('#email-sent-note').textContent = '';
+    showEmailError('');
+  }
+
+  async function requestEmailCode() {
+    if (state.emailBusy) return;
+    const email = $('#email-address').value.trim();
+    showEmailError('');
+    if (!email) {
+      showEmailError('Entrez votre adresse email.');
+      $('#email-address').focus();
+      return;
+    }
+    state.emailBusy = true;
+    const button = $('#email-request-btn');
+    button.disabled = true;
+    button.textContent = 'Envoi…';
+    try {
+      const data = await api('/email/request', { method: 'POST', body: { email } });
+      $('#email-sent-note').textContent = `${data.message} Le code est valable ${data.expiresMinutes ?? 10} minutes.`;
+      $('#email-request-form').classList.add('hidden');
+      $('#email-verify-form').classList.remove('hidden');
+      $('#email-code').value = '';
+      $('#email-code').focus();
+    } catch (err) {
+      showEmailError(err.message);
+    } finally {
+      state.emailBusy = false;
+      button.disabled = false;
+      button.textContent = 'Recevoir un code';
+    }
+  }
+
+  async function verifyEmailCode() {
+    if (state.emailBusy) return;
+    const email = $('#email-address').value.trim();
+    const code = $('#email-code').value.replace(/\s+/g, '');
+    showEmailError('');
+    if (!/^\d{6}$/.test(code)) {
+      showEmailError('Entrez le code à 6 chiffres reçu par email.');
+      $('#email-code').focus();
+      return;
+    }
+    state.emailBusy = true;
+    const button = $('#email-verify-btn');
+    button.disabled = true;
+    button.textContent = 'Vérification…';
+    try {
+      await api('/email/verify', { method: 'POST', body: { email, code } });
+      await loadMe();
+    } catch (err) {
+      showEmailError(err.message);
+      $('#email-code').focus();
+    } finally {
+      state.emailBusy = false;
+      button.disabled = false;
+      button.textContent = 'Valider le code';
+    }
   }
 
   function showApp() {
@@ -183,7 +273,7 @@
   function renderMe(me) {
     state.me = me;
     showApp();
-    $('#portal-sub').textContent = `${me.client.name} · clé ${me.client.keyPrefix} · ${PERIOD_LABELS[me.client.period] || me.client.period}`;
+    $('#portal-sub').textContent = `${me.client.name}${me.client.email ? ` · ${me.client.email}` : ` · clé ${me.client.keyPrefix}`} · ${PERIOD_LABELS[me.client.period] || me.client.period}`;
     $('#portal-version').textContent = `v${me.server?.version ?? ''}`;
 
     const status = $('#portal-status');
@@ -258,6 +348,25 @@
   function wire() {
     $('#login-form').addEventListener('submit', handleLogin);
     $('#logout-btn').addEventListener('click', handleLogout);
+    $('#tab-key').addEventListener('click', () => setAuthTab('key'));
+    $('#tab-email').addEventListener('click', () => setAuthTab('email'));
+    for (const id of ['tab-key', 'tab-email']) {
+      $(`#${id}`).addEventListener('keydown', (event) => {
+        if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+        event.preventDefault();
+        setAuthTab($('#tab-email').classList.contains('active') ? 'key' : 'email');
+      });
+    }
+    $('#email-request-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      requestEmailCode();
+    });
+    $('#email-verify-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      verifyEmailCode();
+    });
+    $('#email-resend').addEventListener('click', requestEmailCode);
+    $('#email-change').addEventListener('click', resetEmailFlow);
     document.addEventListener('click', async (event) => {
       const button = event.target.closest('[data-copy]');
       if (!button) return;
@@ -270,6 +379,21 @@
         button.textContent = 'Copie impossible';
       }
     });
+  }
+
+  async function detectEmailLogin() {
+    try {
+      const config = await api('/config');
+      if (config.emailLoginEnabled) {
+        $('#tab-email').classList.remove('hidden');
+      } else {
+        // Un seul mode : la barre d'onglets n'apporte rien.
+        document.querySelector('.auth-tabs').classList.add('hidden');
+      }
+    } catch {
+      /* pas bloquant : la connexion par clé reste disponible */
+      document.querySelector('.auth-tabs').classList.add('hidden');
+    }
   }
 
   async function refreshStatus() {
@@ -293,6 +417,7 @@
     wire();
     refreshStatus();
     setInterval(refreshStatus, 60_000);
+    await detectEmailLogin();
     try {
       await loadMe();
     } catch (err) {

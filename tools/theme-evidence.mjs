@@ -77,6 +77,7 @@ async function main() {
     tlsKeyFile: '',
     providerApiKey: 'sk-demo-original',
     providerBaseUrl: 'http://127.0.0.1:1',
+    mailTransport: 'console',
     adminPassword: ADMIN_PASSWORD,
     publicBaseUrl: 'https://api.mon-domaine.fr',
     logLevel: 'error',
@@ -91,6 +92,7 @@ async function main() {
     tlsKeyFile: '',
     providerApiKey: '',
     providerBaseUrl: 'http://127.0.0.1:1',
+    mailTransport: 'console',
     adminPassword: ADMIN_PASSWORD,
     logLevel: 'error',
     logger: silentLogger,
@@ -323,7 +325,7 @@ async function main() {
   await navigate(`${URL_A}/portal`);
   await waitFor("document.querySelector('#login-view') && !document.querySelector('#login-view').classList.contains('hidden')");
   await sleep(450);
-  const portalLoginSelectors = ['.portal-login-copy h1', '.portal-login-copy p', '.portal-preview .ledger-key', '.portal-preview .ledger-row dd', '#login-form .field > span', '#login-form .btn-primary', '#login-form .small'];
+  const portalLoginSelectors = ['.portal-login-copy h1', '.portal-login-copy p', '.portal-preview .ledger-key', '.portal-preview .ledger-row dd', '.auth-tab', '#login-form .field > span', '#login-form .btn-primary', '#login-form .small'];
   const portalLoginContrast = await evaluate(contrastScript.replace('SEL', JSON.stringify(portalLoginSelectors)));
   checks.contrast.push(...portalLoginContrast.map((item) => ({ ...item, page: 'portal-login' })));
   await screenshot('18-public-portal-login-desktop.png', 'Portail utilisateur en 1440x900 : connexion par cle derivee, apercu de ce que l\'utilisateur pourra consulter, aucune donnee d\'administration.');
@@ -650,3 +652,4 @@ main().catch((error) => {
   console.error('ECHEC SCRIPT:', error);
   process.exit(1);
 });
+

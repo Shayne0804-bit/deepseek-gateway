@@ -118,6 +118,15 @@
       "page": "portal-login"
     },
     {
+      "selector": ".auth-tab",
+      "ratio": 10.95,
+      "required": 4.5,
+      "size": 11.5,
+      "weight": 400,
+      "text": "Clé API",
+      "page": "portal-login"
+    },
+    {
       "selector": "#login-form .field > span",
       "ratio": 8.74,
       "required": 4.5,
@@ -155,7 +164,7 @@
       "required": 4.5,
       "size": 11.5,
       "weight": 400,
-      "text": "Léa — projet perso · clé sk-dsk-anI6f… ·",
+      "text": "Léa — projet perso · clé sk-dsk-46Dke… ·",
       "page": "portal-dashboard"
     },
     {
@@ -218,7 +227,7 @@
       "required": 4.5,
       "size": 11.5,
       "weight": 400,
-      "text": "DeepSeek Gateway v2.1.2\n        Les donn",
+      "text": "DeepSeek Gateway v2.2.0\n        Les donn",
       "page": "portal-dashboard"
     },
     {

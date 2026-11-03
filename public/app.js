@@ -657,7 +657,7 @@
       <tr>
         <td>
           <div class="client-name">${esc(client.name)}</div>
-          <div class="client-meta">${esc(client.note || '')}${client.note ? ' · ' : ''}créée le ${fmtDate(client.createdAt)}${client.lastUsedAt ? ` · dernier appel ${fmtDate(client.lastUsedAt)}` : ' · jamais utilisée'}</div>
+          <div class="client-meta">${client.email ? `${esc(client.email)} · ` : ''}${esc(client.note || '')}${client.note ? ' · ' : ''}créée le ${fmtDate(client.createdAt)}${client.lastUsedAt ? ` · dernier appel ${fmtDate(client.lastUsedAt)}` : ' · jamais utilisée'}</div>
         </td>
         <td class="nowrap"><span class="mono small" title="Empreinte de la clé">${esc(client.keyPrefix)}</span></td>
         <td>${statusBadge(client)}</td>
@@ -707,6 +707,10 @@
       <div class="form-grid">
         <label class="field full"><span>Nom de la clé</span>
           <input name="name" required maxlength="80" value="${esc(client?.name || '')}" placeholder="Ex : Ami, équipe 3D, projet perso…">
+        </label>
+        <label class="field full"><span>Email (connexion portail)</span>
+          <input type="email" name="email" maxlength="254" value="${esc(client?.email || '')}" placeholder="ex : ami@example.com">
+          <small>Permet à l'utilisateur de se connecter à <code>/portal</code> par code email, sans utiliser sa clé API. Laisser vide pour désactiver.</small>
         </label>
         <label class="field"><span>Quota de tokens</span>
           <input type="number" name="quotaTokens" min="0" step="1000" value="${client?.quotaTokens ?? ''}" placeholder="ex : 5 000 000">
@@ -784,6 +788,7 @@
     const num = (name) => (value(name) === '' ? null : Number(value(name)));
     const payload = {
       name: value('name'),
+      email: value('email') || null,
       quotaTokens: num('quotaTokens'),
       quotaRequests: num('quotaRequests'),
       quotaUsd: num('quotaUsd'),
@@ -821,6 +826,7 @@
         </div>
         <div class="setting-row"><span class="k">Nom</span><span class="v">${esc(client.name)}</span></div>
         <div class="setting-row"><span class="k">URL à donner à votre ami</span><span class="v">${esc(apiUrl)}</span></div>
+        ${client.email ? `<div class="setting-row"><span class="k">Connexion portail par email</span><span class="v">${esc(client.email)}</span></div>` : ''}
         <div class="setting-row"><span class="k">Modèle conseillé</span><span class="v">deepseek-flash</span></div>
         <p class="muted small" style="margin:16px 0 0">
           Votre ami utilise cette clé comme <code>api_key</code> et l'URL ci-dessus comme <code>base_url</code>.
@@ -1007,6 +1013,25 @@
             <button type="submit" class="btn btn-primary">Enregistrer</button>
           </div>
         </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Connexion par email</h2>
+            <span class="hint">Codes à usage unique envoyés aux utilisateurs du portail.</span>
+          </div>
+          <span class="badge ${s.email?.enabled ? 'badge-ok' : 'badge-muted'}">${s.email?.enabled ? 'activée' : 'désactivée'}</span>
+        </div>
+        <div class="alert">
+          Transport : <code>${esc(s.email?.transport || '—')}</code>${s.email?.from ? ` · expéditeur : <code>${esc(s.email.from)}</code>` : ''}
+          · validité du code : ${fmtInt(s.email?.otpExpiresMinutes || 10)} min.
+          Configurez <code>MAIL_TRANSPORT</code>, <code>MAIL_FROM</code> et <code>SMTP_URL</code> ou <code>RESEND_API_KEY</code>.
+          Chaque utilisateur doit avoir une adresse email dans sa fiche.
+        </div>
+        ${s.email?.transport === 'console'
+          ? '<div class="alert warn">Mode console : les codes sont écrits dans les logs du serveur. À réserver au développement.</div>'
+          : ''}
       </section>
 
       <section class="panel">
