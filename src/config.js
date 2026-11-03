@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '2.2.0';
+export const APP_VERSION = '2.3.0';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -132,7 +132,7 @@ export function loadConfig(overrides = {}) {
     // Connexion portail par code recu par email (OTP).
     mailTransport: overrides.mailTransport ?? raw('MAIL_TRANSPORT') ?? '',
     mailFrom: overrides.mailFrom ?? raw('MAIL_FROM') ?? '',
-    mailFromName: overrides.mailFromName ?? raw('MAIL_FROM_NAME') ?? 'DeepSeek Gateway',
+    mailFromName: overrides.mailFromName ?? raw('MAIL_FROM_NAME') ?? 'VALARIA Gateway API',
     smtpUrl: overrides.smtpUrl ?? raw('SMTP_URL') ?? '',
     resendApiKey: overrides.resendApiKey ?? raw('RESEND_API_KEY') ?? '',
     resendApiBase: stripTrailingSlash(overrides.resendApiBase ?? raw('RESEND_API_BASE') ?? 'https://api.resend.com'),
@@ -177,3 +177,4 @@ export function loadConfig(overrides = {}) {
     && (config.mailTransport === 'console' || Boolean(config.mailFrom));
   return config;
 }
+

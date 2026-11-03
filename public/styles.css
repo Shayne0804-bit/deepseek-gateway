@@ -1,5 +1,5 @@
 /* ============================================================
-   DeepSeek Gateway — console d'administration
+   VALARIA Gateway API — console d'administration
    Direction : PHOSPHOR OPS — terminal vert, utilitaire, dense.
    Sans dependance externe. Toutes les classes existantes sont
    conservees ; seules la direction visuelle et la typographie
@@ -1668,3 +1668,4 @@ textarea { min-height: 120px; resize: vertical; font-family: var(--mono); font-s
   }
   html::after { display: none; }
 }
+

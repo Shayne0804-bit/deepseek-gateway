@@ -86,7 +86,7 @@ test('portail : trois surfaces + robots prives', async () => {
     const landing = await fetch(`${started.url}/`);
     assert.equal(landing.status, 200);
     const html = await landing.text();
-    assert.match(html, /DeepSeek Gateway/);
+    assert.match(html, /VALARIA Gateway API/);
     assert.match(html, /partagée sous contrôle/);
 
     const admin = await fetch(`${started.url}/admin`);
@@ -196,3 +196,4 @@ test('portail : isolation des donnees entre deux cles', async () => {
     await started.close();
   }
 });
+

@@ -1,5 +1,5 @@
 /* ============================================================
-   DeepSeek Gateway — panneau d'administration (vanilla JS)
+   VALARIA Gateway API — panneau d'administration (vanilla JS)
    ============================================================ */
 (() => {
   'use strict';
@@ -1562,3 +1562,4 @@
 
   init();
 })();
+

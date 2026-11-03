@@ -102,7 +102,7 @@ function buildModelsPayload(pathname, req, pricing, aliases) {
       id,
       object: 'model',
       created: nowSeconds,
-      owned_by: 'deepseek-gateway',
+      owned_by: 'valaria-gateway',
     })),
   };
 }
@@ -412,7 +412,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
       const upstreamHeaders = {
         'content-type': 'application/json',
         authorization: `Bearer ${provider.apiKey}`,
-        'user-agent': `deepseek-gateway/${APP_VERSION}`,
+        'user-agent': `valaria-gateway/${APP_VERSION}`,
       };
       if (req.headers.accept) upstreamHeaders.accept = String(req.headers.accept);
 
@@ -673,3 +673,4 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
 
   return handleProxy;
 }
+

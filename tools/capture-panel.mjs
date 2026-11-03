@@ -1,4 +1,4 @@
-// Capture d'ecran du panneau DeepSeek Gateway avec Chrome headless (CDP).
+// Capture d'ecran du panneau VALARIA Gateway API avec Chrome headless (CDP).
 // Usage interne : valide le rendu reel de l'interface et les erreurs JS.
 import fs from 'node:fs';
 import http from 'node:http';
@@ -354,4 +354,5 @@ main().catch((err) => {
   console.error('ECHEC:', err);
   process.exit(1);
 });
+
 

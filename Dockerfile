@@ -1,4 +1,4 @@
-# Image de production pour DeepSeek Gateway.
+# Image de production pour VALARIA Gateway API.
 # Compatible Docker local, docker compose et Railway (PaaS).
 #
 # NB : volontairement AUCUNE instruction VOLUME ici. Railway refuse les volumes
@@ -34,3 +34,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "server.js"]
+

@@ -65,7 +65,7 @@ test('HTTPS natif : HTTP et HTTPS servis en parallele', async () => {
     // Le panneau et l'API sont aussi servis en HTTPS.
     const panel = await httpsGet(`https://localhost:${local.httpsPort}/`, ca);
     assert.equal(panel.status, 200);
-    assert.match(panel.body, /DeepSeek Gateway/);
+    assert.match(panel.body, /VALARIA Gateway API/);
 
     const api = await httpsGet(`https://127.0.0.1:${local.httpsPort}/v1/models`, ca);
     assert.equal(api.status, 401); // sans cle derivee : l'API repond (preuve que le proxy HTTPS fonctionne)
@@ -97,3 +97,4 @@ test('TLS : configuration incomplete refusee explicitement', async () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+

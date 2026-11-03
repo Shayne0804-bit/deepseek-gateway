@@ -1,4 +1,4 @@
-# Audit qualité web — DeepSeek Gateway
+# Audit qualité web — VALARIA Gateway API
 
 **Date :** 2026-11-03 · **Version :** 2.1.0
 **Périmètre :** trois surfaces — site public (`/`), console d'administration (`/admin`), espace
@@ -104,3 +104,4 @@ node tools/theme-evidence.mjs        # 24 captures + contrôles a11y/responsive 
 node tools/public-quality.mjs        # mesures HTTP + rendu -> docs/quality-report.json
 node "…/check-evidence.js" docs/theme/report.json   # gate frontend-design : OK
 ```
+

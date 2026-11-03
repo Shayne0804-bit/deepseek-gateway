@@ -175,7 +175,7 @@ export async function startGateway(overrides = {}) {
     fs.writeFileSync(
       generatedPasswordFile,
       [
-        'Mot de passe administrateur DeepSeek Gateway (genere au premier demarrage)',
+        'Mot de passe administrateur VALARIA Gateway API (genere au premier demarrage)',
         '',
         adminBootstrap.generatedPassword,
         '',
@@ -270,7 +270,7 @@ export async function startGateway(overrides = {}) {
       const provider = resolveProvider(db, config);
       sendJson(res, 200, {
         ok: true,
-        name: 'deepseek-gateway',
+        name: 'valaria-gateway',
         version: APP_VERSION,
         uptimeSeconds: Math.round(process.uptime()),
         providerConfigured: Boolean(provider.apiKey),
@@ -439,7 +439,7 @@ export function printStartupBanner(started, log = console.log) {
   const displayHost = host === '0.0.0.0' || host === '::' || host === '' ? '127.0.0.1' : host;
   log('');
   log('  ============================================================');
-  log('   DeepSeek Gateway - partage de cle API avec quotas');
+  log('   VALARIA Gateway API - partage de cle API avec quotas');
   log('  ============================================================');
   log(`   Site public   : http://${displayHost}:${port}/`);
   log(`   Espace perso  : http://${displayHost}:${port}/portal`);
@@ -475,3 +475,4 @@ export function printStartupBanner(started, log = console.log) {
   log('   Ctrl+C pour arreter.');
   log('');
 }
+

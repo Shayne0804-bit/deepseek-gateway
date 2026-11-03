@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Genere un certificat TLS local (CA + serveur) pour DeepSeek Gateway.
+    Genere un certificat TLS local (CA + serveur) pour VALARIA Gateway API.
 
 .DESCRIPTION
     Cree dans data/tls/ :
@@ -57,7 +57,7 @@ distinguished_name = dn
 x509_extensions = v3_ca
 
 [dn]
-CN = DeepSeek Gateway Local CA
+CN = VALARIA Gateway API Local CA
 
 [v3_ca]
 basicConstraints = critical,CA:TRUE
@@ -116,3 +116,4 @@ Write-Host '  TLS_CERT_FILE=data/tls/server.crt'
 Write-Host '  TLS_KEY_FILE=data/tls/server.key'
 Write-Host ''
 Write-Host 'URL pour Claude Desktop : https://localhost:8788/anthropic'
+

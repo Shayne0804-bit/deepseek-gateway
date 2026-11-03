@@ -1,13 +1,13 @@
 {
-  "generatedAt": "2026-11-03T06:22:49.453Z",
+  "generatedAt": "2026-11-03T14:26:06.289Z",
   "target": "3 surfaces : site public (/), console admin (/admin), espace utilisateur (/portal)",
   "http": [
     {
       "name": "landing",
       "path": "/",
       "status": 200,
-      "durationMs": 9,
-      "bytes": 6761,
+      "durationMs": 12,
+      "bytes": 6767,
       "contentType": "text/html; charset=utf-8",
       "headers": {
         "csp": true,
@@ -16,7 +16,7 @@
         "coop": "same-origin",
         "requestId": true
       },
-      "title": "DeepSeek Gateway — votre clé DeepSeek, partagée sous contrôle",
+      "title": "VALARIA Gateway API — votre clé DeepSeek, partagée sous contrôle",
       "description": "Passerelle auto-hébergée pour partager une clé API DeepSeek : clés dérivées à quota, compatibilité OpenAI et Anthropic, journal de facturation, budget mensuel et audit.",
       "robots": "noindex, nofollow",
       "lang": "fr",
@@ -30,8 +30,8 @@
       "name": "admin-login",
       "path": "/admin",
       "status": 200,
-      "durationMs": 4,
-      "bytes": 3878,
+      "durationMs": 6,
+      "bytes": 3884,
       "contentType": "text/html; charset=utf-8",
       "headers": {
         "csp": true,
@@ -40,7 +40,7 @@
         "coop": "same-origin",
         "requestId": true
       },
-      "title": "DeepSeek Gateway — Console d'administration",
+      "title": "VALARIA Gateway API — Console d'administration",
       "description": null,
       "robots": "noindex, nofollow",
       "lang": "fr",
@@ -54,8 +54,8 @@
       "name": "portal-login",
       "path": "/portal",
       "status": 200,
-      "durationMs": 4,
-      "bytes": 5595,
+      "durationMs": 5,
+      "bytes": 7786,
       "contentType": "text/html; charset=utf-8",
       "headers": {
         "csp": true,
@@ -64,8 +64,8 @@
         "coop": "same-origin",
         "requestId": true
       },
-      "title": "Mon espace — DeepSeek Gateway",
-      "description": "Espace utilisateur DeepSeek Gateway : quotas, consommation et dernières requêtes de votre clé API.",
+      "title": "Mon espace — VALARIA Gateway API",
+      "description": "Espace utilisateur VALARIA Gateway API : quotas, consommation et dernières requêtes de votre clé API.",
       "robots": "noindex, nofollow",
       "lang": "fr",
       "h1": 2,
@@ -79,7 +79,7 @@
       "path": "/portal",
       "status": 200,
       "durationMs": 4,
-      "bytes": 5595,
+      "bytes": 7786,
       "contentType": "text/html; charset=utf-8",
       "headers": {
         "csp": true,
@@ -88,8 +88,8 @@
         "coop": "same-origin",
         "requestId": true
       },
-      "title": "Mon espace — DeepSeek Gateway",
-      "description": "Espace utilisateur DeepSeek Gateway : quotas, consommation et dernières requêtes de votre clé API.",
+      "title": "Mon espace — VALARIA Gateway API",
+      "description": "Espace utilisateur VALARIA Gateway API : quotas, consommation et dernières requêtes de votre clé API.",
       "robots": "noindex, nofollow",
       "lang": "fr",
       "h1": 2,
@@ -119,7 +119,7 @@
   ],
   "rendered": {
     "landing": {
-      "title": "DeepSeek Gateway — votre clé DeepSeek, partagée sous contrôle",
+      "title": "VALARIA Gateway API — votre clé DeepSeek, partagée sous contrôle",
       "lang": "fr",
       "h1Count": 1,
       "landmarks": {
@@ -136,19 +136,19 @@
       "emptyButtons": 0,
       "domNodes": 105,
       "timing": {
-        "domContentLoadedMs": 357,
-        "loadMs": 357,
-        "responseMs": 19,
-        "transferBytes": 2756,
+        "domContentLoadedMs": 425,
+        "loadMs": 425,
+        "responseMs": 15,
+        "transferBytes": 2765,
         "resources": 4,
-        "resourceBytes": 10060
+        "resourceBytes": 10301
       },
       "cls": 0,
       "longTasks": 0,
       "pageErrors": 0
     },
     "admin-login": {
-      "title": "DeepSeek Gateway — Console d'administration",
+      "title": "VALARIA Gateway API — Console d'administration",
       "lang": "fr",
       "h1Count": 2,
       "landmarks": {
@@ -165,19 +165,19 @@
       "emptyButtons": 0,
       "domNodes": 66,
       "timing": {
-        "domContentLoadedMs": 64,
-        "loadMs": 65,
+        "domContentLoadedMs": 55,
+        "loadMs": 58,
         "responseMs": 5,
-        "transferBytes": 1670,
+        "transferBytes": 1681,
         "resources": 3,
-        "resourceBytes": 17438
+        "resourceBytes": 17932
       },
       "cls": 0,
       "longTasks": 0,
       "pageErrors": 0
     },
     "portal-login": {
-      "title": "Mon espace — DeepSeek Gateway",
+      "title": "Mon espace — VALARIA Gateway API",
       "lang": "fr",
       "h1Count": 2,
       "landmarks": {
@@ -187,26 +187,26 @@
         "footer": 2
       },
       "skipLink": true,
-      "fields": 1,
+      "fields": 3,
       "unlabeledFields": 0,
       "imagesWithoutAlt": 0,
       "emptyLinks": 0,
       "emptyButtons": 0,
-      "domNodes": 93,
+      "domNodes": 116,
       "timing": {
-        "domContentLoadedMs": 31,
-        "loadMs": 55,
-        "responseMs": 5,
-        "transferBytes": 2128,
-        "resources": 4,
-        "resourceBytes": 5795
+        "domContentLoadedMs": 70,
+        "loadMs": 72,
+        "responseMs": 7,
+        "transferBytes": 2597,
+        "resources": 5,
+        "resourceBytes": 7222
       },
       "cls": 0,
       "longTasks": 0,
       "pageErrors": 0
     },
     "portal-dashboard": {
-      "title": "Mon espace — DeepSeek Gateway",
+      "title": "Mon espace — VALARIA Gateway API",
       "lang": "fr",
       "h1Count": 2,
       "landmarks": {
@@ -216,21 +216,21 @@
         "footer": 2
       },
       "skipLink": true,
-      "fields": 1,
+      "fields": 3,
       "unlabeledFields": 0,
       "imagesWithoutAlt": 0,
       "emptyLinks": 0,
       "emptyButtons": 0,
-      "domNodes": 161,
+      "domNodes": 184,
       "timing": {
-        "domContentLoadedMs": 23,
-        "loadMs": 27,
-        "responseMs": 5,
-        "transferBytes": 2128,
-        "resources": 5,
-        "resourceBytes": 3551
+        "domContentLoadedMs": 30,
+        "loadMs": 34,
+        "responseMs": 10,
+        "transferBytes": 2597,
+        "resources": 6,
+        "resourceBytes": 4035
       },
-      "cls": 0,
+      "cls": 0.038,
       "longTasks": 0,
       "pageErrors": 0
     }

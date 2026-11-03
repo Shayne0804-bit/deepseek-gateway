@@ -1,5 +1,5 @@
 #!/bin/sh
-# Point d'entree du conteneur DeepSeek Gateway.
+# Point d'entree du conteneur VALARIA Gateway API.
 #
 # Sur Railway (comme avec un volume Docker classique), le volume monte sur
 # /data peut appartenir a root. On corrige les droits si on demarre en root,
@@ -15,3 +15,4 @@ if [ "$(id -u)" = "0" ]; then
 fi
 
 exec "$@"
+

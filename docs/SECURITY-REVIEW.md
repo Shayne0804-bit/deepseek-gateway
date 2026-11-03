@@ -1,6 +1,6 @@
 # Security Review Report
 
-**File/Component:** DeepSeek Gateway — passerelle API + panneau d'administration
+**File/Component:** VALARIA Gateway API — passerelle API + panneau d'administration
 **Reviewed:** 2026-11-02
 **Reviewer:** security-reviewer persona (`ecc-security-reviewer`)
 **Scope:** `server.js`, `src/*`, `public/*`, configuration, Docker/Railway, dépôt Git
@@ -154,3 +154,4 @@ toutes les sessions invalidées au changement.
 
 > Security review performed by DSH security-reviewer persona (`ecc-security-reviewer`).
 > Voir [docs/SECURITY.md](./SECURITY.md) pour la politique et l'exploitation.
+

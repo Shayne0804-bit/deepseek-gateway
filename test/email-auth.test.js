@@ -188,7 +188,7 @@ test('mailer : construction du message et transport Resend', async () => {
     code: '123456',
     minutes: 10,
     from: 'no-reply@mail.example.com',
-    fromName: 'DeepSeek Gateway',
+    fromName: 'VALARIA Gateway API',
   });
   assert.match(email.subject, /123456/);
   assert.match(email.message, /To: <ami@example.com>/);
@@ -209,7 +209,7 @@ test('mailer : construction du message et transport Resend', async () => {
       resendApiKey: 're_test',
       resendApiBase: `http://127.0.0.1:${server.address().port}`,
       mailFrom: 'no-reply@mail.example.com',
-      mailFromName: 'DeepSeek Gateway',
+      mailFromName: 'VALARIA Gateway API',
       emailLoginEnabled: true,
     }, silentLogger);
     await mailer.sendPortalCode({ to: 'ami@example.com', code: '123456', minutes: 10 });
@@ -241,3 +241,4 @@ test('mailer : URL SMTP et mode console', async () => {
   assert.equal(logs.length, 1);
   assert.match(logs[0], /654321/);
 });
+

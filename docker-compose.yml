@@ -1,7 +1,7 @@
 services:
   gateway:
     build: .
-    container_name: deepseek-gateway
+    container_name: valaria-gateway
     restart: unless-stopped
     ports:
       - "8787:8787"
@@ -16,3 +16,4 @@ services:
 
 volumes:
   gateway_data:
+

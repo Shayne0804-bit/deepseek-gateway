@@ -652,7 +652,7 @@ export function createAdminApi({ config, db, log }) {
         const csv = `\uFEFF${lines.join('\r\n')}`;
         res.writeHead(200, {
           'content-type': 'text/csv; charset=utf-8',
-          'content-disposition': 'attachment; filename="journaux-deepseek-gateway.csv"',
+          'content-disposition': 'attachment; filename="journaux-valaria-gateway.csv"',
           'cache-control': 'no-store',
           'content-length': Buffer.byteLength(csv),
         });
@@ -805,3 +805,4 @@ export function createAdminApi({ config, db, log }) {
 
   return { handle, readSettingsView };
 }
+

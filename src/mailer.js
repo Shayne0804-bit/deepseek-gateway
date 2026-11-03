@@ -31,7 +31,7 @@ function wrapBase64(text) {
 export function buildPortalCodeEmail({ to, code, minutes, from, fromName }) {
   const subject = `Votre code de connexion : ${code}`;
   const text = [
-    'Code de connexion à votre espace DeepSeek Gateway',
+    'Code de connexion à votre espace VALARIA Gateway API',
     '',
     `Code : ${code}`,
     `Valable ${minutes} minutes, à usage unique.`,
@@ -43,7 +43,7 @@ export function buildPortalCodeEmail({ to, code, minutes, from, fromName }) {
 <html lang="fr"><head><meta charset="utf-8"><title>${subject}</title></head>
 <body style="margin:0;padding:24px;background:#040705;color:#d6f7df;font-family:ui-monospace,Consolas,monospace">
   <div style="max-width:520px;margin:0 auto;border:1px solid #1f4a30;background:#07110b;padding:24px">
-    <p style="margin:0 0 6px;color:#3ee97f;font-size:12px">&gt;_ DeepSeek Gateway</p>
+    <p style="margin:0 0 6px;color:#3ee97f;font-size:12px">&gt;_ VALARIA Gateway API</p>
     <h1 style="margin:0 0 16px;font-size:20px">Code de connexion</h1>
     <p style="margin:0 0 18px;line-height:1.6">Saisissez ce code dans votre espace pour vous connecter.</p>
     <p style="margin:0 0 18px;font-size:32px;letter-spacing:8px;color:#3ee97f;font-weight:700">${code}</p>
@@ -53,7 +53,7 @@ export function buildPortalCodeEmail({ to, code, minutes, from, fromName }) {
 </body></html>`;
 
   const fromHeader = fromName ? `${encodeHeader(fromName)} <${from}>` : `<${from}>`;
-  const messageId = `<${Date.now()}.${Math.random().toString(36).slice(2)}@deepseek-gateway>`;
+  const messageId = `<${Date.now()}.${Math.random().toString(36).slice(2)}@valaria-gateway>`;
   const body = [
     `From: ${fromHeader}`,
     `To: <${to}>`,
@@ -202,7 +202,7 @@ async function smtpSend({ smtpUrl, from, to, message }) {
         const session = new SmtpSession(socket);
         try {
           session.expect(await session.read(), [220], 'Bannière SMTP');
-          session.expect(await session.command('EHLO deepseek-gateway'), [250], 'EHLO');
+          session.expect(await session.command('EHLO valaria-gateway'), [250], 'EHLO');
           if (user) await session.authenticate(user, pass);
           await session.sendMail({ from, to, message });
           await session.quit();
@@ -222,7 +222,7 @@ async function smtpSend({ smtpUrl, from, to, message }) {
 export function createMailer(config, log) {
   const transport = config.mailTransport || 'disabled';
   const from = config.mailFrom || '';
-  const fromName = config.mailFromName || 'DeepSeek Gateway';
+  const fromName = config.mailFromName || 'VALARIA Gateway API';
   const enabled = Boolean(config.emailLoginEnabled);
 
   async function sendPortalCode({ to, code, minutes }) {
@@ -265,3 +265,4 @@ export function createMailer(config, log) {
     sendPortalCode,
   };
 }
+

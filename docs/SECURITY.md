@@ -1,4 +1,4 @@
-# Sécurité — DeepSeek Gateway
+# Sécurité — VALARIA Gateway API
 
 Ce document décrit le modèle de menace, les mesures de sécurité intégrées et les
 procédures d'exploitation pour un déploiement en production.
@@ -111,3 +111,4 @@ procédures d'exploitation pour un déploiement en production.
 - **Une seule instance** : rate-limits en mémoire (pas de Redis) ; le déploiement
   cible est mono-instance.
 - **Mono-admin** : pas de RBAC ; chaque action est auditée.
+

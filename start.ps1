@@ -1,4 +1,4 @@
-# Demarre DeepSeek Gateway sur Windows (PowerShell).
+# Demarre VALARIA Gateway API sur Windows (PowerShell).
 Set-Location -LiteralPath $PSScriptRoot
 
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
@@ -12,3 +12,4 @@ if (-not (Test-Path (Join-Path $PSScriptRoot 'data'))) {
 }
 
 node server.js
+

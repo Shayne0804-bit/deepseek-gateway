@@ -1,4 +1,4 @@
-/* Espace utilisateur DeepSeek Gateway — session par clé dérivée. */
+/* Espace utilisateur VALARIA Gateway API — session par clé dérivée. */
 (() => {
   'use strict';
 
@@ -427,3 +427,4 @@
 
   init();
 })();
+

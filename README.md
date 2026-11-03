@@ -1,4 +1,4 @@
-# DeepSeek Gateway
+# VALARIA Gateway API
 
 **Partagez votre clé API DeepSeek avec un ami, sans lui donner votre clé et sans perdre le contrôle.**
 Votre clé originale reste sur votre machine. Vous créez pour chaque personne une **clé dérivée** (`sk-dsk-…`)
@@ -15,6 +15,12 @@ Le produit tient en **trois surfaces web** :
 ![Site public](docs/landing-desktop.png)
 
 ---
+
+> **Nom du produit : VALARIA Gateway API.** Le renommage est volontairement limité aux surfaces
+> visibles (site, portail, console, emails, métadonnées, documentation). Les identifiants techniques
+> restent compatibles avec les installations existantes : préfixe de clé `sk-dsk-`, cookies
+> `dsk_*`, base `data/gateway.db`, dossier de données `/data`, endpoints `/v1` et `/anthropic`.
+> Le dépôt GitHub reste `Shayne0804-bit/deepseek-gateway`.
 
 ## Sommaire
 
@@ -92,7 +98,7 @@ Le produit tient en **trois surfaces web** :
      │  clé dérivée sk-dsk-…        │  console /admin · espace /portal · site /
      ▼                              ▼
 ┌──────────────────────────────────────────────────────┐
-│                  DeepSeek Gateway                     │
+│                  VALARIA Gateway API                 │
 │  • authentifie la clé dérivée (hash)                  │
 │  • applique les quotas / débit / modèles              │
 │  • transmet à l'API DeepSeek avec VOTRE clé originale │
@@ -234,7 +240,7 @@ Chaque utilisateur doit avoir une **adresse email** renseignée dans sa fiche (p
 # Resend (recommandé)
 MAIL_TRANSPORT=resend
 MAIL_FROM=no-reply@mail.votre-domaine.fr
-MAIL_FROM_NAME=DeepSeek Gateway
+MAIL_FROM_NAME=VALARIA Gateway API
 RESEND_API_KEY=re_…
 
 # ou Gmail (petit volume, compte personnel)
@@ -485,13 +491,13 @@ PUBLIC_BASE_URL=https://api.mondomaine.fr
 ADMIN_PASSWORD=un-mot-de-passe-long-et-unique
 TRUST_PROXY=1
 
-# 2. service systemd /etc/systemd/system/deepseek-gateway.service
+# 2. service systemd /etc/systemd/system/valaria-gateway.service
 [Unit]
-Description=DeepSeek Gateway
+Description=VALARIA Gateway API
 After=network.target
 
 [Service]
-WorkingDirectory=/opt/deepseek-gateway
+WorkingDirectory=/opt/valaria-gateway
 ExecStart=/usr/bin/node server.js
 Restart=always
 User=www-data
@@ -506,7 +512,7 @@ api.mondomaine.fr {
 ```
 
 ```bash
-systemctl enable --now deepseek-gateway
+systemctl enable --now valaria-gateway
 systemctl reload caddy
 ```
 
@@ -591,11 +597,11 @@ docker compose up -d --build
 Sans compose :
 
 ```bash
-docker build -t deepseek-gateway .
-docker run -d --name deepseek-gateway -p 8787:8787 \
-  -v deepseek_gateway_data:/data \
+docker build -t valaria-gateway .
+docker run -d --name valaria-gateway -p 8787:8787 \
+  -v valaria_gateway_data:/data \
   -e DEEPSEEK_API_KEY=sk-... -e ADMIN_PASSWORD=... \
-  deepseek-gateway
+  valaria-gateway
 ```
 
 ## Déployer sur Railway (production)
@@ -638,7 +644,7 @@ SESSION_HOURS=12
 # Connexion portail par email (Resend recommande avec domaine vérifié) :
 MAIL_TRANSPORT=resend
 MAIL_FROM=no-reply@mail.VOTRE-DOMAINE
-MAIL_FROM_NAME=DeepSeek Gateway
+MAIL_FROM_NAME=VALARIA Gateway API
 RESEND_API_KEY=re_...
 ```
 
@@ -764,7 +770,7 @@ Les tests utilisent un faux serveur DeepSeek local : **aucun appel réseau réel
 ## Structure du projet
 
 ```
-deepseek-gateway/
+valaria-gateway/
 ├── server.js                 # point d'entrée (node server.js)
 ├── src/
 │   ├── app.js                # serveur HTTP, routage, démarrage, bannière
@@ -887,3 +893,4 @@ et **Vue d'ensemble** (graphique 30 jours, top consommateurs).
 ---
 
 **Bonne discussion avec votre ami — et gardez votre clé originale pour vous.**
+
