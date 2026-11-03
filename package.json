@@ -1,16 +1,51 @@
 {
   "name": "valaria-gateway",
-  "version": "2.3.0",
-  "private": true,
-  "description": "Passerelle de partage d'une cle API DeepSeek : cles derivees a quota, panneau d'administration, streaming SSE.",
+  "version": "2.4.0",
+  "description": "VALARIA Gateway API — passerelle auto-hébergée pour partager une clé API DeepSeek avec des clés dérivées à quota (OpenAI/Anthropic, portail, audit).",
   "type": "module",
+  "bin": {
+    "valaria-gateway": "bin/valaria-gateway.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "public/",
+    "server.js",
+    ".env.example",
+    "LICENSE",
+    "README.md"
+  ],
   "engines": {
     "node": ">=24.0.0"
   },
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test test"
+    "test": "node --test test",
+    "prepublishOnly": "node --test test"
+  },
+  "keywords": [
+    "deepseek",
+    "gateway",
+    "api",
+    "quota",
+    "proxy",
+    "openai",
+    "anthropic",
+    "claude",
+    "self-hosted"
+  ],
+  "license": "MIT",
+  "author": "Shayne0804-bit",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Shayne0804-bit/deepseek-gateway.git"
+  },
+  "homepage": "https://github.com/Shayne0804-bit/deepseek-gateway#readme",
+  "bugs": {
+    "url": "https://github.com/Shayne0804-bit/deepseek-gateway/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
-

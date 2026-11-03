@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '2.3.0';
+export const APP_VERSION = '2.4.0';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -84,7 +84,14 @@ export function byteLimit(value, fallback = DEFAULT_MAX_BODY_BYTES) {
  * Les variables d'environnement priment sur le fichier .env.
  */
 export function loadConfig(overrides = {}) {
-  const fileEnv = parseEnvFile(path.join(APP_ROOT, '.env'));
+  // Fichier de configuration : override explicite, sinon ENV_FILE (CLI npm),
+  // sinon le .env du depot (developpement). Les variables d'environnement priment.
+  const envFile = overrides.envFile
+    ? path.resolve(overrides.envFile)
+    : process.env.ENV_FILE
+      ? path.resolve(process.env.ENV_FILE)
+      : path.join(APP_ROOT, '.env');
+  const fileEnv = parseEnvFile(envFile);
   const env = { ...fileEnv, ...process.env };
 
   /**

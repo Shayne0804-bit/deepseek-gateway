@@ -4,3 +4,4 @@ data/
 *.log
 gateway.db
 gateway.db-*
+*.tgz
