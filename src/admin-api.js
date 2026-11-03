@@ -350,6 +350,7 @@ export function createAdminApi({ config, db, log }) {
       },
       modelAliases,
       modelAliasesMeta: { defaults: DEFAULT_MODEL_ALIASES },
+      billedModel: config.billedModel || null,
       email: {
         enabled: Boolean(config.emailLoginEnabled),
         transport: config.mailTransport,

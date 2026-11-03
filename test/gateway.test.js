@@ -378,20 +378,28 @@ test('streaming SSE transmis et comptabilise', async () => {
   assert.equal(logs.rows[0].totalTokens, 12);
 });
 
-test('liste de modeles autorises appliquee', async () => {
+test('liste de modeles autorises appliquee (facturation flash forcee)', async () => {
   const { key } = await createClient({
     name: 'Ami modele',
-    allowedModels: ['deepseek-flash'],
+    allowedModels: ['claude-opus-5.5'],
     period: 'total',
   });
+  // Ni flash ni le modele demande ne sont autorises -> refus.
   const denied = await proxyChat(key, { model: 'deepseek-v4-pro' });
   assert.equal(denied.status, 403);
   const body = await denied.json();
   assert.equal(body.error.code, 'model_not_allowed');
 
-  const allowed = await proxyChat(key, { model: 'deepseek-flash' });
+  // L'alias autorise passe, mais il est reellement servi et facture par flash.
+  const allowed = await proxyChat(key, { model: 'claude-opus-5.5' });
   assert.equal(allowed.status, 200);
+  assert.equal(allowed.headers.get('x-gateway-billed-model'), 'deepseek-flash');
+  assert.equal(allowed.headers.get('x-gateway-requested-model'), 'claude-opus-5.5');
   await allowed.text();
+  assert.equal(mock.seen.at(-1).body.model, 'deepseek-flash');
+
+  const deniedFlash = await proxyChat(key, { model: 'deepseek-flash' });
+  assert.equal(deniedFlash.status, 403);
 });
 
 test('max_output_tokens plafonne la demande', async () => {
@@ -632,11 +640,12 @@ test('alias de modele personnalises via les reglages, puis retour aux defauts', 
     await res.text();
     assert.equal(mock.seen.at(-1).body.model, 'deepseek-flash');
 
-    // La table personnalisee remplace les defauts : claude-opus-5 n'est plus mappe.
+    // La table personnalisee remplace les defauts, MAIS la facturation forcee reste flash.
     const notMapped = await proxyChat(key, { model: 'claude-opus-5' });
     assert.equal(notMapped.status, 200);
+    assert.equal(notMapped.headers.get('x-gateway-billed-model'), 'deepseek-flash');
     await notMapped.text();
-    assert.equal(mock.seen.at(-1).body.model, 'claude-opus-5');
+    assert.equal(mock.seen.at(-1).body.model, 'deepseek-flash');
   } finally {
     const restore = await api('/admin/api/settings', { method: 'PUT', body: { modelAliases: null } });
     assert.equal(restore.status, 200);
@@ -716,17 +725,43 @@ test('ancien nom de modele converti aussi via l API OpenAI', async () => {
   assert.equal(mock.seen.at(-1).body.model, 'deepseek-flash');
 });
 
-test('liste de modeles : un alias legacy est accepte si le nom canonique est autorise', async () => {
+test('v4-pro expose mais toujours servi et facture par deepseek-flash', async () => {
   const { key } = await createClient({
     name: 'Alias allowlist',
     allowedModels: ['deepseek-flash'],
     period: 'total',
   });
-  const allowed = await proxyChat(key, { model: 'deepseek-v4-flash' });
-  assert.equal(allowed.status, 200);
-  await allowed.text();
-  const denied = await proxyChat(key, { model: 'deepseek-v4-pro' });
-  assert.equal(denied.status, 403);
+  for (const model of ['deepseek-v4-flash', 'deepseek-v4-pro']) {
+    const res = await proxyChat(key, { model });
+    assert.equal(res.status, 200, model);
+    assert.equal(res.headers.get('x-gateway-billed-model'), 'deepseek-flash');
+    assert.equal(res.headers.get('x-gateway-requested-model'), model);
+    await res.text();
+    assert.equal(mock.seen.at(-1).body.model, 'deepseek-flash');
+  }
+});
+
+test('tous les modeles exposes (claude, fable, v4-pro, inconnu) partent sur flash', async () => {
+  const { client, key } = await createClient({ name: 'Flash partout', period: 'total' });
+  const requestedModels = [
+    'deepseek-v4-pro',
+    'claude-opus-5',
+    'claude-opus-5.5',
+    'fable-5.1',
+    'modele-inconnu',
+  ];
+  for (const requested of requestedModels) {
+    const res = await proxyChat(key, { model: requested });
+    assert.equal(res.status, 200, requested);
+    assert.equal(res.headers.get('x-gateway-billed-model'), 'deepseek-flash');
+    assert.equal(res.headers.get('x-gateway-requested-model'), requested);
+    await res.text();
+    assert.equal(mock.seen.at(-1).body.model, 'deepseek-flash', requested);
+  }
+
+  const { data: logs } = await api(`/admin/api/clients/${client.id}/logs?limit=10`);
+  assert.ok(logs.rows.some((row) => row.requestedModel === 'deepseek-v4-pro'));
+  assert.ok(logs.rows.every((row) => row.model === 'deepseek-flash'));
 });
 
 test('chemin avec slashs multiples normalise', async () => {

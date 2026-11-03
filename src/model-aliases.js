@@ -20,6 +20,8 @@ export const DEFAULT_MODEL_ALIASES = Object.freeze({
   'claude-opus-5.5': 'deepseek-flash',
   'fable-5': 'deepseek-flash',
   'fable-5.1': 'deepseek-flash',
+  // Le nom v4-pro reste expose commercialement, mais il est reellement servi par flash.
+  'deepseek-v4-pro': 'deepseek-flash',
 });
 
 /** Valide et normalise un objet d'alias. Lance une Error si invalide. */

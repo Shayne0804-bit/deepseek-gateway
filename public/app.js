@@ -1066,13 +1066,22 @@
             <button class="btn btn-ghost btn-sm" data-action="reset-aliases">Valeurs par défaut</button>
           </div>
         </div>
+        <div class="alert warn">
+          <strong>Facturation forcée : <span class="mono">${esc(s.billedModel || 'désactivée')}</span>.</strong>
+          ${s.billedModel
+            ? `Tous les noms exposés — y compris <span class="mono">deepseek-v4-pro</span> et les alias Claude —
+               sont réellement envoyés à <span class="mono">${esc(s.billedModel)}</span>. Le v4-pro n'est jamais appelé.
+               Le client voit le nom demandé et le modèle facturé via
+               <span class="mono">x-gateway-requested-model</span> / <span class="mono">x-gateway-billed-model</span> ;
+               quotas et coût sont calculés sur le modèle facturé.`
+            : 'Le forçage de modèle est désactivé : le modèle demandé (ou son alias) est utilisé tel quel.'}
+        </div>
         <div class="alert">
           Par défaut : <span class="mono">claude-opus-5*</span>, <span class="mono">claude-opus-5.5</span>,
-          <span class="mono">fable-5</span> et <span class="mono">fable-5.1</span> → <span class="mono">deepseek-flash</span>.
+          <span class="mono">fable-5</span>, <span class="mono">fable-5.1</span> et <span class="mono">deepseek-v4-pro</span>
+          → <span class="mono">deepseek-flash</span>.
           Un client qui demande <span class="mono">claude-opus-5</span> (ou <span class="mono">claude-opus-5-20260101</span>)
-          est donc servi par DeepSeek Flash (le modèle économique). Les quotas, le coût estimé et les journaux utilisent le
-          <strong>modèle réellement facturé</strong> ; le client reçoit les en-têtes
-          <span class="mono">x-gateway-requested-model</span> / <span class="mono">x-gateway-billed-model</span>.
+          est donc servi par DeepSeek Flash (le modèle économique), comme pour tous les alias.
           Videz le champ puis enregistrez pour revenir aux alias par défaut.
         </div>
         <form data-form="settings-aliases">
@@ -1249,7 +1258,7 @@
       `ANTHROPIC_BASE_URL=${anthropicUrl}`,
       'ANTHROPIC_AUTH_TOKEN=sk-dsk-VOTRE_CLE',
       'ANTHROPIC_MODEL=deepseek-flash',
-      'ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-v4-pro',
+      'ANTHROPIC_DEFAULT_OPUS_MODEL=claude-opus-5.5',
       'ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-flash',
       'ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-flash',
       'CLAUDE_CODE_SUBAGENT_MODEL=deepseek-flash',

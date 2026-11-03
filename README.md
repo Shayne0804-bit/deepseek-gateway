@@ -77,6 +77,10 @@ Le produit tient en **trois surfaces web** :
 - **Alias de modèles** : exposez le nom de votre choix (ex. `claude-opus-5`) tout en servant
   réellement un modèle DeepSeek (`deepseek-flash` par défaut). Les quotas et le coût restent
   calculés sur le modèle facturé.
+- **Facturation forcée sur Flash** : par défaut (`BILLED_MODEL=deepseek-flash`), **tous les noms
+  exposés** — `deepseek-v4-pro`, alias Claude, fable, noms inconnus — sont réellement envoyés à
+  `deepseek-flash`. Le v4-pro n'est jamais appelé ; le nom demandé reste tracé dans les en-têtes
+  et le journal (`requestedModel`), le modèle facturé est flash.
 - **HTTP + HTTPS** : HTTP sur `8787` et, si un certificat est fourni, HTTPS sur `8788`
   (requis par Claude Desktop). Voir [HTTPS local](#https-local-claude-desktop).
 - **Interface console « terminal »** : thème vert phosphore, typographie monospace, prompts `>` et
@@ -230,6 +234,7 @@ sauf `DEEPSEEK_API_KEY` (ou la clé saisie dans le panneau).
 | Variable | Défaut | Rôle |
 |---|---|---|
 | `DEEPSEEK_API_KEY` | — | Clé API DeepSeek **originale**. Ne jamais partager. |
+| `BILLED_MODEL` | `deepseek-flash` | Modèle réellement appelé chez DeepSeek, quel que soit le nom demandé. `none` = désactive le forçage. |
 | `HOST` | `127.0.0.1` | Interface d'écoute (`0.0.0.0` pour un VPS/Docker). |
 | `PORT` | `8787` | Port d'écoute. |
 | `PUBLIC_BASE_URL` | `http://<hôte>:<port>` | URL publique affichée dans le guide (ex. `https://api.mondomaine.fr`). |
@@ -436,7 +441,7 @@ OPENAI_API_KEY=sk-dsk-VOTRE_CLE
 ANTHROPIC_BASE_URL=https://votre-domaine/anthropic
 ANTHROPIC_AUTH_TOKEN=sk-dsk-VOTRE_CLE
 ANTHROPIC_MODEL=deepseek-flash
-ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-v4-pro
+ANTHROPIC_DEFAULT_OPUS_MODEL=claude-opus-5.5
 ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-flash
 ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-flash
 CLAUDE_CODE_SUBAGENT_MODEL=deepseek-flash
@@ -503,6 +508,9 @@ Les tarifs publics DeepSeek (2026, USD par million de tokens) sont préchargés 
 - Ces montants servent **uniquement à estimer** les quotas de coût, pas à facturer.
 - Ils sont modifiables dans **Réglages → Tarification** (JSON) si DeepSeek change ses prix.
 - Les modèles inconnus (anciens noms) utilisent le tarif de repli (`deepseek-flash` par défaut).
+- ⚠️ **Le tarif `deepseek-v4-pro` ci-dessus n'est pas utilisé en pratique** tant que
+  `BILLED_MODEL=deepseek-flash` (valeur par défaut) : tout est facturé au tarif flash. La ligne
+  v4-pro reste utile si vous désactivez le forçage plus tard (`BILLED_MODEL=none`).
 
 ## Alias de modèles (déguisement)
 
@@ -515,16 +523,22 @@ celui réellement utilisé par DeepSeek. Un alias est une simple règle
   "claude-opus-5*": "deepseek-flash",
   "claude-opus-5.5": "deepseek-flash",
   "fable-5": "deepseek-flash",
-  "fable-5.1": "deepseek-flash"
+  "fable-5.1": "deepseek-flash",
+  "deepseek-v4-pro": "deepseek-flash"
 }
 ```
 
 - `claude-opus-5*` est un motif : il couvre `claude-opus-5`, `claude-opus-5-20260101`, etc.
-- `claude-opus-5.5` est un alias exact explicite (il apparaît tel quel dans la découverte de modèles).
+- `claude-opus-5.5` et `deepseek-v4-pro` sont des alias exacts (ils apparaissent tels quels dans
+  la découverte de modèles, mais sont **réellement servis par flash**).
 - Un alias exact (`"mon-modele": "deepseek-flash"`) est aussi possible ; le motif le plus précis gagne.
-- **Par défaut**, les alias `claude-opus-5*`, `claude-opus-5.5`, `fable-5` et `fable-5.1` sont déjà actifs et
-  pointent tous vers `deepseek-flash` : ces noms utilisent le modèle DeepSeek économique,
-  jamais le pro. Pour utiliser le pro, remplacez la cible par `deepseek-v4-pro` dans le panneau.
+- **Par défaut**, `claude-opus-5*`, `claude-opus-5.5`, `fable-5`, `fable-5.1` et `deepseek-v4-pro`
+  pointent tous vers `deepseek-flash`.
+- **Important** : en plus des alias, `BILLED_MODEL=deepseek-flash` force **le modèle réellement
+  appelé** pour toutes les requêtes. Même si un client demande `deepseek-v4-pro` ou un nom
+  inconnu, l'appel part sur flash ; le nom demandé est visible dans
+  `x-gateway-requested-model`, le modèle facturé dans `x-gateway-billed-model` et le journal.
+  Pour un jour réactiver v4-pro : `BILLED_MODEL=none` puis redémarrer (les alias restent).
 - Ils apparaissent aussi dans la découverte de modèles (`/v1/models` et `/anthropic/v1/models`).
 
 Modifiable dans le panneau : **Réglages → Alias de modèles** (JSON). Videz le champ puis
@@ -835,7 +849,7 @@ Serveur arrêté, copiez le dossier `data/` (ou au minimum `gateway.db`). À cha
 node --test test
 ```
 
-La suite (78 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
+La suite (79 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
 normalisation `usage` OpenAI/Anthropic, quotas (tokens, requêtes, coût, reset de période),
 limites de débit et de concurrence, authentification admin (hash scrypt, sessions),
 chiffrement/hachage des clés dérivées, proxy JSON et **streaming SSE** avec comptage,

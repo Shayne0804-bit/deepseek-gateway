@@ -356,17 +356,21 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
             throw new HttpError(400, 'Le corps JSON doit etre un objet.', 'invalid_json');
           }
           // Alias de modele (« deguisement ») puis anciens noms DeepSeek -> nom canonique.
+          // Puis forcage eventuel : par defaut, TOUT est reellement servi par deepseek-flash,
+          // meme si le client demande deepseek-v4-pro ou un alias Claude. Le modele demande
+          // reste trace (en-tetes + journal) pour la transparence.
           let bodyMutated = false;
           const requestedModel = typeof body.model === 'string' ? body.model : null;
           const aliasedModel = resolveModelAlias(requestedModel, modelAliases);
-          const model = canonicalModelName(aliasedModel);
-          if (requestedModel && model !== requestedModel) {
+          const model = config.billedModel || canonicalModelName(aliasedModel);
+          if (model && body.model !== model) {
             body.model = model;
             bodyMutated = true;
-            logRequestedModel = requestedModel;
-            // Permet au client de connaitre le modele reellement facture.
-            responseHeaders['x-gateway-requested-model'] = requestedModel;
+            if (requestedModel) logRequestedModel = requestedModel;
             responseHeaders['x-gateway-billed-model'] = model;
+            if (requestedModel && model !== requestedModel) {
+              responseHeaders['x-gateway-requested-model'] = requestedModel;
+            }
           }
           const modelAllowed =
             isModelAllowed(client, model) ||

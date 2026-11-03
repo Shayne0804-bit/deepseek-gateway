@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '2.5.0';
+export const APP_VERSION = '2.6.0';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -115,6 +115,10 @@ export function loadConfig(overrides = {}) {
     port: overrides.port ?? intOr(raw('PORT'), 8787),
     // Cle originale : prioritaire via variable d'environnement (jamais exposee par l'API admin).
     providerApiKey: overrides.providerApiKey ?? raw('DEEPSEEK_API_KEY') ?? '',
+    // Modele reellement appele chez le fournisseur. Par defaut TOUT est servi par
+    // deepseek-flash, meme si le client demande deepseek-v4-pro ou un alias Claude.
+    // Mettre BILLED_MODEL=none pour desactiver ce forcage.
+    billedModel: overrides.billedModel ?? raw('BILLED_MODEL') ?? 'deepseek-flash',
     // Chaine vide = non definie par l'environnement (le panneau peut alors la configurer).
     providerBaseUrl: stripTrailingSlash(overrides.providerBaseUrl ?? raw('DEEPSEEK_BASE_URL') ?? ''),
     publicBaseUrl: stripTrailingSlash(overrides.publicBaseUrl ?? raw('PUBLIC_BASE_URL') ?? ''),
@@ -167,6 +171,10 @@ export function loadConfig(overrides = {}) {
   }
   if (!Number.isFinite(config.otpExpiresMinutes) || config.otpExpiresMinutes < 5 || config.otpExpiresMinutes > 30) {
     config.otpExpiresMinutes = 10;
+  }
+  // BILLED_MODEL=none / off : desactive le forcage (comportement historique).
+  if (['none', 'off', '0', 'false'].includes(String(config.billedModel ?? '').trim().toLowerCase())) {
+    config.billedModel = '';
   }
   // Transport email effectif : explicite, sinon detecte par configuration.
   // Sans rien : desactive (la connexion par cle API reste le mode par defaut).
