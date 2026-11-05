@@ -214,7 +214,7 @@ test('les trois surfaces web sont servies : site public, console admin, espace u
   assert.match(landing.headers.get('content-type'), /text\/html/);
   const landingHtml = await landing.text();
   assert.match(landingHtml, /VALARIA Gateway API/);
-  assert.match(landingHtml, /partagée sous contrôle/);
+  assert.match(landingHtml, /sans partager votre clé/);
 
   const admin = await fetch(`${base}/admin`);
   assert.equal(admin.status, 200);
@@ -868,4 +868,5 @@ test('cle fournisseur absente -> 503 explicite', async () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
 

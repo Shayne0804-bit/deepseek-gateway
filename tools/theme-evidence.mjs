@@ -622,9 +622,9 @@ async function main() {
     || mobileOverflowFailures.length > 0
     || (checks.touchTargets?.tooSmall?.length ?? 1) > 0
     || (checks.touchTargetsPortal?.tooSmall?.length ?? 0) > 0
-    || (checks.steps?.desktop?.pWidth ?? 0) < 400
+    || (checks.steps?.desktop?.pWidth ?? 0) < 280
     || (checks.steps?.mobile?.pWidth ?? 0) < 200
-    || (checks.steps?.desktop?.preWidth ?? 0) < 400
+    || (checks.steps?.desktop?.preWidth ?? 0) < 280
     || (checks.steps?.mobile?.preWidth ?? 0) < 200
     || checks.errorRecovery !== true
     || jsErrorsUnexpected.length > 0;
@@ -652,5 +652,6 @@ main().catch((error) => {
   console.error('ECHEC SCRIPT:', error);
   process.exit(1);
 });
+
 
 

@@ -4,20 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#040705">
+  <meta name="theme-color" content="#0a0e0c">
   <title>VALARIA Gateway API — Console d'administration</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/styles.css?v={{APP_VERSION}}">
+  <link rel="stylesheet" href="/assets/theme.css?v={{APP_VERSION}}">
 </head>
 <body>
   <a class="skip-link" href="#main-view">Aller au contenu</a>
   <!-- ============================ Connexion ============================ -->
   <div id="login-view" class="login-screen hidden">
     <form class="login-card" data-form="login" autocomplete="on">
-      <div class="login-kicker">console d'administration</div>
-      <div class="login-logo" aria-hidden="true">&gt;_</div>
+      <div class="login-kicker">Console d'administration</div>
+      <div class="login-logo" aria-hidden="true">V</div>
       <h1>VALARIA Gateway API</h1>
-      <p>Partagez votre clé API DeepSeek avec des clés dérivées à quota.</p>
+      <p>Gérez les accès, les quotas et les journaux de votre passerelle.</p>
       <div class="login-error" id="login-error"></div>
       <label class="field">
         <span>Mot de passe administrateur</span>
@@ -25,8 +26,7 @@
       </label>
       <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
       <p class="small muted" style="margin:16px 0 0">
-        Mot de passe oublié ? Voir <code>data/admin-password.txt</code> (premier démarrage) ou définissez
-        <code>ADMIN_PASSWORD</code> dans <code>.env</code> puis supprimez la base <code>data/gateway.db</code>.
+        Défini par <code>ADMIN_PASSWORD</code> (ou dans <code>data/admin-password.txt</code> au premier démarrage).
       </p>
     </form>
   </div>
@@ -35,19 +35,19 @@
   <div id="app-view" class="app hidden">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-logo" aria-hidden="true">&gt;_</div>
+        <div class="brand-logo" aria-hidden="true">V</div>
         <div>
           <div class="brand-name">VALARIA Gateway</div>
-          <div class="brand-sub">partage &amp; quotas</div>
+          <div class="brand-sub">Console API</div>
         </div>
       </div>
       <nav class="nav" id="nav">
         <button class="nav-item" data-nav="overview"><span class="nav-icon" aria-hidden="true">[~]</span>Vue d'ensemble</button>
         <button class="nav-item" data-nav="clients"><span class="nav-icon" aria-hidden="true">[k]</span>Clés &amp; quotas</button>
         <button class="nav-item" data-nav="logs"><span class="nav-icon" aria-hidden="true">[l]</span>Journaux</button>
-        <button class="nav-item" data-nav="audit"><span class="nav-icon" aria-hidden="true">[a]</span>Journal d'audit</button>
+        <button class="nav-item" data-nav="audit"><span class="nav-icon" aria-hidden="true">[a]</span>Audit</button>
         <button class="nav-item" data-nav="settings"><span class="nav-icon" aria-hidden="true">[c]</span>Réglages</button>
-        <button class="nav-item" data-nav="guide"><span class="nav-icon" aria-hidden="true">[?]</span>Guide pour votre ami</button>
+        <button class="nav-item" data-nav="guide"><span class="nav-icon" aria-hidden="true">[?]</span>Guide d'intégration</button>
       </nav>
       <div class="sidebar-foot">
         <div class="provider-pill" id="provider-pill">
@@ -79,5 +79,7 @@
   <script src="/assets/app.js?v={{APP_VERSION}}" defer></script>
 </body>
 </html>
+
+
 
 

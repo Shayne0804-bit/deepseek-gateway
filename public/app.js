@@ -555,7 +555,7 @@
         <div class="panel-head">
           <div>
             <h2>Activité des 30 derniers jours</h2>
-            <span class="hint">Tarifs appliqués : ${esc(data.pricing?.peakLabel || '—')} · heures creuses à moitié prix</span>
+            <span class="hint">Heures creuses à moitié prix.</span>
           </div>
           <div class="panel-head-actions">
             <button class="btn btn-primary btn-sm" data-action="create-client">+ Nouvelle clé</button>

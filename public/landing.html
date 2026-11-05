@@ -4,23 +4,24 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#040705">
-  <meta name="description" content="Passerelle auto-hébergée pour partager une clé API DeepSeek : clés dérivées à quota, compatibilité OpenAI et Anthropic, journal de facturation, budget mensuel et audit.">
-  <title>VALARIA Gateway API — votre clé DeepSeek, partagée sous contrôle</title>
+  <meta name="theme-color" content="#0a0e0c">
+  <meta name="description" content="VALARIA Gateway API : partagez une clé DeepSeek avec des accès individuels, quotas, crédit et suivi des requêtes. Compatible OpenAI et Anthropic.">
+  <title>VALARIA Gateway API — l'accès DeepSeek, sans partager votre clé</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/styles.css?v={{APP_VERSION}}">
+  <link rel="stylesheet" href="/assets/theme.css?v={{APP_VERSION}}">
 </head>
 <body class="public-page">
   <a class="skip-link" href="#main">Aller au contenu</a>
 
   <header class="site-header">
     <a class="site-brand" href="/">
-      <span class="brand-logo" aria-hidden="true">&gt;_</span>
+      <span class="brand-logo" aria-hidden="true">V</span>
       <span class="brand-name">VALARIA Gateway</span>
     </a>
     <nav class="site-nav" aria-label="Navigation principale">
-      <a href="#capacites">Capacités</a>
-      <a href="#brancher">Brancher un client</a>
+      <a href="#capacites">Fonctionnalités</a>
+      <a href="#brancher">Intégration</a>
       <a href="/portal">Mon espace</a>
     </nav>
     <div class="site-status" id="site-status" aria-live="polite">
@@ -32,30 +33,29 @@
   <main id="main">
     <section class="hero">
       <div class="hero-copy">
-        <p class="hero-kicker">Passerelle auto-hébergée · API DeepSeek</p>
-        <h1>Votre clé DeepSeek, partagée sous contrôle.</h1>
+        <p class="hero-kicker">API DeepSeek · Passerelle privée</p>
+        <h1>La puissance de DeepSeek, sans partager votre clé.</h1>
         <p class="hero-lede">
-          Une clé originale reste sur le serveur. Chaque personne reçoit sa propre clé dérivée,
-          avec des quotas en tokens, requêtes et dollars, un débit limité et un historique de facturation réel.
-          Vos clients continuent d'utiliser les SDK OpenAI ou Anthropic.
+          Une seule clé fournisseur reste côté serveur. Chaque personne reçoit son propre accès,
+          avec un quota, un crédit et un suivi de consommation.
         </p>
         <div class="hero-actions">
-          <a class="btn btn-primary" href="/portal">Ouvrir mon espace</a>
-          <a class="btn btn-ghost" href="#brancher">Brancher un client</a>
+          <a class="btn btn-primary" href="/portal">Créer mon compte</a>
+          <a class="btn btn-ghost" href="#brancher">Voir l'intégration</a>
         </div>
         <dl class="hero-facts">
-          <div><dt>clés</dt><dd>dérivées, révocables</dd></div>
-          <div><dt>quota</dt><dd>tokens · requêtes · USD</dd></div>
-          <div><dt>trace</dt><dd>journal + audit</dd></div>
+          <div><dt>Accès</dt><dd>Clés individuelles</dd></div>
+          <div><dt>Contrôle</dt><dd>Quotas &amp; crédit</dd></div>
+          <div><dt>Suivi</dt><dd>Requêtes &amp; coûts</dd></div>
         </dl>
       </div>
 
-      <figure class="transcript" aria-label="Exemple d'échange avec la passerelle">
+      <figure class="transcript" aria-label="Exemple de requête API">
         <figcaption class="transcript-head">
-          <span>exemple · requête proxifiée</span>
+          <span>Exemple de requête</span>
           <span class="transcript-dots" aria-hidden="true">● ● ●</span>
         </figcaption>
-        <pre class="transcript-body"><span class="t-prompt">$</span> curl https://votre-domaine/v1/chat/completions \
+        <pre class="transcript-body"><span class="t-prompt">$</span> curl https://api.votre-domaine.fr/v1/chat/completions \
   -H "Authorization: Bearer sk-dsk-…" \
   -d '{"model":"claude-opus-5.5","messages":[…]}'
 
@@ -63,86 +63,93 @@
 <span class="t-h">x-quota-tokens-remaining: <b>1 987 412</b></span>
 <span class="t-h">x-gateway-billed-model: <b>deepseek-flash</b></span>
 
-{"model":"deepseek-flash","usage":{"total_tokens":118}}<span class="t-caret" aria-hidden="true">_</span></pre>
-        <figcaption class="transcript-foot">La clé originale ne quitte jamais le serveur.</figcaption>
+{"model":"deepseek-flash","usage":{"total_tokens":118}}</pre>
+        <figcaption class="transcript-foot">La clé fournisseur ne quitte jamais le serveur.</figcaption>
       </figure>
     </section>
 
     <section class="site-section" id="capacites" aria-labelledby="capacites-title">
-      <h2 id="capacites-title">Ce que fait la passerelle</h2>
-      <dl class="ledger">
-        <div class="ledger-row">
-          <dt class="ledger-key">clés dérivées</dt>
-          <dd>Une clé par personne ou par projet. Révocation, régénération et désactivation immédiates ; la clé fournisseur n'est jamais exposée.</dd>
-        </div>
-        <div class="ledger-row">
-          <dt class="ledger-key">quotas</dt>
-          <dd>Plafonds en tokens, requêtes et coût estimé, par jour, mois ou total. Débit par minute et concurrence bornés par clé.</dd>
-        </div>
-        <div class="ledger-row">
-          <dt class="ledger-key">facturation</dt>
-          <dd>Chaque requête est comptée avec les tokens réels et le coût DeepSeek. Les modèles demandés sont tracés face au modèle réellement facturé.</dd>
-        </div>
-        <div class="ledger-row">
-          <dt class="ledger-key">compatibilité</dt>
-          <dd>Base URL compatible OpenAI (<code>/v1</code>) et Anthropic (<code>/anthropic</code>) : chat completions, responses, FIM, modèles.</dd>
-        </div>
-        <div class="ledger-row">
-          <dt class="ledger-key">contrôle</dt>
-          <dd>Budget mensuel global, rate-limit par IP, plafond de concurrence, journal d'audit et export CSV des consommations.</dd>
-        </div>
-        <div class="ledger-row">
-          <dt class="ledger-key">pass</dt>
-          <dd>Un accès de 30 jours, arrêté à sa date de fin <em>ou</em> à l'épuisement du quota, au premier des deux. Sans reconduction automatique.</dd>
-        </div>
-        <div class="ledger-row">
-          <dt class="ledger-key">exploitation</dt>
-          <dd>HTTP et HTTPS, healthchecks <code>/healthz</code> et <code>/readyz</code>, logs JSON, sauvegardes SQLite, zéro dépendance npm.</dd>
-        </div>
-      </dl>
+      <div class="section-head">
+        <p class="eyebrow">Fonctionnalités</p>
+        <h2 id="capacites-title">Tout le nécessaire pour partager une API.</h2>
+        <p class="section-lede">Accès, limites, facturation et sécurité réunis dans une console claire.</p>
+      </div>
+      <div class="feature-grid">
+        <article class="feature-card">
+          <span class="feature-icon">01</span>
+          <h3>Clés dérivées</h3>
+          <p>Un accès par personne ou par projet, révocable et régénérable en un clic.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">02</span>
+          <h3>Quotas maîtrisés</h3>
+          <p>Tokens, requêtes et crédit, avec débit et concurrence limités par clé.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">03</span>
+          <h3>Coûts transparents</h3>
+          <p>Chaque requête est facturée au modèle réellement utilisé, visible dans le journal.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">04</span>
+          <h3>Compatible SDK</h3>
+          <p>OpenAI et Anthropic : changez l'URL de base et la clé, rien d'autre.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">05</span>
+          <h3>Sécurité intégrée</h3>
+          <p>Rate limiting, HTTPS, audit et chiffrement de la clé fournisseur au repos.</p>
+        </article>
+        <article class="feature-card">
+          <span class="feature-icon">06</span>
+          <h3>Pass sans surprise</h3>
+          <p>Un accès de 30 jours, arrêté à la date ou au quota, sans reconduction automatique.</p>
+        </article>
+      </div>
     </section>
 
     <section class="site-section" id="brancher" aria-labelledby="brancher-title">
-      <h2 id="brancher-title">Brancher un client</h2>
+      <div class="section-head">
+        <p class="eyebrow">Intégration</p>
+        <h2 id="brancher-title">Trois étapes, aucun changement de SDK.</h2>
+      </div>
       <ol class="site-steps">
         <li>
           <h3>Créez votre compte</h3>
-          <p>Inscrivez-vous avec votre email : un code de vérification est envoyé, puis votre espace s'ouvre avec un pass d'essai. Vous y créez votre clé <code>sk-dsk-…</code>, affichée une seule fois.</p>
+          <p>Un code de vérification par email, puis votre clé API dans l'espace.</p>
         </li>
         <li>
-          <h3>Pointez votre client vers la passerelle</h3>
-          <p>OpenAI SDK, Claude Code, Claude Desktop ou une simple requête HTTP : changez uniquement l'URL de base et la clé.</p>
-          <pre class="mini-code">OPENAI_BASE_URL=https://votre-domaine/v1
+          <h3>Pointez votre client</h3>
+          <p>Remplacez l'URL de base et la clé dans votre SDK ou votre outil.</p>
+          <pre class="mini-code">OPENAI_BASE_URL=https://api.votre-domaine.fr/v1
 OPENAI_API_KEY=sk-dsk-…
 
-# ou, format Anthropic :
-ANTHROPIC_BASE_URL=https://votre-domaine/anthropic
+ANTHROPIC_BASE_URL=https://api.votre-domaine.fr/anthropic
 ANTHROPIC_AUTH_TOKEN=sk-dsk-…</pre>
         </li>
         <li>
           <h3>Suivez votre consommation</h3>
-          <p>Dans <a href="/portal">Mon espace</a>, consultez quotas restants, consommation du mois et dernières requêtes. Les en-têtes de réponse donnent le restant à chaque appel.</p>
+          <p>Quotas, crédit et dernières requêtes sont disponibles dans votre espace.</p>
         </li>
       </ol>
     </section>
 
     <section class="site-section site-cta" aria-labelledby="cta-title">
-      <h2 id="cta-title">Prêt à commencer ?</h2>
-      <p>Créez votre compte avec votre email, puis générez votre clé API dans votre espace. Vous pourrez ensuite vous connecter par email ou directement par clé.</p>
-      <a class="btn btn-primary" href="/portal">Créer mon compte / me connecter</a>
+      <p class="eyebrow">Commencer</p>
+      <h2 id="cta-title">Votre espace est prêt.</h2>
+      <p>Créez un compte, générez votre clé et branchez votre client en quelques minutes.</p>
+      <a class="btn btn-primary" href="/portal">Créer mon compte</a>
     </section>
   </main>
 
   <footer class="site-footer">
-    <span>VALARIA Gateway API · passerelle auto-hébergée</span>
+    <span>VALARIA Gateway API</span>
     <span class="site-footer-links">
       <a href="/portal">Mon espace</a>
-      <a href="#brancher">Brancher un client</a>
+      <a href="#brancher">Intégration</a>
     </span>
   </footer>
 
   <script src="/assets/landing.js?v={{APP_VERSION}}" defer></script>
 </body>
 </html>
-
-

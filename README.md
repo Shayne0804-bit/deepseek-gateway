@@ -84,9 +84,11 @@ Le produit tient en **trois surfaces web** :
   et le journal (`requestedModel`), le modèle facturé est flash.
 - **HTTP + HTTPS** : HTTP sur `8787` et, si un certificat est fourni, HTTPS sur `8788`
   (requis par Claude Desktop). Voir [HTTPS local](#https-local-claude-desktop).
-- **Interface console « terminal »** : thème vert phosphore, typographie monospace, prompts `>` et
-  badges entre crochets ; états chargement / vide / erreur / partiel / succès / permission soignés,
-  focus clavier visible, contraste WCAG AA et `prefers-reduced-motion` vérifiés.
+- **Interface soignée** : direction « Signal Ledger » — typographie Manrope lisible, IBM Plex Mono
+  réservé au code, palette graphite/jade/ambre, cartes et espacements responsive. Les pages publiques,
+  le portail et la console partagent le même système visuel ; états chargement / vide / erreur /
+  partiel / succès / permission soignés, focus clavier visible, contraste WCAG AA et
+  `prefers-reduced-motion` vérifiés.
 - **Site public et portail accessibles** : statut en direct, contenu factuel, navigation claire,
   assets gzip, zéro dépendance tierce. Audit qualité complet : [docs/QUALITY-AUDIT.md](docs/QUALITY-AUDIT.md).
 - **Durcissement production** : clé fournisseur **chiffrée au repos** (AES-256-GCM),

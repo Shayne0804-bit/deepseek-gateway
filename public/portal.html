@@ -4,18 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#040705">
+  <meta name="theme-color" content="#0a0e0c">
   <meta name="description" content="Espace utilisateur VALARIA Gateway API : quotas, consommation et dernières requêtes de votre clé API.">
   <title>Mon espace — VALARIA Gateway API</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/styles.css?v={{APP_VERSION}}">
+  <link rel="stylesheet" href="/assets/theme.css?v={{APP_VERSION}}">
 </head>
 <body class="public-page portal-page">
   <a class="skip-link" href="#main">Aller au contenu</a>
 
   <header class="site-header">
     <a class="site-brand" href="/">
-      <span class="brand-logo" aria-hidden="true">&gt;_</span>
+      <span class="brand-logo" aria-hidden="true">V</span>
       <span class="brand-name">VALARIA Gateway</span>
     </a>
     <nav class="site-nav" aria-label="Navigation principale">
@@ -32,39 +33,20 @@
     <section id="login-view" class="portal-login" aria-labelledby="login-title">
       <div class="portal-login-copy">
         <p class="hero-kicker">Espace utilisateur</p>
-        <h1 id="login-title">Mon espace</h1>
+        <h1 id="login-title">Vos accès, en un seul endroit.</h1>
         <p>
-          Connectez-vous avec votre clé API, ou créez votre compte avec votre email pour obtenir
-          votre propre clé et suivre vos quotas, votre consommation et vos dernières requêtes.
+          Connectez-vous par clé API ou par email. Nouveau ? Créez votre compte
+          en quelques secondes.
         </p>
+        <ul class="portal-points">
+          <li>Quotas et crédit restants</li>
+          <li>Dernières requêtes et consommation</li>
+          <li>Clé API et fin de pass</li>
+        </ul>
         <p class="small muted">
-          Nouveau ? Utilisez l'onglet <strong>Créer un compte</strong> : un code de vérification est
-          envoyé par email, puis vous créez votre clé API dans votre espace. Ensuite, connexion au
-          choix par email ou par clé.
+          Pass de 30 jours, arrêté à sa date de fin ou à l'épuisement du quota,
+          sans reconduction automatique.
         </p>
-        <p class="small muted">
-          <strong>Durée d'accès :</strong> votre pass s'arrête à sa date de fin <em>ou</em> à
-          l'épuisement de son quota (crédit, requêtes ou tokens), au premier des deux.
-          Aucun prélèvement automatique.
-        </p>
-        <dl class="ledger portal-preview">
-          <div class="ledger-row">
-            <dt class="ledger-key">quotas</dt>
-            <dd>Tokens, requêtes et coût restants pour la période en cours.</dd>
-          </div>
-          <div class="ledger-row">
-            <dt class="ledger-key">consommation</dt>
-            <dd>Votre activité des 30 derniers jours, calculée sur le modèle réellement facturé.</dd>
-          </div>
-          <div class="ledger-row">
-            <dt class="ledger-key">requêtes</dt>
-            <dd>Vos dernières requêtes, avec le modèle demandé et le modèle facturé.</dd>
-          </div>
-          <div class="ledger-row">
-            <dt class="ledger-key">branchement</dt>
-            <dd>URL de base et exemples prêts à copier pour OpenAI, Claude Code et Claude Desktop.</dd>
-          </div>
-        </dl>
       </div>
       <div class="panel portal-login-form">
         <div class="auth-tabs" role="tablist" aria-label="Méthode de connexion">
@@ -237,5 +219,7 @@
   <script src="/assets/portal.js?v={{APP_VERSION}}" defer></script>
 </body>
 </html>
+
+
 
 

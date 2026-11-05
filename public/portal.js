@@ -341,7 +341,7 @@
         <div class="stat-label">${esc(label)}</div>
         <div class="stat-value">${formatter(used)}</div>
         <div class="quota-bar quota-bar-unlimited"><span></span></div>
-        <div class="small muted">aucun plafond configuré</div>
+        <div class="small muted">non plafonné</div>
       </article>`;
     }
     const pct = Math.max(0, Math.min(100, Math.round((used / limit) * 100)));
@@ -410,14 +410,8 @@
   }
 
   function limitsMarkup(me) {
-    const expiresAt = me.client.expiresAt ? new Date(me.client.expiresAt) : null;
-    const daysLeft = expiresAt ? Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000) : null;
-    const expiryLabel = expiresAt
-      ? `${fmtDate(me.client.expiresAt)}${daysLeft != null ? ` — ${daysLeft > 0 ? `dans ${daysLeft} j` : 'expiré'}` : ''} ou quota épuisé`
-      : "aucune date — arrêt à l'épuisement du quota";
     const rows = [
       ['période', PERIOD_LABELS[me.client.period] || me.client.period],
-      ['fin du pass', expiryLabel],
       ['débit', me.limits.rpmLimit ? `${fmtInt(me.limits.rpmLimit)} req/min` : 'non limité'],
       ['sortie max', me.limits.maxOutputTokens ? `${fmtInt(me.limits.maxOutputTokens)} tokens` : 'non plafonnée'],
       ['depuis', fmtDate(me.client.createdAt)],

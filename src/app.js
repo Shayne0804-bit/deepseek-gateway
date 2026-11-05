@@ -74,6 +74,10 @@ const ASSETS = {
   '/assets/portal.js': { file: 'portal.js', type: 'text/javascript; charset=utf-8' },
   // Communs
   '/assets/styles.css': { file: 'styles.css', type: 'text/css; charset=utf-8' },
+  '/assets/theme.css': { file: 'theme.css', type: 'text/css; charset=utf-8' },
+  '/assets/fonts/manrope-latin-var.woff2': { file: 'fonts/manrope-latin-var.woff2', type: 'font/woff2' },
+  '/assets/fonts/ibm-plex-mono-400.woff2': { file: 'fonts/ibm-plex-mono-400.woff2', type: 'font/woff2' },
+  '/assets/fonts/ibm-plex-mono-500.woff2': { file: 'fonts/ibm-plex-mono-500.woff2', type: 'font/woff2' },
   '/favicon.svg': { file: 'favicon.svg', type: 'image/svg+xml' },
 };
 
