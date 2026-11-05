@@ -859,8 +859,7 @@ img.login-logo { width: 46px; height: 46px; margin-bottom: 20px; }
   position: fixed;
   inset: 0;
   z-index: 55;
-  background: rgba(3, 7, 5, 0.58);
-  backdrop-filter: blur(2px);
+  background: rgba(3, 7, 5, 0.62);
 }
 body.menu-open { overflow: hidden; }
 
@@ -952,3 +951,4 @@ body.menu-open { overflow: hidden; }
   .user-main .topbar-title > div { width: 100%; }
   .user-main .hero-kicker { text-align: left; }
 }
+
