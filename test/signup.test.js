@@ -160,3 +160,39 @@ test('clé API : une seule création, régénération possible', async () => {
     await started.close();
   }
 });
+
+test('admin : test email visible et erreur Resend remontee', async () => {
+  const { started, mailer } = await startServer();
+  try {
+    const admin = await adminLogin(started.url);
+    const ok = await fetch(`${started.url}/admin/api/settings/mail-test`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-requested-with': 'dsk-admin', cookie: admin },
+      body: JSON.stringify({ to: 'destinataire@test.local' }),
+    });
+    assert.equal(ok.status, 200);
+    assert.equal(mailer.sent.at(-1).code, '000000');
+  } finally {
+    await started.close();
+  }
+
+  const failing = {
+    enabled: true,
+    transport: 'resend',
+    async sendPortalCode() { throw new Error('Resend HTTP 403 {"message":"domain not verified"}'); },
+  };
+  const { started: failingStarted } = await startServer({ mailer: failing });
+  try {
+    const admin = await adminLogin(failingStarted.url);
+    const res = await fetch(`${failingStarted.url}/admin/api/settings/mail-test`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-requested-with': 'dsk-admin', cookie: admin },
+      body: JSON.stringify({ to: 'destinataire@test.local' }),
+    });
+    assert.equal(res.status, 502);
+    const body = await res.json();
+    assert.match(body.error.message, /domain not verified/);
+  } finally {
+    await failingStarted.close();
+  }
+});

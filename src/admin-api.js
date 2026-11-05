@@ -261,7 +261,7 @@ function validateHttpUrl(value, label) {
   return `${url.origin}${url.pathname}`.replace(/\/+$/, '');
 }
 
-export function createAdminApi({ config, db, log }) {
+export function createAdminApi({ config, db, log, mailer }) {
   const loginAttempts = new Map();
 
   function requireSession(req) {
@@ -796,6 +796,34 @@ export function createAdminApi({ config, db, log }) {
         audit(req, 'admin.password.change', 'admin');
         log.info('Mot de passe administrateur modifie.');
         sendJson(res, 200, { ok: true });
+        return;
+      }
+
+      if (route === '/settings/mail-test' && method === 'POST') {
+        const body = await readJsonBody(req, 4 * 1024);
+        const to = String(body.to ?? '').trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || to.length > 254) {
+          adminError(res, 400, 'Adresse email de test invalide.', 'invalid_email');
+          return;
+        }
+        if (!mailer?.enabled) {
+          adminError(res, 409, "Aucun transport email actif. Configurez MAIL_TRANSPORT, MAIL_FROM et RESEND_API_KEY.", 'mail_disabled');
+          return;
+        }
+        try {
+          await mailer.sendPortalCode({ to, code: '000000', minutes: config.otpExpiresMinutes });
+          audit(req, 'admin.mail_test', to);
+          log.info(`Email de test envoye a ${to} (${mailer.transport}).`);
+          sendJson(res, 200, {
+            ok: true,
+            to,
+            transport: mailer.transport,
+            message: 'Email de test envoye. Le code de test est 000000.',
+          });
+        } catch (err) {
+          log.error(`Test email impossible : ${err.message}`);
+          adminError(res, 502, `Envoi impossible : ${err.message}`, 'mail_send_failed');
+        }
         return;
       }
 

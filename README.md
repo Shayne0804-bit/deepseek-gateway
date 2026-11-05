@@ -345,6 +345,9 @@ et création impossible sans vérification de l'adresse. Pour fermer complèteme
 
 > Sans `MAIL_TRANSPORT` configuré, la connexion par email est **désactivée** (la clé API reste
 > le seul mode). Mettez `MAIL_TRANSPORT=console` pour tester le parcours sans envoi réel.
+>
+> En production, **Réglages → Connexion par email → Tester l'envoi** envoie un email de test et
+> affiche l'erreur exacte du fournisseur (401/403/422…), même avec `LOG_LEVEL=silent`.
 
 ```env
 # Resend (recommandé)
@@ -975,7 +978,7 @@ Serveur arrêté, copiez le dossier `data/` (ou au minimum `gateway.db`). À cha
 node --test test
 ```
 
-La suite (83 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
+La suite (84 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
 normalisation `usage` OpenAI/Anthropic, quotas (tokens, requêtes, coût, reset de période),
 limites de débit et de concurrence, authentification admin (hash scrypt, sessions),
 chiffrement/hachage des clés dérivées, proxy JSON et **streaming SSE** avec comptage,

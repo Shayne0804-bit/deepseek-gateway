@@ -1021,7 +1021,10 @@
             <h2>Connexion par email</h2>
             <span class="hint">Codes à usage unique envoyés aux utilisateurs du portail.</span>
           </div>
-          <span class="badge ${s.email?.enabled ? 'badge-ok' : 'badge-muted'}">${s.email?.enabled ? 'activée' : 'désactivée'}</span>
+          <div class="panel-head-actions">
+            <button type="button" class="btn btn-ghost btn-sm" data-action="test-mail">Tester l'envoi</button>
+            <span class="badge ${s.email?.enabled ? 'badge-ok' : 'badge-muted'}">${s.email?.enabled ? 'activée' : 'désactivée'}</span>
+          </div>
         </div>
         <div class="alert">
           Transport : <code>${esc(s.email?.transport || '—')}</code>${s.email?.from ? ` · expéditeur : <code>${esc(s.email.from)}</code>` : ''}
@@ -1394,6 +1397,18 @@
     }
     if (action === 'load-more-logs') {
       await loadLogs({ append: true });
+      return;
+    }
+    if (action === 'test-mail') {
+      const to = window.prompt('Adresse email qui recevra le test :');
+      if (!to) return;
+      toast('Envoi du test…', 'info');
+      try {
+        const result = await api('/settings/mail-test', { method: 'POST', body: { to } });
+        toast(`Email de test envoyé à ${result.to} (${result.transport}).`, 'success');
+      } catch (err) {
+        toast(`Échec : ${err.message}`, 'error');
+      }
       return;
     }
     if (action === 'reset-pricing') {

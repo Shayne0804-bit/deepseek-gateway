@@ -192,7 +192,7 @@ export async function startGateway(overrides = {}) {
   const resolveProvider = (database, cfg) => resolveProviderConfig(database, cfg);
   migrateProviderSecret(db, config, log);
   const mailer = overrides.mailer ?? createMailer(config, log);
-  const adminApi = createAdminApi({ config, db, log });
+  const adminApi = createAdminApi({ config, db, log, mailer });
   const portalApi = createPortalApi({ config, db, log, mailer });
   const proxyHandler = createProxyHandler({ config, db, log, resolveProvider });
   const ipLimiter = new IpRateLimiter();
