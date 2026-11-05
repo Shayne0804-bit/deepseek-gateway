@@ -199,6 +199,38 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     return Boolean(client?.keyPrefix && String(client.keyPrefix).startsWith('sk-dsk-'));
   }
 
+  /** Cree un compte d'essai (inscription autonome ou connexion email inconnue). */
+  function createTrialClient(email) {
+    const now = new Date();
+    const trialExpiry = new Date(now.getTime() + config.trialDays * 86_400_000).toISOString();
+    const localPart = email.split('@')[0].replace(/[._-]+/g, ' ').trim();
+    const client = {
+      id: crypto.randomUUID(),
+      name: (localPart || 'Nouveau compte').slice(0, 80),
+      email,
+      keyHash: sha256(`pending:${crypto.randomUUID()}`),
+      keyPrefix: 'en attente',
+      enabled: true,
+      quotaTokens: null,
+      quotaRequests: config.trialQuotaRequests || null,
+      quotaUsd: config.trialQuotaUsd || null,
+      usedTokens: 0,
+      usedRequests: 0,
+      usedUsd: 0,
+      period: 'total',
+      periodStart: periodKeyFor('total', now),
+      rpmLimit: config.trialRpmLimit || null,
+      concurrencyLimit: config.trialConcurrencyLimit || null,
+      maxOutputTokens: config.trialMaxOutputTokens || null,
+      allowedModels: null,
+      expiresAt: trialExpiry,
+      note: 'Inscription autonome — pass d’essai',
+      createdAt: now.toISOString(),
+    };
+    insertClient(db, client);
+    return client;
+  }
+
   function emailCodeMessage() {
     return {
       ok: true,
@@ -461,7 +493,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           return;
         }
         const client = findClientByEmail(db, email);
-        if (!client) {
+        if (!client && !config.signupEnabled) {
           // Reponse generique : ne revele pas l'absence de compte.
           audit(req, 'portal.email.requested');
           sendJson(res, 200, emailCodeMessage());
@@ -469,7 +501,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         }
         const send = reserveEmailSend(email);
         if (!send.ok) {
-          audit(req, 'portal.email.request.rate_limited', client.name);
+          audit(req, client ? 'portal.email.request.rate_limited' : 'portal.signup.rate_limited', client?.name ?? null);
           sendRateLimited(
             res,
             `Un code a déjà été demandé. Patientez ${send.retryAfterSeconds} s avant de renvoyer.`,
@@ -490,13 +522,13 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           createdAt: now.toISOString(),
           expiresAt,
         });
-        audit(req, 'portal.email.requested', client.name);
+        audit(req, client ? 'portal.email.requested' : 'portal.signup.requested', client?.name ?? null);
         try {
           await mailer.sendPortalCode({ to: email, code, minutes: config.otpExpiresMinutes });
         } catch (err) {
           releaseEmailSend(email);
           deletePortalEmailCodes(db, email);
-          audit(req, 'portal.email.send_failed', client.name);
+          audit(req, 'portal.email.send_failed', client?.name ?? null);
           log.error(`[${req.requestId ?? '-'}] Envoi email impossible : ${err.message}`);
           sendJson(res, 502, {
             error: {
@@ -508,11 +540,14 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           });
           return;
         }
-        log.info(`[${req.requestId ?? '-'}] Code de connexion email envoyé (${client.name}).`);
+        log.info(`[${req.requestId ?? '-'}] Code de connexion email envoyé (${client?.name ?? 'nouveau compte'}).`);
         sendJson(res, 200, {
           ok: true,
           sent: true,
-          message: 'Code de connexion envoyé. Vérifiez votre boîte email.',
+          signup: !client,
+          message: client
+            ? 'Code de connexion envoyé. Vérifiez votre boîte email.'
+            : 'Code envoyé. Le compte sera créé automatiquement après validation (pass d’essai).',
           expiresMinutes: config.otpExpiresMinutes,
           resend_in_seconds: send.retryAfterSeconds,
           sends_in_window: send.count,
@@ -546,10 +581,10 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 401, 'Code expiré ou déjà utilisé. Demandez un nouveau code.', 'expired_code');
           return;
         }
-        // Ne pas consommer le code si le compte n'existe pas encore : le meme code
-        // reste valable dans l'onglet « Creer un compte ».
+        // Si l'inscription autonome est active, une adresse inconnue est acceptee :
+        // le compte sera cree apres validation du code.
         const client = findClientByEmail(db, email);
-        if (!client) {
+        if (!client && !config.signupEnabled) {
           portalError(
             res,
             409,
@@ -572,7 +607,14 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           return;
         }
         deletePortalEmailCode(db, record.id);
-        createSession(req, res, client, 'email');
+        if (client) {
+          createSession(req, res, client, 'email');
+          return;
+        }
+        const created = createTrialClient(email);
+        audit(req, 'portal.signup', created.name);
+        log.info(`[${req.requestId ?? '-'}] Nouveau compte email via connexion : ${created.name} (essai ${config.trialDays} j)`);
+        createSession(req, res, created, 'signup');
         return;
       }
 
@@ -698,33 +740,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           return;
         }
 
-        const now = new Date();
-        const trialExpiry = new Date(now.getTime() + config.trialDays * 86_400_000).toISOString();
-        const localPart = email.split('@')[0].replace(/[._-]+/g, ' ').trim();
-        const client = {
-          id: crypto.randomUUID(),
-          name: (localPart || 'Nouveau compte').slice(0, 80),
-          email,
-          keyHash: sha256(`pending:${crypto.randomUUID()}`),
-          keyPrefix: 'en attente',
-          enabled: true,
-          quotaTokens: null,
-          quotaRequests: config.trialQuotaRequests || null,
-          quotaUsd: config.trialQuotaUsd || null,
-          usedTokens: 0,
-          usedRequests: 0,
-          usedUsd: 0,
-          period: 'total',
-          periodStart: periodKeyFor('total', now),
-          rpmLimit: config.trialRpmLimit || null,
-          concurrencyLimit: config.trialConcurrencyLimit || null,
-          maxOutputTokens: config.trialMaxOutputTokens || null,
-          allowedModels: null,
-          expiresAt: trialExpiry,
-          note: 'Inscription autonome — pass d’essai',
-          createdAt: now.toISOString(),
-        };
-        insertClient(db, client);
+        const client = createTrialClient(email);
         audit(req, 'portal.signup', client.name);
         log.info(`[${req.requestId ?? '-'}] Nouveau compte email : ${client.name} (essai ${config.trialDays} j)`);
         createSession(req, res, client, 'signup');

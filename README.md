@@ -310,11 +310,15 @@ Le portail accepte **trois parcours** :
 
 1. **Inscription autonome** — l'utilisateur saisit son email, reçoit un code, vérifie-le et son
    compte est créé avec un **pass d'essai**. Il crée ensuite sa propre clé API depuis l'espace.
-2. **Code par email** — pour un compte existant, sans ressaisir la clé.
+2. **Code par email** — le compte se connecte s'il existe ; si l'adresse est inconnue et que
+   l'inscription est ouverte (`SIGNUP_ENABLED=1`), un compte d'essai est **créé automatiquement**
+   après validation du code.
 3. **Clé API** (`sk-dsk-…`) — toujours disponible, aucun service externe.
 
-Le code est haché en base (HMAC), limité à 5 essais, redemandé au plus une fois par minute,
-et la réponse est toujours générique (« si un compte existe… ») pour ne pas révéler les comptes.
+Le code est haché en base (HMAC), limité à 5 essais, renvoyable après un cooldown (30 s par défaut),
+et le nombre d'envois est affiché dans le portail. Quand l'inscription est fermée, une adresse
+inconnue reçoit une réponse générique sans envoi ; sinon le code est réellement envoyé et le
+compte créé à la validation.
 
 ### Inscription autonome (signup)
 
@@ -985,7 +989,7 @@ Serveur arrêté, copiez le dossier `data/` (ou au minimum `gateway.db`). À cha
 node --test test
 ```
 
-La suite (86 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
+La suite (87 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
 normalisation `usage` OpenAI/Anthropic, quotas (tokens, requêtes, coût, reset de période),
 limites de débit et de concurrence, authentification admin (hash scrypt, sessions),
 chiffrement/hachage des clés dérivées, proxy JSON et **streaming SSE** avec comptage,

@@ -177,23 +177,44 @@ test('pas de plafond d envois par email (cooldown court en test)', async () => {
   }
 });
 
-test('code demande en inscription mais saisi en connexion : non consomme et message clair', async () => {
+test('code demande en inscription mais saisi en connexion : compte cree automatiquement', async () => {
   const { started, mailer } = await startServer();
   try {
     await portalPost(started.url, '/signup/request', { email: 'mauvais-onglet@gmail.com' });
     const code = mailer.sent.at(-1).code;
 
-    // L'utilisateur se trompe d'onglet : la connexion ne doit pas brûler le code.
-    const wrongTab = await portalPost(started.url, '/email/verify', { email: 'mauvais-onglet@gmail.com', code });
-    assert.equal(wrongTab.status, 409);
-    const wrongBody = await wrongTab.json();
-    assert.equal(wrongBody.error.code, 'account_not_found');
-    assert.match(wrongBody.error.message, /Créer un compte/);
+    const login = await portalPost(started.url, '/email/verify', { email: 'mauvais-onglet@gmail.com', code });
+    assert.equal(login.status, 200);
+    assert.equal((await login.json()).method, 'signup');
 
-    // Le même code reste valable dans le bon onglet.
-    const signup = await portalPost(started.url, '/signup/verify', { email: 'mauvais-onglet@gmail.com', code });
-    assert.equal(signup.status, 200);
-    assert.equal((await signup.json()).method, 'signup');
+    const cookie = login.headers.getSetCookie()[0].split(';')[0];
+    const me = await (await fetch(`${started.url}/portal/api/me`, { headers: { cookie } })).json();
+    assert.equal(me.client.email, 'mauvais-onglet@gmail.com');
+    assert.equal(me.client.hasKey, false);
+  } finally {
+    await started.close();
+  }
+});
+
+test('connexion email inconnue : un code est envoye et le compte est cree', async () => {
+  const { started, mailer } = await startServer();
+  try {
+    const request = await portalPost(started.url, '/email/request', { email: 'inconnu@gmail.com' });
+    assert.equal(request.status, 200);
+    const requestData = await request.json();
+    assert.equal(requestData.sent, true);
+    assert.equal(requestData.signup, true);
+    assert.equal(mailer.sent.length, 1);
+
+    const verify = await portalPost(started.url, '/email/verify', { email: 'inconnu@gmail.com', code: mailer.sent[0].code });
+    assert.equal(verify.status, 200);
+    assert.equal((await verify.json()).method, 'signup');
+
+    const adminCookie = await adminLogin(started.url);
+    const clients = await (await fetch(`${started.url}/admin/api/clients`, { headers: { cookie: adminCookie } })).json();
+    const account = clients.clients.find((c) => c.email === 'inconnu@gmail.com');
+    assert.ok(account, 'le compte doit apparaître côté admin');
+    assert.equal(account.hasKey, false);
   } finally {
     await started.close();
   }

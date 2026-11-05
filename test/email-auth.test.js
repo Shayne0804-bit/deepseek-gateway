@@ -76,7 +76,8 @@ function portalPost(base, pathname, body, extra = {}) {
 }
 
 test('email OTP : demande générique, vérification, session et audit', async () => {
-  const { started, mailer } = await startServer();
+  // Inscription fermée : une adresse inconnue ne reçoit rien (comportement historique).
+  const { started, mailer } = await startServer({ signupEnabled: false });
   try {
     const cookie = await adminLogin(started.url);
     const created = await createClient(started.url, cookie, {
