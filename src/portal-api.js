@@ -427,7 +427,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         }
         const body = await readJsonBody(req, 4 * 1024);
         const email = normalizeEmail(body.email);
-        const code = String(body.code ?? '').replace(/\s+/g, '');
+        const code = String(body.code ?? '').replace(/\D/g, '');
         if (!EMAIL_RE.test(email) || !/^\d{6}$/.test(code)) {
           portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
           return;
@@ -435,7 +435,19 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         const record = getActivePortalEmailCode(db, email);
         if (!record || new Date(record.expires_at).getTime() <= Date.now()) {
           if (record) deletePortalEmailCode(db, record.id);
-          portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
+          portalError(res, 401, 'Code expiré ou déjà utilisé. Demandez un nouveau code.', 'expired_code');
+          return;
+        }
+        // Ne pas consommer le code si le compte n'existe pas encore : le meme code
+        // reste valable dans l'onglet « Creer un compte ».
+        const client = findClientByEmail(db, email);
+        if (!client) {
+          portalError(
+            res,
+            409,
+            'Aucun compte n’existe encore pour cette adresse. Utilisez « Créer un compte » pour finaliser l’inscription avec ce code.',
+            'account_not_found',
+          );
           return;
         }
         incrementPortalEmailCodeAttempts(db, record.id);
@@ -448,15 +460,10 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         if (!safeEqualHex(otpHash(email, code), record.code_hash)) {
           audit(req, 'portal.email.failed');
           recordLoginFailure(ip);
-          portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
+          portalError(res, 401, 'Code incorrect. Vérifiez le dernier code reçu.', 'invalid_code');
           return;
         }
         deletePortalEmailCode(db, record.id);
-        const client = findClientByEmail(db, email);
-        if (!client) {
-          portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
-          return;
-        }
         createSession(req, res, client, 'email');
         return;
       }
@@ -519,7 +526,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         }
         const body = await readJsonBody(req, 4 * 1024);
         const email = normalizeEmail(body.email);
-        const code = String(body.code ?? '').replace(/\s+/g, '');
+        const code = String(body.code ?? '').replace(/\D/g, '');
         if (!EMAIL_RE.test(email) || !/^\d{6}$/.test(code)) {
           portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
           return;
@@ -527,7 +534,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         const record = getActivePortalEmailCode(db, email);
         if (!record || new Date(record.expires_at).getTime() <= Date.now()) {
           if (record) deletePortalEmailCode(db, record.id);
-          portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
+          portalError(res, 401, 'Code expiré ou déjà utilisé. Demandez un nouveau code.', 'expired_code');
           return;
         }
         incrementPortalEmailCodeAttempts(db, record.id);
@@ -538,7 +545,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         }
         if (!safeEqualHex(otpHash(email, code), record.code_hash)) {
           recordLoginFailure(ip);
-          portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
+          portalError(res, 401, 'Code incorrect. Vérifiez le dernier code reçu.', 'invalid_code');
           return;
         }
         deletePortalEmailCode(db, record.id);

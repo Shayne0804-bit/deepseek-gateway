@@ -125,7 +125,7 @@
   async function verifyEmailCode() {
     if (state.emailBusy) return;
     const email = $('#email-address').value.trim();
-    const code = $('#email-code').value.replace(/\s+/g, '');
+    const code = $('#email-code').value.replace(/\D/g, '');
     showEmailError('');
     if (!/^\d{6}$/.test(code)) {
       showEmailError('Entrez le code à 6 chiffres reçu par email.');
@@ -176,7 +176,7 @@
     button.textContent = 'Envoi…';
     try {
       const data = await api('/signup/request', { method: 'POST', body: { email } });
-      $('#signup-sent-note').textContent = `${data.message} Le code est valable ${data.expiresMinutes ?? 10} minutes.`;
+      $('#signup-sent-note').textContent = `Un code vient d’être envoyé à ${email} (valable ${data.expiresMinutes ?? 10} minutes). Utilisez le dernier code reçu : demander un nouveau code annule le précédent.`;
       $('#signup-request-form').classList.add('hidden');
       $('#signup-verify-form').classList.remove('hidden');
       $('#signup-code').value = '';
@@ -193,7 +193,7 @@
   async function verifySignup() {
     if (state.emailBusy) return;
     const email = $('#signup-email').value.trim();
-    const code = $('#signup-code').value.replace(/\s+/g, '');
+    const code = $('#signup-code').value.replace(/\D/g, '');
     showSignupError('');
     if (!/^\d{6}$/.test(code)) {
       showSignupError('Entrez le code à 6 chiffres reçu par email.');
@@ -527,6 +527,7 @@
     });
     $('#email-resend').addEventListener('click', requestEmailCode);
     $('#email-change').addEventListener('click', resetEmailFlow);
+    $('#email-signup-link').addEventListener('click', () => setAuthTab('signup'));
     $('#signup-request-form').addEventListener('submit', (event) => {
       event.preventDefault();
       requestSignup();

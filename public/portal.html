@@ -108,6 +108,10 @@
               <button type="button" class="btn btn-ghost btn-sm" id="email-change">Changer d'adresse</button>
             </div>
           </form>
+          <p class="small muted" style="margin:14px 0 0">
+            Ce mode est réservé aux comptes déjà créés. Nouveau ?
+            <button type="button" class="link-btn" id="email-signup-link">Créer un compte</button>.
+          </p>
         </div>
 
         <div id="panel-signup" role="tabpanel" aria-labelledby="tab-signup" class="hidden">
@@ -125,7 +129,7 @@
             <label class="field full">
               <span>Code à 6 chiffres</span>
               <input type="text" id="signup-code" name="code" placeholder="000000" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="7" required>
-              <small>Valable quelques minutes, à usage unique.</small>
+              <small>Utilisez le <strong>dernier code reçu</strong> : demander un nouveau code annule le précédent. Valable quelques minutes.</small>
             </label>
             <button type="submit" class="btn btn-primary btn-block" id="signup-verify-btn">Vérifier et créer mon compte</button>
             <div class="auth-links">

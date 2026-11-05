@@ -161,6 +161,28 @@ test('clé API : une seule création, régénération possible', async () => {
   }
 });
 
+test('code demande en inscription mais saisi en connexion : non consomme et message clair', async () => {
+  const { started, mailer } = await startServer();
+  try {
+    await portalPost(started.url, '/signup/request', { email: 'mauvais-onglet@gmail.com' });
+    const code = mailer.sent.at(-1).code;
+
+    // L'utilisateur se trompe d'onglet : la connexion ne doit pas brûler le code.
+    const wrongTab = await portalPost(started.url, '/email/verify', { email: 'mauvais-onglet@gmail.com', code });
+    assert.equal(wrongTab.status, 409);
+    const wrongBody = await wrongTab.json();
+    assert.equal(wrongBody.error.code, 'account_not_found');
+    assert.match(wrongBody.error.message, /Créer un compte/);
+
+    // Le même code reste valable dans le bon onglet.
+    const signup = await portalPost(started.url, '/signup/verify', { email: 'mauvais-onglet@gmail.com', code });
+    assert.equal(signup.status, 200);
+    assert.equal((await signup.json()).method, 'signup');
+  } finally {
+    await started.close();
+  }
+});
+
 test('admin : test email visible et erreur Resend remontee', async () => {
   const { started, mailer } = await startServer();
   try {
