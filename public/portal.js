@@ -596,7 +596,6 @@
     }
 
     const hasKey = me.client.hasKey !== false;
-    const showDashboard = hasKey && !state.newKey;
     const noKeyPanel = $('#no-key-panel');
     if (!hasKey || state.newKey) {
       noKeyPanel.classList.remove('hidden');
@@ -609,18 +608,17 @@
         $('#new-key-box').classList.remove('hidden');
         $('#new-key-value').textContent = state.newKey;
       } else {
-        $('#no-key-title').textContent = 'Bienvenue dans votre espace';
-        $('#no-key-copy').textContent = 'Votre compte est actif. Créez votre clé API pour utiliser la passerelle : elle sera affichée une seule fois.';
+        $('#no-key-title').textContent = 'Votre compte est créé';
+        $('#no-key-copy').textContent = 'Créez votre clé API pour utiliser la passerelle. Elle sera affichée une seule fois ; vous pourrez ensuite vous connecter avec cette clé ou avec votre email.';
         $('#create-key-btn').classList.remove('hidden');
         $('#dismiss-key-btn').classList.add('hidden');
         $('#new-key-box').classList.add('hidden');
         $('#new-key-value').textContent = '';
       }
-      $('#onboarding-steps').classList.toggle('hidden', Boolean(state.newKey));
     } else {
       noKeyPanel.classList.add('hidden');
     }
-    $('#portal-dashboard').classList.toggle('hidden', !showDashboard);
+    $('#portal-dashboard').classList.remove('hidden');
 
     const q = me.quota;
     $('#portal-quotas').innerHTML = [
