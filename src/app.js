@@ -95,10 +95,18 @@ function serveAsset(req, res, config, asset) {
       return;
     }
     const isHtml = asset.type.startsWith('text/html');
+    if (isHtml) {
+      // Version injectee dans les URLs d'assets (?v=...) : contourne le cache
+      // navigateur/Cloudflare apres chaque deploiement.
+      buffer = Buffer.from(buffer.toString('utf8').replaceAll('{{APP_VERSION}}', APP_VERSION));
+    }
     const headers = {
       'content-type': asset.type,
       // Pas de cache long sur les assets : evite un HTML neuf + ancien JS apres deploiement.
       'cache-control': isHtml ? 'no-cache' : 'no-cache, must-revalidate',
+      // Demande explicite a Cloudflare de ne pas mettre l'asset en cache edge.
+      'cdn-cache-control': 'no-store',
+      'cloudflare-cdn-cache-control': 'no-store',
       vary: 'accept-encoding',
     };
     let payload = buffer;
