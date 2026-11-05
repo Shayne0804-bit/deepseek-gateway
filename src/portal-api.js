@@ -953,6 +953,25 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         return;
       }
 
+      if (route === '/profile' && method === 'PUT') {
+        const current = sessionFromRequest(req);
+        if (!current) {
+          portalError(res, 401, 'Session portail expirée. Reconnectez-vous.', 'unauthorized');
+          return;
+        }
+        if (!requireCsrf(req, res)) return;
+        const body = await readJsonBody(req, 4 * 1024);
+        const name = String(body.name ?? '').trim();
+        if (name.length < 1 || name.length > 80) {
+          portalError(res, 400, 'Le nom doit contenir entre 1 et 80 caractères.', 'invalid_name');
+          return;
+        }
+        updateClientFields(db, current.client.id, { name });
+        audit(req, 'portal.profile.update', name);
+        sendJson(res, 200, { ok: true, name });
+        return;
+      }
+
       if (route === '/logout' && method === 'POST') {
         const current = sessionFromRequest(req);
         if (current) {

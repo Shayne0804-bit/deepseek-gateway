@@ -10,7 +10,7 @@
   const DAY_LABEL = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit' });
 
   const $ = (selector) => document.querySelector(selector);
-  const state = { me: null, busy: false, emailBusy: false, newKey: null };
+  const state = { me: null, busy: false, emailBusy: false, newKey: null, userView: 'overview' };
 
   function esc(value) {
     return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
@@ -187,6 +187,8 @@
   function showLogin(message = '') {
     state.me = null;
     state.newKey = null;
+    document.body.classList.remove('portal-authenticated');
+    setUserMenu(false);
     $('#portal-app').classList.add('hidden');
     $('#login-view').classList.remove('hidden');
     $('#portal-error').textContent = message;
@@ -399,6 +401,7 @@
     try {
       const data = await api('/key', { method: 'POST' });
       state.newKey = data.key;
+      state.userView = 'keys';
       await loadMe();
     } catch (err) {
       const status = $('#portal-status');
@@ -429,8 +432,107 @@
   }
 
   function showApp() {
+    document.body.classList.add('portal-authenticated');
     $('#login-view').classList.add('hidden');
     $('#portal-app').classList.remove('hidden');
+  }
+
+  const USER_VIEWS = {
+    overview: 'Vue d’ensemble',
+    keys: 'Mes clés API',
+    usage: 'Consommation',
+    requests: 'Requêtes',
+    settings: 'Réglages',
+    guide: 'Guide d’intégration',
+  };
+
+  function setUserView(view) {
+    const normalized = USER_VIEWS[view] ? view : 'overview';
+    state.userView = normalized;
+    document.querySelectorAll('[data-user-panel]').forEach((panel) => {
+      panel.classList.toggle('hidden', panel.dataset.userPanel !== normalized);
+    });
+    document.querySelectorAll('[data-user-view]').forEach((item) => {
+      item.classList.toggle('active', item.dataset.userView === normalized);
+    });
+    const title = $('#portal-title');
+    if (title) title.textContent = USER_VIEWS[normalized];
+    const profileStatus = $('#profile-status');
+    if (profileStatus) profileStatus.textContent = '';
+    setUserMenu(false);
+  }
+
+  function setUserMenu(open) {
+    const sidebar = $('#user-sidebar');
+    const toggle = $('#user-menu-toggle');
+    const backdrop = $('#user-nav-backdrop');
+    if (!sidebar) return;
+    sidebar.classList.toggle('open', open);
+    if (toggle) toggle.setAttribute('aria-expanded', String(open));
+    if (backdrop) backdrop.classList.toggle('hidden', !open);
+    document.body.classList.toggle('user-menu-open', open);
+  }
+
+  function keyDetailsMarkup(me) {
+    if (!me.client.hasKey) {
+      return '<div class="empty-state"><strong>Aucune clé API pour le moment</strong><p>Créez votre clé depuis le bouton en haut à droite. Elle sera affichée une seule fois.</p></div>';
+    }
+    const status = me.client.enabled ? 'Actif' : 'Désactivé';
+    const rows = [
+      ['empreinte', `${me.client.keyPrefix}…`],
+      ['statut', status],
+      ['créée le', fmtDate(me.client.createdAt)],
+      ['fin du pass', me.client.expiresAt ? fmtDate(me.client.expiresAt) : 'sans date de fin'],
+      ['période', PERIOD_LABELS[me.client.period] || me.client.period],
+    ];
+    return `<dl class="spec-list">${rows.map(([key, value]) => `<div class="spec-row"><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>`;
+  }
+
+  function accountDetailsMarkup(me) {
+    const rows = [
+      ['nom', me.client.name],
+      ['email', me.client.email || 'non renseigné'],
+      ['clé API', me.client.hasKey ? `${me.client.keyPrefix}…` : 'non créée'],
+      ['compte', me.client.enabled ? 'actif' : 'désactivé'],
+      ['créé le', fmtDate(me.client.createdAt)],
+      ['fin du pass', me.client.expiresAt ? fmtDate(me.client.expiresAt) : 'sans date de fin'],
+    ];
+    return `<dl class="spec-list">${rows.map(([key, value]) => `<div class="spec-row"><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>`;
+  }
+
+  function endpointsMarkup(me) {
+    return `<div class="usage-grid">
+      <div>
+        <h3 class="usage-title">OpenAI / compatible</h3>
+        <p class="small muted">URL de base : <code>${esc(me.baseUrl)}</code></p>
+        <pre class="mini-code">curl ${esc(me.baseUrl)}/chat/completions \\
+  -H "Authorization: Bearer VOTRE_CLE" \\
+  -H "Content-Type: application/json" \\
+  -d '{"model":"claude-opus-5.5","messages":[{"role":"user","content":"Bonjour"}]}'</pre>
+      </div>
+      <div>
+        <h3 class="usage-title">Claude Code / Anthropic</h3>
+        <p class="small muted">URL de base : <code>${esc(me.anthropicBaseUrl)}</code></p>
+        <pre class="mini-code">ANTHROPIC_BASE_URL=${esc(me.anthropicBaseUrl)}
+ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
+      </div>
+    </div>`;
+  }
+
+  function usageTableMarkup(me) {
+    const series = (me.usage?.series ?? []).filter((row) => Number(row.requests) > 0).slice(-14).reverse();
+    if (!series.length) {
+      return '<div class="empty-state"><strong>Aucune consommation</strong><p>Vos requêtes apparaîtront ici dès le premier appel.</p></div>';
+    }
+    const rows = series.map((row) => `<tr>
+      <td>${esc(row.day)}</td>
+      <td class="right">${fmtInt(row.requests)}</td>
+      <td class="right">${fmtCompact(row.tokens)}</td>
+      <td class="right">${fmtUsd(row.cost)}</td>
+    </tr>`).join('');
+    return `<div class="table-wrap"><table>
+      <thead><tr><th>Jour</th><th class="right">Requêtes</th><th class="right">Tokens</th><th class="right">Coût</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
   }
 
   function quotaCard(label, quota, formatter) {
@@ -609,7 +711,11 @@
       noKeyPanel.classList.add('hidden');
       headerCreate.classList.toggle('hidden', hasKey);
     }
-    $('#portal-dashboard').classList.remove('hidden');
+    $('#rotate-key-btn').disabled = !hasKey;
+    const userStatusText = $('#user-status-text');
+    const userStatusDot = $('#user-status-dot');
+    if (userStatusText) userStatusText.textContent = !hasKey ? 'aucune clé' : me.client.enabled ? 'pass actif' : 'compte désactivé';
+    if (userStatusDot) userStatusDot.className = `dot ${hasKey && me.client.enabled ? 'ok' : 'warn'}`;
 
     const q = me.quota;
     $('#portal-quotas').innerHTML = [
@@ -623,18 +729,60 @@
     $('#portal-chart').innerHTML = chartMarkup(series);
 
     $('#portal-limits').innerHTML = limitsMarkup(me);
-    $('#portal-logs-hint').textContent = `${fmtInt(me.usage?.totals?.requests ?? 0)} requêtes · ${fmtInt(me.usage?.today?.requests ?? 0)} aujourd'hui`;
+    $('#portal-key-details').innerHTML = keyDetailsMarkup(me);
+    $('#portal-account-details').innerHTML = accountDetailsMarkup(me);
+    $('#portal-endpoints').innerHTML = endpointsMarkup(me);
+    $('#portal-usage-table').innerHTML = usageTableMarkup(me);
+    $('#portal-usage-hint').textContent = `${fmtInt(me.usage?.totals?.requests ?? 0)} requêtes au total`;
+    const profileName = $('#profile-form [name="displayName"]');
+    if (profileName) profileName.value = me.client.name || '';
     $('#portal-usage').innerHTML = usageMarkup(me);
 
+    $('#portal-logs-hint').textContent = `${fmtInt(me.usage?.totals?.requests ?? 0)} requêtes · ${fmtInt(me.usage?.today?.requests ?? 0)} aujourd'hui`;
+    $('#portal-recent-hint').textContent = `${fmtInt(me.usage?.today?.requests ?? 0)} aujourd'hui`;
     $('#portal-logs').innerHTML = '<div class="muted small">Chargement des requêtes…</div>';
+    $('#portal-recent-logs').innerHTML = '<div class="muted small">Chargement des requêtes…</div>';
     api('/logs?limit=25')
-      .then((data) => { $('#portal-logs').innerHTML = logsMarkup(data.rows ?? []); })
-      .catch((err) => { $('#portal-logs').innerHTML = `<div class="alert danger">${esc(err.message)}</div>`; });
+      .then((data) => {
+        const rows = data.rows ?? [];
+        $('#portal-logs').innerHTML = logsMarkup(rows);
+        $('#portal-recent-logs').innerHTML = logsMarkup(rows.slice(0, 5));
+      })
+      .catch((err) => {
+        $('#portal-logs').innerHTML = `<div class="alert danger">${esc(err.message)}</div>`;
+        $('#portal-recent-logs').innerHTML = `<div class="alert danger">${esc(err.message)}</div>`;
+      });
+
+    setUserView(state.newKey ? 'keys' : state.userView || 'overview');
   }
 
   async function loadMe() {
     const me = await api('/me');
     renderMe(me);
+  }
+
+  async function saveProfile(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const name = form.elements.displayName.value.trim();
+    const status = $('#profile-status');
+    if (!name) {
+      status.textContent = 'Le nom ne peut pas être vide.';
+      return;
+    }
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    status.textContent = 'Enregistrement…';
+    try {
+      const data = await api('/profile', { method: 'PUT', body: { name } });
+      state.me.client.name = data.name;
+      await loadMe();
+      $('#profile-status').textContent = 'Nom enregistré.';
+    } catch (err) {
+      status.textContent = err.message;
+    } finally {
+      button.disabled = false;
+    }
   }
 
   async function handleLogin(event) {
@@ -674,6 +822,15 @@
   function wire() {
     $('#login-form').addEventListener('submit', handleLogin);
     $('#logout-btn').addEventListener('click', handleLogout);
+    document.querySelectorAll('[data-user-view]').forEach((item) => {
+      item.addEventListener('click', () => setUserView(item.dataset.userView));
+    });
+    $('#user-menu-toggle')?.addEventListener('click', () => {
+      const sidebar = $('#user-sidebar');
+      setUserMenu(!sidebar.classList.contains('open'));
+    });
+    $('#user-nav-backdrop')?.addEventListener('click', () => setUserMenu(false));
+    $('#profile-form')?.addEventListener('submit', saveProfile);
     const authTabs = [
       ['tab-key', 'key'],
       ['tab-email', 'email'],

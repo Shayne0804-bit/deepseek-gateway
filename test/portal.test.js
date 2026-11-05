@@ -150,6 +150,17 @@ test('portail : login, session, quotas et deconnexion', async () => {
     assert.equal(logsData.rows[0].requestedModel, 'claude-opus-5.5');
     assert.equal(Object.hasOwn(logsData.rows[0], 'model'), false);
 
+    // Modification de son propre nom affiche.
+    const profile = await fetch(`${started.url}/portal/api/profile`, {
+      method: 'PUT',
+      headers: { cookie, 'content-type': 'application/json', 'x-requested-with': 'dsk-portal' },
+      body: JSON.stringify({ name: 'Client renommé' }),
+    });
+    assert.equal(profile.status, 200);
+    assert.equal((await profile.json()).name, 'Client renommé');
+    const meAfterProfile = await (await fetch(`${started.url}/portal/api/me`, { headers: { cookie } })).json();
+    assert.equal(meAfterProfile.client.name, 'Client renommé');
+
     // Une session portail n'ouvre pas l'API admin.
     const adminAccess = await fetch(`${started.url}/admin/api/clients`, { headers: { cookie } });
     assert.equal(adminAccess.status, 401);

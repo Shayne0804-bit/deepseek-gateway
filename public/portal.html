@@ -132,86 +132,169 @@
     </section>
 
     <!-- ============================ Tableau de bord ====================== -->
-    <section id="portal-app" class="hidden" aria-labelledby="portal-title">
-      <div class="portal-head">
-        <div>
-          <p class="hero-kicker">Espace utilisateur</p>
-          <h1 id="portal-title">Mon espace</h1>
-          <p class="muted small" id="portal-sub"></p>
-          <p class="pass-line small" id="portal-pass"></p>
-        </div>
-        <div class="portal-actions">
-          <button type="button" class="btn btn-primary btn-sm hidden" id="create-key-btn">Créer ma clé API</button>
-          <button type="button" class="btn btn-ghost btn-sm" id="logout-btn">Se déconnecter</button>
-        </div>
-      </div>
-
-      <div id="portal-status" class="portal-status" role="status" aria-live="polite"></div>
-
-      <section id="no-key-panel" class="panel hidden" aria-labelledby="no-key-title">
-        <div class="panel-head">
+        <!-- ====================== Console utilisateur ====================== -->
+    <section id="portal-app" class="app user-app hidden" aria-labelledby="portal-title">
+      <aside class="sidebar" id="user-sidebar">
+        <div class="brand">
+          <img class="brand-logo" src="/assets/logo-mark.svg?v={{APP_VERSION}}" alt="" aria-hidden="true" width="40" height="40">
           <div>
-            <h2 id="no-key-title">Votre clé API est créée</h2>
-            <span class="hint">Conservez-la maintenant.</span>
+            <div class="brand-name">VALARIA Gateway</div>
+            <div class="brand-sub">Espace utilisateur</div>
           </div>
         </div>
-        <p id="no-key-copy">Copiez-la et conservez-la en lieu sûr : elle ne sera plus jamais affichée en entier.</p>
-        <div id="key-error" class="login-error" role="alert" aria-live="assertive"></div>
-        <div id="new-key-box">
-          <div class="alert warn"><strong>Copiez cette clé maintenant :</strong> elle ne sera plus jamais affichée en entier.</div>
-          <div class="key-reveal">
-            <code id="new-key-value"></code>
-            <button type="button" class="btn btn-ghost" id="copy-new-key">Copier</button>
+        <nav class="nav" aria-label="Navigation de l'espace utilisateur">
+          <button class="nav-item active" data-user-view="overview">Vue d'ensemble</button>
+          <button class="nav-item" data-user-view="keys">Mes clés API</button>
+          <button class="nav-item" data-user-view="usage">Consommation</button>
+          <button class="nav-item" data-user-view="requests">Requêtes</button>
+          <button class="nav-item" data-user-view="settings">Réglages</button>
+          <button class="nav-item" data-user-view="guide">Guide d'intégration</button>
+        </nav>
+        <div class="sidebar-foot">
+          <div class="provider-pill">
+            <span class="dot ok" id="user-status-dot"></span>
+            <span class="text" id="user-status-text">pass actif</span>
           </div>
-          <div class="form-actions" style="justify-content:flex-start">
-            <button type="button" class="btn btn-primary" id="dismiss-key-btn">J'ai copié ma clé</button>
-          </div>
+          <a class="small sidebar-link" href="/">← Site public</a>
+          <div class="small" style="color:var(--muted-2);padding-left:6px">v<span id="portal-version"></span></div>
         </div>
-      </section>
+      </aside>
 
-      <div id="portal-dashboard">
-      <div class="stat-grid" id="portal-quotas"></div>
+      <main class="main user-main">
+        <header class="topbar">
+          <div class="topbar-title">
+            <button type="button" class="menu-toggle" id="user-menu-toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="user-sidebar">☰</button>
+            <div>
+              <p class="hero-kicker">Espace utilisateur</p>
+              <h1 id="portal-title">Vue d'ensemble</h1>
+              <p class="muted small" id="portal-sub"></p>
+              <p class="pass-line small" id="portal-pass"></p>
+            </div>
+          </div>
+          <div class="topbar-actions">
+            <button type="button" class="btn btn-primary btn-sm hidden" id="create-key-btn">Créer ma clé API</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="logout-btn">Se déconnecter</button>
+          </div>
+        </header>
 
-      <div class="two-col">
-        <section class="panel">
+        <div id="portal-status" class="portal-status" role="status" aria-live="polite"></div>
+
+        <section id="no-key-panel" class="panel hidden" aria-labelledby="no-key-title">
           <div class="panel-head">
-            <div><h2>Consommation — 30 derniers jours</h2><span class="hint" id="portal-chart-hint"></span></div>
+            <div>
+              <h2 id="no-key-title">Votre clé API est créée</h2>
+              <span class="hint">Conservez-la maintenant.</span>
+            </div>
           </div>
-          <div id="portal-chart"></div>
+          <p id="no-key-copy">Copiez-la et conservez-la en lieu sûr : elle ne sera plus jamais affichée en entier.</p>
+          <div id="key-error" class="login-error" role="alert" aria-live="assertive"></div>
+          <div id="new-key-box">
+            <div class="alert warn"><strong>Copiez cette clé maintenant :</strong> elle ne sera plus jamais affichée en entier.</div>
+            <div class="key-reveal">
+              <code id="new-key-value"></code>
+              <button type="button" class="btn btn-ghost" id="copy-new-key">Copier</button>
+            </div>
+            <div class="form-actions" style="justify-content:flex-start">
+              <button type="button" class="btn btn-primary" id="dismiss-key-btn">J'ai copié ma clé</button>
+            </div>
+          </div>
         </section>
-        <section class="panel">
-          <div class="panel-head"><h2>Limites de ma clé</h2></div>
-          <dl class="spec-list" id="portal-limits"></dl>
-        </section>
-      </div>
 
-      <section class="panel" id="portal-logs-panel">
-        <div class="panel-head">
-          <div><h2>Dernières requêtes</h2><span class="hint" id="portal-logs-hint"></span></div>
+        <div id="user-view">
+          <section class="user-panel" data-user-panel="overview">
+            <div class="stat-grid" id="portal-quotas"></div>
+            <div class="two-col">
+              <section class="panel">
+                <div class="panel-head">
+                  <div><h2>Limites de ma clé</h2></div>
+                </div>
+                <dl class="spec-list" id="portal-limits"></dl>
+              </section>
+              <section class="panel">
+                <div class="panel-head">
+                  <div><h2>Consommation — 30 derniers jours</h2><span class="hint" id="portal-chart-hint"></span></div>
+                </div>
+                <div id="portal-chart"></div>
+              </section>
+            </div>
+            <section class="panel">
+              <div class="panel-head">
+                <div><h2>Dernières requêtes</h2><span class="hint" id="portal-recent-hint"></span></div>
+              </div>
+              <div id="portal-recent-logs"></div>
+            </section>
+          </section>
+
+          <section class="user-panel hidden" data-user-panel="keys">
+            <section class="panel">
+              <div class="panel-head">
+                <div><h2>Ma clé API</h2><span class="hint">Identifiant et état de votre accès.</span></div>
+                <div class="panel-head-actions">
+                  <button type="button" class="btn btn-ghost btn-sm" id="rotate-key-btn">Régénérer ma clé</button>
+                </div>
+              </div>
+              <div id="portal-key-details"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-head"><div><h2>Sécurité</h2></div></div>
+              <p class="muted">Votre clé est affichée une seule fois à la création. La régénération invalide immédiatement l'ancienne. Ne la partagez pas et stockez-la dans un gestionnaire de secrets.</p>
+            </section>
+          </section>
+
+          <section class="user-panel hidden" data-user-panel="usage">
+            <section class="panel">
+              <div class="panel-head">
+                <div><h2>Consommation quotidienne</h2><span class="hint" id="portal-usage-hint"></span></div>
+              </div>
+              <div id="portal-usage-table"></div>
+            </section>
+          </section>
+
+          <section class="user-panel hidden" data-user-panel="requests">
+            <section class="panel">
+              <div class="panel-head">
+                <div><h2>Mes requêtes</h2><span class="hint" id="portal-logs-hint"></span></div>
+              </div>
+              <div id="portal-logs"></div>
+            </section>
+          </section>
+
+          <section class="user-panel hidden" data-user-panel="settings">
+            <section class="panel">
+              <div class="panel-head"><div><h2>Profil</h2><span class="hint">Nom affiché dans votre espace.</span></div></div>
+              <form id="profile-form" class="form-grid" novalidate>
+                <label class="field full"><span>Nom affiché</span>
+                  <input type="text" name="displayName" maxlength="80" required>
+                </label>
+                <div class="form-actions full">
+                  <span class="small muted" id="profile-status" aria-live="polite"></span>
+                  <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+                </div>
+              </form>
+            </section>
+            <section class="panel">
+              <div class="panel-head"><div><h2>Compte</h2></div></div>
+              <dl class="spec-list" id="portal-account-details"></dl>
+            </section>
+            <section class="panel">
+              <div class="panel-head"><div><h2>Points d'accès API</h2></div></div>
+              <div id="portal-endpoints"></div>
+            </section>
+          </section>
+
+          <section class="user-panel hidden" data-user-panel="guide">
+            <section class="panel">
+              <div class="panel-head">
+                <div><h2>Guide d'intégration</h2><span class="hint">Exemples prêts à copier.</span></div>
+              </div>
+              <div id="portal-usage"></div>
+            </section>
+          </section>
         </div>
-        <div id="portal-logs"></div>
-      </section>
-
-      <section class="panel" id="portal-usage-panel">
-        <div class="panel-head">
-          <div>
-            <h2>Utiliser l'API</h2>
-            <span class="hint">Remplacez <code>VOTRE_CLE</code> par la clé créée dans votre espace.</span>
-          </div>
-          <div class="panel-head-actions">
-            <button type="button" class="btn btn-ghost btn-sm" id="rotate-key-btn">Régénérer ma clé</button>
-          </div>
-        </div>
-        <div id="portal-usage"></div>
-      </section>
-      </div>
-
-      <footer class="portal-footer">
-        <span>VALARIA Gateway API <span class="mono" id="portal-version"></span></span>
-        <span class="muted small">Les données affichées sont celles de votre clé uniquement.</span>
-      </footer>
+      </main>
     </section>
-  </main>
+    <div class="nav-backdrop hidden" id="user-nav-backdrop" aria-hidden="true"></div>
+</main>
 
   <footer class="site-footer">
     <span>VALARIA Gateway API · passerelle auto-hébergée</span>
@@ -223,6 +306,8 @@
   <script src="/assets/portal.js?v={{APP_VERSION}}" defer></script>
 </body>
 </html>
+
+
 
 
 

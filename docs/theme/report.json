@@ -10,7 +10,7 @@
   },
   "responsive": {
     "status": "pass",
-    "evidence": "Surfaces teste��es en 390x844 et 1440x900 (site public, portail, 5 vues admin) : largeur document <= viewport partout (aucun debordement), tableaux contenus dans .table-wrap scrollable. Cibles tactiles mobiles : admin 30 controles (min 27px de haut), portail 6 controles, seuil 24px."
+    "evidence": "Surfaces teste��es en 390x844 et 1440x900 (site public, portail, 5 vues admin) : largeur document <= viewport partout (aucun debordement), tableaux contenus dans .table-wrap scrollable. Cibles tactiles mobiles : admin 30 controles (min 27px de haut), portail 1 controles, seuil 24px."
   },
   "contentStates": {
     "loading": {
@@ -43,7 +43,7 @@
     },
     "portal": {
       "status": "pass",
-      "evidence": "Artifacts 19/20-public-portal-*.png : espace utilisateur connecte (6 controles tactiles, tableaux contenus) avec quotas, graphique 30 jours et historique."
+      "evidence": "Artifacts 19/20-public-portal-*.png : espace utilisateur connecte (1 controles tactiles, tableaux contenus) avec quotas, graphique 30 jours et historique."
     }
   },
   "renderedEvidence": [

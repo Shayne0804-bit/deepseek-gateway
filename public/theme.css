@@ -909,3 +909,46 @@ body.menu-open { overflow: hidden; }
 @media (max-width: 960px) {
   .mobile-brand { display: inline-flex; }
 }
+
+/* --------------------- console utilisateur ------------------------- */
+
+.portal-authenticated .site-header,
+.portal-authenticated .site-footer {
+  display: none;
+}
+.portal-authenticated .public-page main {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+.user-app { min-height: 100vh; }
+.user-main { padding: 32px 40px 80px; min-width: 0; }
+.user-main .topbar { align-items: flex-start; }
+.user-main .topbar-title .hero-kicker { margin: 0 0 4px; }
+.user-panel { min-width: 0; }
+.user-panel .two-col { align-items: start; }
+.user-panel .empty-state { padding: 28px 12px; }
+.user-main .mini-code { white-space: pre-wrap; overflow-wrap: anywhere; }
+.user-main .usage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.user-main .usage-title { margin: 0 0 6px; font-size: 14px; }
+.user-menu-open { overflow: hidden; }
+
+@media (max-width: 960px) {
+  .user-main { padding: 24px 20px 64px; }
+  .user-main .usage-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 680px) {
+  .user-main { padding: 18px 16px 56px; }
+  .user-main .topbar-actions { width: 100%; }
+  .user-main .topbar-actions .btn { flex: 1 1 0; }
+}
+
+.user-main .topbar-title { flex: 1; min-width: 0; }
+.user-main .topbar-title > div { flex: 1; min-width: 0; }
+@media (max-width: 960px) {
+  .user-main .topbar { align-items: flex-start; }
+  .user-main .topbar-title { align-items: flex-start; width: 100%; }
+  .user-main .topbar-title > div { width: 100%; }
+  .user-main .hero-kicker { text-align: left; }
+}
