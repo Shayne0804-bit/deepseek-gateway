@@ -90,13 +90,15 @@ Le produit tient en **trois surfaces web** :
   partiel / succès / permission soignés, focus clavier visible, contraste WCAG AA et
   `prefers-reduced-motion` vérifiés.
 - **Site public et portail accessibles** : statut en direct, contenu factuel, navigation claire,
-  assets gzip, zéro dépendance tierce. Audit qualité complet : [docs/QUALITY-AUDIT.md](docs/QUALITY-AUDIT.md).
+  assets gzip, aucune dépendance front. Audit qualité complet : [docs/QUALITY-AUDIT.md](docs/QUALITY-AUDIT.md).
 - **Durcissement production** : clé fournisseur **chiffrée au repos** (AES-256-GCM),
   erreurs internes masquées (`x-request-id`), HSTS/Permissions-Policy, rate-limit par IP,
   plafond global de requêtes simultanées, **journal d'audit** des actions admin,
   **budget mensuel global**, export CSV des journaux, logs JSON et rétention configurable.
   Voir [docs/SECURITY.md](docs/SECURITY.md) et la [revue de sécurité](docs/SECURITY-REVIEW.md).
-- **Zéro dépendance** : Node.js + SQLite intégré (`node:sqlite`). Pas de `npm install`, pas de build.
+- **Deux moteurs de stockage** : SQLite intégré (`node:sqlite`) par défaut, **MongoDB Atlas
+  optionnel** (`DB_DRIVER=mongo`) avec migration automatique depuis SQLite. Pas de build ;
+  seule dépendance npm de runtime : le pilote `mongodb` (installé automatiquement).
 
 ## Architecture
 
@@ -118,7 +120,8 @@ Le produit tient en **trois surfaces web** :
                   https://api.deepseek.com
 ```
 
-Données stockées localement dans `data/gateway.db` (SQLite). Aucun service tiers, aucun cloud.
+Données stockées localement dans `data/gateway.db` (SQLite) par défaut, ou dans MongoDB Atlas si
+`DB_DRIVER=mongo` (voir [MongoDB](#mongodb-optionnel)). Aucun autre service cloud requis.
 
 ## Démarrage rapide (Windows)
 
@@ -998,11 +1001,55 @@ Checklist minimale (détails complets : [docs/SECURITY.md](docs/SECURITY.md)) :
 La revue de sécurité interne (findings, statuts, risques acceptés) est disponible dans
 [docs/SECURITY-REVIEW.md](docs/SECURITY-REVIEW.md).
 
+## MongoDB (optionnel)
+
+Par défaut, tout fonctionne avec **SQLite** (`/data/gateway.db`) et zéro service externe.
+Pour utiliser **MongoDB Atlas** comme base principale :
+
+1. Créez une base **dédiée** `valaria_gateway` et un utilisateur dédié (`readWrite` uniquement
+   sur cette base). N'utilisez pas une base d'un autre projet.
+2. Autorisez l'accès réseau depuis Railway (Network Access Atlas ; idéalement IP statique ou
+   accès privé, sinon `0.0.0.0/0` avec mot de passe fort et TLS).
+3. Ajoutez les variables Railway :
+
+```env
+DB_DRIVER=mongo
+MONGODB_URI=mongodb+srv://valaria_app:...@cluster0.xxxxx.mongodb.net/valaria_gateway?retryWrites=true&w=majority
+MONGODB_DB=valaria_gateway
+MONGODB_MIGRATE_SQLITE=1
+MONGODB_MIGRATION_REQUIRED=0
+```
+
+4. Redéployez. Au démarrage :
+   - connexion Mongo + création des index ;
+   - si MongoDB ne contient encore aucun client et que `/data/gateway.db` existe, **migration
+     automatique** des tables (clients, quotas, journaux, sessions, réglages, audit, anti-abus) ;
+   - l'application n'écoute qu'une fois la migration terminée.
+
+Vérification :
+
+```text
+GET /healthz  →  "database":"mongo"
+```
+
+Les écritures suivantes vont dans MongoDB. Le fichier SQLite n'est pas modifié (rollback possible
+avec `DB_DRIVER=sqlite`, mais les écritures effectuées après la bascule ne seront pas dans SQLite :
+faites une sauvegarde avant).
+
+> La migration est rejouable : `clients` est importé en dernier, donc une interruption avant la
+> fin laisse MongoDB sans clients et la migration repart proprement au démarrage suivant.
+> `MONGODB_MIGRATION_REQUIRED=1` fait échouer le démarrage si la migration ne peut pas être faite.
+
+Le pilote `mongodb` est la seule dépendance npm de runtime (SQLite reste natif à Node). En cas de
+multi-instance, les compteurs de débit en mémoire restent locaux à chaque instance.
+
 ## Données, sauvegardes et sécurité
 
 ### Données
 
 - Tout est dans `data/` : `gateway.db` (SQLite, mode WAL) + `admin-password.txt` au premier démarrage.
+  Avec `DB_DRIVER=mongo`, les données sont dans les collections MongoDB `clients`, `usage_logs`,
+  `settings`, `admin_sessions`, `portal_sessions`, `admin_audit`, `signup_identities`.
 - Le journal stocke les **métadonnées** des requêtes (modèle, tokens, coût, statut, latence) —
   **pas** le contenu des messages.
 - Si vous saisissez la clé originale dans le panneau (et non via `.env`), elle est stockée dans
@@ -1057,7 +1104,9 @@ valaria-gateway/
 ├── src/
 │   ├── app.js                # serveur HTTP, routage, démarrage, bannière
 │   ├── config.js             # chargement .env / variables d'environnement
-│   ├── db.js                 # schéma SQLite et requêtes
+│   ├── db.js                 # sélection du moteur (SQLite ou MongoDB), API asynchrone
+│   ├── db-sqlite.js          # schéma SQLite et requêtes
+│   ├── db-mongo.js           # collections MongoDB, index, migration SQLite -> Mongo
 │   ├── settings.js           # clé fournisseur, mot de passe admin, infos serveur
 │   ├── auth.js               # clés dérivées (hash), scrypt, sessions admin
 │   ├── pricing.js            # tarifs DeepSeek, heures pleines, calcul du coût

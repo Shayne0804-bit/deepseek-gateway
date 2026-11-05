@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '3.0.1';
+export const APP_VERSION = '3.1.0';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -111,6 +111,12 @@ export function loadConfig(overrides = {}) {
     appRoot: APP_ROOT,
     publicDir: path.join(APP_ROOT, 'public'),
     dataDir,
+    // sqlite (defaut) ou mongo.
+    dbDriver: String(overrides.dbDriver ?? raw('DB_DRIVER') ?? 'sqlite').trim().toLowerCase(),
+    mongoUri: overrides.mongoUri ?? raw('MONGODB_URI') ?? '',
+    mongoDb: overrides.mongoDb ?? raw('MONGODB_DB') ?? 'valaria_gateway',
+    mongoMigrateSqlite: overrides.mongoMigrateSqlite ?? boolOr(raw('MONGODB_MIGRATE_SQLITE'), true),
+    mongoMigrationRequired: overrides.mongoMigrationRequired ?? boolOr(raw('MONGODB_MIGRATION_REQUIRED'), false),
     host: overrides.host ?? raw('HOST') ?? '127.0.0.1',
     port: overrides.port ?? intOr(raw('PORT'), 8787),
     // Cle originale : prioritaire via variable d'environnement (jamais exposee par l'API admin).
@@ -199,6 +205,14 @@ export function loadConfig(overrides = {}) {
   if (!Number.isInteger(config.port) || config.port < 0 || config.port > 65535) {
     throw new Error(`PORT invalide : ${config.port}`);
   }
+  if (!['sqlite', 'mongo'].includes(config.dbDriver)) {
+    throw new Error(`DB_DRIVER invalide : ${config.dbDriver} (sqlite ou mongo).`);
+  }
+  if (config.dbDriver === 'mongo' && !config.mongoUri) {
+    throw new Error('DB_DRIVER=mongo mais MONGODB_URI est vide.');
+  }
+  config.mongoMigrateSqlite = Boolean(config.mongoMigrateSqlite);
+  config.mongoMigrationRequired = Boolean(config.mongoMigrationRequired);
   if (!Number.isInteger(config.httpsPort) || config.httpsPort < 0 || config.httpsPort > 65535) {
     throw new Error(`HTTPS_PORT invalide : ${config.httpsPort}`);
   }
@@ -286,6 +300,7 @@ export function loadConfig(overrides = {}) {
   config.signupEnabled = Boolean(config.signupEnabled);
   return config;
 }
+
 
 
 

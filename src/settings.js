@@ -1,5 +1,6 @@
 import { APP_VERSION, PROVIDER_DEFAULT_BASE_URL } from './config.js';
 import {
+  countUsageSince,
   deleteSetting,
   getSetting,
   setSetting,
@@ -15,8 +16,8 @@ import { decryptSecret, encryptSecret, isEncryptedSecret } from './secrets.js';
  * La cle stockee au panneau est chiffree (AES-256-GCM) et dechiffree ici.
  * La cle originale n'est JAMAIS renvoyee par l'API admin.
  */
-export function resolveProviderConfig(db, config) {
-  const stored = getSetting(db, 'provider', {}) || {};
+export async function resolveProviderConfig(db, config) {
+  const stored = (await getSetting(db, 'provider', {})) || {};
   let storedKey = stored.apiKey || '';
   if (storedKey && isEncryptedSecret(storedKey)) {
     try {
@@ -48,8 +49,8 @@ export function maskApiKey(apiKey) {
  * Enregistre un champ fournisseur. La cle API est chiffree avant stockage ;
  * le fichier de cle maitre (data/master.key) est cree au besoin.
  */
-export function saveProviderField(db, field, value, config) {
-  const stored = getSetting(db, 'provider', {}) || {};
+export async function saveProviderField(db, field, value, config) {
+  const stored = (await getSetting(db, 'provider', {})) || {};
   const next = { ...stored };
   if (value == null || value === '') {
     delete next[field];
@@ -58,15 +59,15 @@ export function saveProviderField(db, field, value, config) {
   } else {
     next[field] = value;
   }
-  if (Object.keys(next).length === 0) deleteSetting(db, 'provider');
-  else setSetting(db, 'provider', next);
+  if (Object.keys(next).length === 0) await deleteSetting(db, 'provider');
+  else await setSetting(db, 'provider', next);
 }
 
 /** Migration : chiffre une cle eventuellement stockee en clair par une version anterieure. */
-export function migrateProviderSecret(db, config, log = null) {
-  const stored = getSetting(db, 'provider', {}) || {};
+export async function migrateProviderSecret(db, config, log = null) {
+  const stored = (await getSetting(db, 'provider', {})) || {};
   if (stored.apiKey && !isEncryptedSecret(stored.apiKey)) {
-    setSetting(db, 'provider', { ...stored, apiKey: encryptSecret(String(stored.apiKey), config) });
+    await setSetting(db, 'provider', { ...stored, apiKey: encryptSecret(String(stored.apiKey), config) });
     if (log) log.info('Cle API fournisseur migree en stockage chiffre (AES-256-GCM).');
     return true;
   }
@@ -76,25 +77,23 @@ export function migrateProviderSecret(db, config, log = null) {
 /* ---------------------------- global budget ---------------------------- */
 
 /** Budget mensuel global en USD (0 = desactive). */
-export function getGlobalBudgetUsd(db) {
-  const value = Number(getSetting(db, 'global_budget_usd', 0));
+export async function getGlobalBudgetUsd(db) {
+  const value = Number(await getSetting(db, 'global_budget_usd', 0));
   return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
-export function saveGlobalBudgetUsd(db, value) {
-  if (value == null || value === '' || Number(value) <= 0) deleteSetting(db, 'global_budget_usd');
-  else setSetting(db, 'global_budget_usd', Math.round(Number(value) * 1e6) / 1e6);
+export async function saveGlobalBudgetUsd(db, value) {
+  if (value == null || value === '' || Number(value) <= 0) await deleteSetting(db, 'global_budget_usd');
+  else await setSetting(db, 'global_budget_usd', Math.round(Number(value) * 1e6) / 1e6);
 }
 
 /** Etat du budget global pour le mois UTC en cours. */
-export function globalBudgetStatus(db, now = new Date()) {
-  const limitUsd = getGlobalBudgetUsd(db);
+export async function globalBudgetStatus(db, now = new Date()) {
+  const limitUsd = await getGlobalBudgetUsd(db);
   if (!limitUsd) return { limitUsd: 0, spentUsd: 0, exceeded: false, periodStart: null, remainingUsd: null };
   const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const row = db
-    .prepare('SELECT COALESCE(SUM(cost_usd), 0) AS cost FROM usage_logs WHERE created_at >= ?')
-    .get(periodStart.toISOString());
-  const spentUsd = Math.round(Number(row.cost) * 1e6) / 1e6;
+  const usage = await countUsageSince(db, periodStart.toISOString());
+  const spentUsd = Math.round(Number(usage.cost) * 1e6) / 1e6;
   return {
     limitUsd,
     spentUsd,
@@ -111,32 +110,32 @@ export function globalBudgetStatus(db, now = new Date()) {
  * - ADMIN_PASSWORD (env) s'il est fourni ;
  * - sinon mot de passe aleatoire genere, ecrit dans data/admin-password.txt.
  */
-export function bootstrapAdmin(db, config) {
-  const existing = getSetting(db, 'admin_password_hash', '');
+export async function bootstrapAdmin(db, config) {
+  const existing = await getSetting(db, 'admin_password_hash', '');
   if (existing) {
     return { bootstrapped: false, generatedPassword: null };
   }
   const fromEnv = Boolean(config.adminPassword);
   const password = fromEnv ? config.adminPassword : generateAdminPassword();
-  setSetting(db, 'admin_password_hash', hashPassword(password));
-  setSetting(db, 'admin_password_source', fromEnv ? 'env' : 'generated');
-  setSetting(db, 'admin_password_initialized_at', new Date().toISOString());
+  await setSetting(db, 'admin_password_hash', hashPassword(password));
+  await setSetting(db, 'admin_password_source', fromEnv ? 'env' : 'generated');
+  await setSetting(db, 'admin_password_initialized_at', new Date().toISOString());
   return { bootstrapped: true, generatedPassword: fromEnv ? null : password };
 }
 
-export function getAdminPasswordSource(db) {
+export async function getAdminPasswordSource(db) {
   return getSetting(db, 'admin_password_source', 'generated');
 }
 
-export function checkAdminPassword(db, password) {
-  const stored = getSetting(db, 'admin_password_hash', '');
+export async function checkAdminPassword(db, password) {
+  const stored = await getSetting(db, 'admin_password_hash', '');
   if (!stored) return false;
   return verifyPassword(String(password ?? ''), stored);
 }
 
-export function changeAdminPassword(db, newPassword) {
-  setSetting(db, 'admin_password_hash', hashPassword(newPassword));
-  setSetting(db, 'admin_password_source', 'panel');
+export async function changeAdminPassword(db, newPassword) {
+  await setSetting(db, 'admin_password_hash', hashPassword(newPassword));
+  await setSetting(db, 'admin_password_source', 'panel');
 }
 
 /* ------------------------------- defaults ------------------------------ */
@@ -149,6 +148,7 @@ export function serverInfo(config) {
     node: process.version,
     startedAt: STARTED_AT,
     dataDir: config.dataDir,
+    database: config.dbDriver,
     host: config.host,
     port: config.port,
   };

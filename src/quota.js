@@ -1,5 +1,5 @@
 import { hashApiKey } from './auth.js';
-import { getClientByKeyHash, insertUsageLog } from './db.js';
+import { getClientByKeyHash, insertUsageAndUpdateClient, resetClientUsage } from './db.js';
 import { canonicalModelName, modelBaseName } from './pricing.js';
 
 export const PERIODS = ['daily', 'monthly', 'total'];
@@ -25,14 +25,10 @@ export function periodLabel(period) {
  * Remet les compteurs a zero si la periode est terminee.
  * Retourne le client a jour (objet en memoire, pas de deuxieme lecture).
  */
-export function maybeRollPeriod(db, client, now = new Date()) {
+export async function maybeRollPeriod(db, client, now = new Date()) {
   const expected = periodKeyFor(client.period, now);
   if (client.periodStart === expected) return client;
-  db.prepare(
-    `UPDATE clients
-        SET used_tokens = 0, used_requests = 0, used_usd = 0, period_start = ?
-      WHERE id = ?`,
-  ).run(expected, client.id);
+  await resetClientUsage(db, client.id, expected);
   return { ...client, usedTokens: 0, usedRequests: 0, usedUsd: 0, periodStart: expected };
 }
 
@@ -200,7 +196,7 @@ export function estimateUsage(inputText, outputBytes) {
  * Enregistre une requete dans les journaux et met a jour les compteurs du client.
  * `usage` peut etre null (aucun token facture, mais la requete compte).
  */
-export function recordUsage(
+export async function recordUsage(
   db,
   clientId,
   {
@@ -222,44 +218,25 @@ export function recordUsage(
   const cost = Number.isFinite(costUsd) && costUsd > 0 ? costUsd : 0;
   const createdAt = now.toISOString();
 
-  db.exec('BEGIN IMMEDIATE');
-  try {
-    insertUsageLog(db, {
-      clientId,
-      model,
-      requestedModel,
-      promptTokens,
-      completionTokens,
-      totalTokens,
-      costUsd: cost,
-      status,
-      streamed,
-      estimated,
-      latencyMs,
-      error,
-      createdAt,
-    });
-    db.prepare(
-      `UPDATE clients
-          SET used_tokens = used_tokens + ?,
-              used_requests = used_requests + 1,
-              used_usd = used_usd + ?,
-              last_used_at = ?
-        WHERE id = ?`,
-    ).run(totalTokens, cost, createdAt, clientId);
-    db.exec('COMMIT');
-  } catch (err) {
-    try {
-      db.exec('ROLLBACK');
-    } catch {
-      /* ignore */
-    }
-    throw err;
-  }
+  await insertUsageAndUpdateClient(db, {
+    clientId,
+    model,
+    requestedModel,
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    costUsd: cost,
+    status,
+    streamed,
+    estimated,
+    latencyMs,
+    error,
+    createdAt,
+  });
 }
 
 /** Retrouve un client a partir de la cle presentee par l'appelant. */
-export function findClientByApiKey(db, apiKey) {
+export async function findClientByApiKey(db, apiKey) {
   if (!apiKey || typeof apiKey !== 'string') return null;
   return getClientByKeyHash(db, hashApiKey(apiKey));
 }

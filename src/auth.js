@@ -70,29 +70,29 @@ export function generateAdminPassword() {
 
 /* ------------------------------- sessions ------------------------------- */
 
-export function createAdminSession(db, ttlMs, now = new Date()) {
+export async function createAdminSession(db, ttlMs, now = new Date()) {
   const token = crypto.randomBytes(32).toString('base64url');
   const expiresAt = new Date(now.getTime() + ttlMs).toISOString();
-  cleanupAdminSessions(db, now.toISOString());
-  insertAdminSession(db, sha256(token), now.toISOString(), expiresAt);
+  await cleanupAdminSessions(db, now.toISOString());
+  await insertAdminSession(db, sha256(token), now.toISOString(), expiresAt);
   return { token, expiresAt };
 }
 
-export function validateAdminSession(db, token, now = new Date()) {
+export async function validateAdminSession(db, token, now = new Date()) {
   if (!token) return null;
-  const row = getAdminSession(db, sha256(token));
+  const row = await getAdminSession(db, sha256(token));
   if (!row) return null;
   if (new Date(row.expires_at).getTime() <= now.getTime()) {
-    deleteAdminSession(db, sha256(token));
+    await deleteAdminSession(db, sha256(token));
     return null;
   }
   return row;
 }
 
-export function destroyAdminSession(db, token) {
-  if (token) deleteAdminSession(db, sha256(token));
+export async function destroyAdminSession(db, token) {
+  if (token) await deleteAdminSession(db, sha256(token));
 }
 
-export function destroyAllAdminSessions(db) {
-  deleteAllAdminSessions(db);
+export async function destroyAllAdminSessions(db) {
+  await deleteAllAdminSessions(db);
 }

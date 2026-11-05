@@ -12,7 +12,7 @@ import {
   resetMasterKeyCache,
 } from '../src/secrets.js';
 import { IpRateLimiter, Semaphore } from '../src/limits.js';
-import { deleteUsageLogsBefore, insertUsageLog } from '../src/db.js';
+import { closeDb, deleteUsageLogsBefore, insertUsageLog } from '../src/db.js';
 import { openDb } from '../src/db.js';
 
 const silentLogger = { debug() {}, info() {}, warn() {}, error() {} };
@@ -121,9 +121,9 @@ test('logger : format JSON pour la production', () => {
   assert.ok(parsed.ts);
 });
 
-test('retention : suppression des journaux anciens', () => {
-  const db = openDb(tmpDir('dsg-retention-'));
-  insertUsageLog(db, {
+test('retention : suppression des journaux anciens', async () => {
+  const db = await openDb(tmpDir('dsg-retention-'));
+  await insertUsageLog(db, {
     clientId: 'client-x',
     model: 'deepseek-flash',
     requestedModel: null,
@@ -138,9 +138,9 @@ test('retention : suppression des journaux anciens', () => {
     error: null,
     createdAt: '2020-01-01T00:00:00.000Z',
   });
-  const deleted = deleteUsageLogsBefore(db, '2021-01-01T00:00:00.000Z');
+  const deleted = await deleteUsageLogsBefore(db, '2021-01-01T00:00:00.000Z');
   assert.equal(deleted, 1);
-  db.close();
+  await closeDb(db);
 });
 
 // ------------------------------ integration -------------------------------

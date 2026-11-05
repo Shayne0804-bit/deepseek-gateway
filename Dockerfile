@@ -16,13 +16,15 @@ ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     DATA_DIR=/data
 
-COPY package.json ./
+COPY package.json package-lock.json ./
 COPY server.js ./
 COPY src ./src
 COPY public ./public
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
+# Dependances de production (pilote MongoDB ; SQLite reste natif a Node).
+RUN npm ci --omit=dev --no-audit --no-fund \
+ && chmod +x /usr/local/bin/docker-entrypoint.sh \
  && mkdir -p /data \
  && chown -R node:node /app /data
 

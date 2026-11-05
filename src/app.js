@@ -176,15 +176,22 @@ export function buildTlsOptions(config) {
 export async function startGateway(overrides = {}) {
   const config = loadConfig(overrides);
   const log = overrides.logger ?? createLogger(config.logLevel, config.logFormat);
-  const db = openDb(config.dataDir);
+  const db = await openDb(config.dataDir, {
+    driver: config.dbDriver,
+    mongoUri: config.mongoUri,
+    mongoDb: config.mongoDb,
+    migrateSqlite: config.mongoMigrateSqlite,
+    migrateRequired: config.mongoMigrationRequired,
+    log,
+  });
 
   // Tarification par defaut si premiere utilisation.
-  if (getSetting(db, 'pricing', null) == null) {
-    setSetting(db, 'pricing', DEFAULT_PRICING);
+  if ((await getSetting(db, 'pricing', null)) == null) {
+    await setSetting(db, 'pricing', DEFAULT_PRICING);
   }
 
   // Mot de passe administrateur (premiere utilisation).
-  const adminBootstrap = bootstrapAdmin(db, config);
+  const adminBootstrap = await bootstrapAdmin(db, config);
   let generatedPasswordFile = null;
   if (adminBootstrap.generatedPassword) {
     generatedPasswordFile = path.join(config.dataDir, 'admin-password.txt');
@@ -202,8 +209,8 @@ export async function startGateway(overrides = {}) {
     );
   }
 
-  const resolveProvider = (database, cfg) => resolveProviderConfig(database, cfg);
-  migrateProviderSecret(db, config, log);
+  const resolveProvider = async (database, cfg) => resolveProviderConfig(database, cfg);
+  await migrateProviderSecret(db, config, log);
   const mailer = overrides.mailer ?? createMailer(config, log);
   const adminApi = createAdminApi({ config, db, log, mailer });
   const portalApi = createPortalApi({ config, db, log, mailer });
@@ -296,12 +303,13 @@ export async function startGateway(overrides = {}) {
     }
 
     if (pathname === '/healthz' || pathname === '/readyz') {
-      const provider = resolveProvider(db, config);
+      const provider = await resolveProvider(db, config);
       sendJson(res, 200, {
         ok: true,
         name: 'valaria-gateway',
         version: APP_VERSION,
         uptimeSeconds: Math.round(process.uptime()),
+        database: config.dbDriver,
         providerConfigured: Boolean(provider.apiKey),
         warnings: startupWarnings,
       });
@@ -382,7 +390,7 @@ export async function startGateway(overrides = {}) {
   try {
     tlsOptions = buildTlsOptions(config);
   } catch (err) {
-    closeDb(db);
+    await closeDb(db);
     throw err;
   }
 
@@ -390,20 +398,22 @@ export async function startGateway(overrides = {}) {
 
   // Nettoyage periodique : sessions, fenetres de debit, retention des journaux.
   const maintenance = setInterval(() => {
-    try {
-      const nowIso = new Date().toISOString();
-      cleanupAdminSessions(db, nowIso);
-      cleanupPortalSessions(db, nowIso);
-      cleanupPortalEmailCodes(db, nowIso);
-      ipLimiter.prune();
-      if (config.usageRetentionDays > 0) {
-        const cutoff = new Date(Date.now() - config.usageRetentionDays * 86_400_000).toISOString();
-        const deleted = deleteUsageLogsBefore(db, cutoff);
-        if (deleted > 0) log.info(`Retention : ${deleted} ligne(s) de journal supprimee(s) (> ${config.usageRetentionDays} j).`);
+    (async () => {
+      try {
+        const nowIso = new Date().toISOString();
+        await cleanupAdminSessions(db, nowIso);
+        await cleanupPortalSessions(db, nowIso);
+        await cleanupPortalEmailCodes(db, nowIso);
+        ipLimiter.prune();
+        if (config.usageRetentionDays > 0) {
+          const cutoff = new Date(Date.now() - config.usageRetentionDays * 86_400_000).toISOString();
+          const deleted = await deleteUsageLogsBefore(db, cutoff);
+          if (deleted > 0) log.info(`Retention : ${deleted} ligne(s) de journal supprimee(s) (> ${config.usageRetentionDays} j).`);
+        }
+      } catch (err) {
+        log.warn(`Maintenance : ${err.message}`);
       }
-    } catch (err) {
-      log.warn(`Maintenance : ${err.message}`);
-    }
+    })();
   }, 60 * 60 * 1000);
   maintenance.unref();
 
@@ -420,7 +430,7 @@ export async function startGateway(overrides = {}) {
     clearInterval(maintenance);
     if (httpsServer) httpsServer.close();
     server.close();
-    closeDb(db);
+    await closeDb(db);
     throw err;
   }
 
@@ -440,7 +450,7 @@ export async function startGateway(overrides = {}) {
           }),
       ),
     );
-    closeDb(db);
+    await closeDb(db);
   };
 
   return {
@@ -505,4 +515,5 @@ export function printStartupBanner(started, log = console.log) {
   log('   Ctrl+C pour arreter.');
   log('');
 }
+
 

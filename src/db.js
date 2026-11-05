@@ -1,665 +1,211 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-
-const SCHEMA = `
-CREATE TABLE IF NOT EXISTS clients (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT,
-  key_hash TEXT NOT NULL UNIQUE,
-  key_prefix TEXT NOT NULL,
-  enabled INTEGER NOT NULL DEFAULT 1,
-  quota_tokens INTEGER,
-  quota_requests INTEGER,
-  quota_usd REAL,
-  used_tokens INTEGER NOT NULL DEFAULT 0,
-  used_requests INTEGER NOT NULL DEFAULT 0,
-  used_usd REAL NOT NULL DEFAULT 0,
-  period TEXT NOT NULL DEFAULT 'monthly',
-  period_start TEXT NOT NULL,
-  rpm_limit INTEGER,
-  concurrency_limit INTEGER,
-  max_output_tokens INTEGER,
-  allowed_models TEXT,
-  expires_at TEXT,
-  note TEXT,
-  created_at TEXT NOT NULL,
-  last_used_at TEXT
-);
-
-CREATE TABLE IF NOT EXISTS portal_email_codes (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  email TEXT NOT NULL,
-  code_hash TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  expires_at TEXT NOT NULL,
-  attempts INTEGER NOT NULL DEFAULT 0
-);
-CREATE INDEX IF NOT EXISTS idx_email_codes_email ON portal_email_codes (email COLLATE NOCASE, created_at);
-
-CREATE TABLE IF NOT EXISTS usage_logs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  client_id TEXT,
-  model TEXT,
-  requested_model TEXT,
-  prompt_tokens INTEGER NOT NULL DEFAULT 0,
-  completion_tokens INTEGER NOT NULL DEFAULT 0,
-  total_tokens INTEGER NOT NULL DEFAULT 0,
-  cost_usd REAL NOT NULL DEFAULT 0,
-  status INTEGER NOT NULL DEFAULT 0,
-  streamed INTEGER NOT NULL DEFAULT 0,
-  estimated INTEGER NOT NULL DEFAULT 0,
-  latency_ms INTEGER,
-  error TEXT,
-  created_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_usage_created ON usage_logs (created_at);
-CREATE INDEX IF NOT EXISTS idx_usage_client ON usage_logs (client_id, created_at);
-
-CREATE TABLE IF NOT EXISTS settings (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS admin_sessions (
-  token_hash TEXT PRIMARY KEY,
-  created_at TEXT NOT NULL,
-  expires_at TEXT NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS portal_sessions (
-  token_hash TEXT PRIMARY KEY,
-  client_id TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  expires_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_portal_expires ON portal_sessions (expires_at);
-
-CREATE TABLE IF NOT EXISTS admin_audit (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  created_at TEXT NOT NULL,
-  ip TEXT,
-  action TEXT NOT NULL,
-  target TEXT,
-  details TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_audit_created ON admin_audit (created_at);
-
--- Traçabilite anti-abus des inscriptions (1 compte par IP / appareil).
-CREATE TABLE IF NOT EXISTS signup_identities (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ip TEXT NOT NULL,
-  device_hash TEXT,
-  email TEXT NOT NULL,
-  created_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_signup_ip ON signup_identities (ip, created_at);
-CREATE INDEX IF NOT EXISTS idx_signup_device ON signup_identities (device_hash, created_at);
-`;
-
-export function openDb(dataDir) {
-  fs.mkdirSync(dataDir, { recursive: true });
-  const db = new DatabaseSync(path.join(dataDir, 'gateway.db'));
-  db.exec('PRAGMA journal_mode = WAL;');
-  db.exec('PRAGMA synchronous = NORMAL;');
-  db.exec('PRAGMA busy_timeout = 5000;');
-  db.exec('PRAGMA foreign_keys = ON;');
-  db.exec(SCHEMA);
-  migrateDb(db);
-  return db;
-}
-
 /**
- * Migrations legeres pour les bases existantes (ajout de colonnes).
- * `requested_model` : nom de modele demande par le client (ex. fable-5.1)
- * quand il differe du modele DeepSeek reellement facture (ex. deepseek-flash).
+ * Couche de donnees : SQLite (defaut) ou MongoDB (DB_DRIVER=mongo).
+ *
+ * Toutes les fonctions sont asynchrones pour permettre les deux moteurs.
+ * SQLite reste disponible pour les tests et le rollback.
  */
-function migrateDb(db) {
-  const logColumns = db.prepare('PRAGMA table_info(usage_logs)').all();
-  if (!logColumns.some((column) => column.name === 'requested_model')) {
-    db.exec('ALTER TABLE usage_logs ADD COLUMN requested_model TEXT');
-  }
-  const clientColumns = db.prepare('PRAGMA table_info(clients)').all();
-  if (!clientColumns.some((column) => column.name === 'email')) {
-    db.exec('ALTER TABLE clients ADD COLUMN email TEXT');
-  }
-  db.exec(
-    "CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_email ON clients (email COLLATE NOCASE) WHERE email IS NOT NULL",
-  );
+import path from 'node:path';
+import * as sqlite from './db-sqlite.js';
+import * as mongo from './db-mongo.js';
+
+export { mapClientRow } from './db-sqlite.js';
+
+export function dbDriver(db) {
+  return db?.driver === 'mongo' ? 'mongo' : 'sqlite';
 }
 
-export function closeDb(db) {
-  try {
-    db.close();
-  } catch {
-    /* deja ferme */
+/** Ouvre la base selon la configuration. */
+export async function openDb(dataDir, options = {}) {
+  const driver = options.driver || 'sqlite';
+  if (driver === 'mongo') {
+    if (!options.mongoUri) throw new Error('DB_DRIVER=mongo mais MONGODB_URI est vide.');
+    const handle = await mongo.openMongoDb({
+      uri: options.mongoUri,
+      dbName: options.mongoDb || 'valaria_gateway',
+      log: options.log || null,
+    });
+    if (options.migrateSqlite !== false) {
+      const sqliteFile = path.join(dataDir, 'gateway.db');
+      try {
+        const result = await mongo.migrateFromSqlite(handle, sqliteFile, options.log || null);
+        if (result?.imported && options.log?.info) {
+          options.log.info(`Migration SQLite -> MongoDB : ${result.imported} document(s) importe(s).`);
+        }
+      } catch (err) {
+        if (options.migrateRequired) throw err;
+        if (options.log?.warn) options.log.warn(`Migration SQLite -> MongoDB ignoree : ${err.message}`);
+      }
+    }
+    return handle;
   }
+  return sqlite.openDb(dataDir);
+}
+
+export async function closeDb(db) {
+  if (db?.driver === 'mongo') return mongo.closeMongoDb(db);
+  return sqlite.closeDb(db);
 }
 
 /* ------------------------------- settings ------------------------------- */
-
-export function getSetting(db, key, fallback = null) {
-  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
-  if (!row) return fallback;
-  try {
-    return JSON.parse(row.value);
-  } catch {
-    return row.value;
-  }
+export async function getSetting(db, key, fallback = null) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.getSetting(db, key, fallback)
+    : sqlite.getSetting(db, key, fallback);
 }
-
-export function setSetting(db, key, value) {
-  db.prepare(
-    'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-  ).run(key, JSON.stringify(value));
+export async function setSetting(db, key, value) {
+  return dbDriver(db) === 'mongo' ? mongo.setSetting(db, key, value) : sqlite.setSetting(db, key, value);
 }
-
-export function deleteSetting(db, key) {
-  db.prepare('DELETE FROM settings WHERE key = ?').run(key);
+export async function deleteSetting(db, key) {
+  return dbDriver(db) === 'mongo' ? mongo.deleteSetting(db, key) : sqlite.deleteSetting(db, key);
 }
 
 /* -------------------------------- clients ------------------------------- */
-
-function safeJsonParse(value) {
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
-  }
+export async function getClientById(db, id) {
+  return dbDriver(db) === 'mongo' ? mongo.getClientById(db, id) : sqlite.getClientById(db, id);
 }
-
-export function mapClientRow(row) {
-  if (!row) return null;
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email ?? null,
-    keyHash: row.key_hash,
-    keyPrefix: row.key_prefix,
-    enabled: row.enabled === 1 || row.enabled === true,
-    quotaTokens: row.quota_tokens == null ? null : Number(row.quota_tokens),
-    quotaRequests: row.quota_requests == null ? null : Number(row.quota_requests),
-    quotaUsd: row.quota_usd == null ? null : Number(row.quota_usd),
-    usedTokens: Number(row.used_tokens ?? 0),
-    usedRequests: Number(row.used_requests ?? 0),
-    usedUsd: Number(row.used_usd ?? 0),
-    period: row.period,
-    periodStart: row.period_start,
-    rpmLimit: row.rpm_limit == null ? null : Number(row.rpm_limit),
-    concurrencyLimit: row.concurrency_limit == null ? null : Number(row.concurrency_limit),
-    maxOutputTokens: row.max_output_tokens == null ? null : Number(row.max_output_tokens),
-    allowedModels: row.allowed_models ? safeJsonParse(row.allowed_models) : null,
-    expiresAt: row.expires_at,
-    note: row.note,
-    createdAt: row.created_at,
-    lastUsedAt: row.last_used_at,
-  };
+export async function findClientByEmail(db, email) {
+  return dbDriver(db) === 'mongo' ? mongo.findClientByEmail(db, email) : sqlite.findClientByEmail(db, email);
 }
-
-export function getClientById(db, id) {
-  return mapClientRow(db.prepare('SELECT * FROM clients WHERE id = ?').get(id));
+export async function getClientByKeyHash(db, keyHash) {
+  return dbDriver(db) === 'mongo' ? mongo.getClientByKeyHash(db, keyHash) : sqlite.getClientByKeyHash(db, keyHash);
 }
-
-export function findClientByEmail(db, email) {
-  const normalized = String(email ?? '').trim().toLowerCase();
-  if (!normalized) return null;
-  return mapClientRow(
-    db.prepare("SELECT * FROM clients WHERE email IS NOT NULL AND email = ? COLLATE NOCASE").get(normalized),
-  );
+export async function listClients(db) {
+  return dbDriver(db) === 'mongo' ? mongo.listClients(db) : sqlite.listClients(db);
+}
+export async function countClients(db) {
+  return dbDriver(db) === 'mongo' ? mongo.countClients(db) : sqlite.countClients(db);
+}
+export async function insertClient(db, client) {
+  return dbDriver(db) === 'mongo' ? mongo.insertClient(db, client) : sqlite.insertClient(db, client);
+}
+export async function updateClientFields(db, id, fields) {
+  return dbDriver(db) === 'mongo' ? mongo.updateClientFields(db, id, fields) : sqlite.updateClientFields(db, id, fields);
+}
+export async function resetClientUsage(db, id, periodStart) {
+  return dbDriver(db) === 'mongo' ? mongo.resetClientUsage(db, id, periodStart) : sqlite.resetClientUsage(db, id, periodStart);
+}
+export async function deleteClient(db, id) {
+  return dbDriver(db) === 'mongo' ? mongo.deleteClient(db, id) : sqlite.deleteClient(db, id);
 }
 
 /* --------------------------- codes email portail ------------------------ */
-
-export function deletePortalEmailCodes(db, email) {
-  db.prepare('DELETE FROM portal_email_codes WHERE email = ? COLLATE NOCASE').run(String(email));
+export async function deletePortalEmailCodes(db, email) {
+  return dbDriver(db) === 'mongo' ? mongo.deletePortalEmailCodes(db, email) : sqlite.deletePortalEmailCodes(db, email);
+}
+export async function insertPortalEmailCode(db, code) {
+  return dbDriver(db) === 'mongo' ? mongo.insertPortalEmailCode(db, code) : sqlite.insertPortalEmailCode(db, code);
+}
+export async function getActivePortalEmailCode(db, email) {
+  return dbDriver(db) === 'mongo' ? mongo.getActivePortalEmailCode(db, email) : sqlite.getActivePortalEmailCode(db, email);
+}
+export async function incrementPortalEmailCodeAttempts(db, id) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.incrementPortalEmailCodeAttempts(db, id)
+    : sqlite.incrementPortalEmailCodeAttempts(db, id);
+}
+export async function deletePortalEmailCode(db, id) {
+  return dbDriver(db) === 'mongo' ? mongo.deletePortalEmailCode(db, id) : sqlite.deletePortalEmailCode(db, id);
+}
+export async function cleanupPortalEmailCodes(db, nowIso) {
+  return dbDriver(db) === 'mongo' ? mongo.cleanupPortalEmailCodes(db, nowIso) : sqlite.cleanupPortalEmailCodes(db, nowIso);
 }
 
-export function insertPortalEmailCode(db, { email, codeHash, createdAt, expiresAt }) {
-  db.prepare(
-    'INSERT INTO portal_email_codes (email, code_hash, created_at, expires_at, attempts) VALUES (?, ?, ?, ?, 0)',
-  ).run(String(email).toLowerCase(), codeHash, createdAt, expiresAt);
+/* ------------------------- anti-abus inscription ----------------------- */
+export async function insertSignupIdentity(db, identity) {
+  return dbDriver(db) === 'mongo' ? mongo.insertSignupIdentity(db, identity) : sqlite.insertSignupIdentity(db, identity);
 }
-
-export function getActivePortalEmailCode(db, email) {
-  return db
-    .prepare(
-      `SELECT * FROM portal_email_codes
-        WHERE email = ? COLLATE NOCASE
-        ORDER BY id DESC LIMIT 1`,
-    )
-    .get(String(email).toLowerCase());
+export async function countSignupIdentitiesByIp(db, ip, sinceIso) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.countSignupIdentitiesByIp(db, ip, sinceIso)
+    : sqlite.countSignupIdentitiesByIp(db, ip, sinceIso);
 }
-
-export function incrementPortalEmailCodeAttempts(db, id) {
-  db.prepare('UPDATE portal_email_codes SET attempts = attempts + 1 WHERE id = ?').run(id);
+export async function countSignupIdentitiesByDevice(db, deviceHash, sinceIso) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.countSignupIdentitiesByDevice(db, deviceHash, sinceIso)
+    : sqlite.countSignupIdentitiesByDevice(db, deviceHash, sinceIso);
 }
-
-export function deletePortalEmailCode(db, id) {
-  db.prepare('DELETE FROM portal_email_codes WHERE id = ?').run(id);
-}
-
-export function cleanupPortalEmailCodes(db, nowIso) {
-  db.prepare('DELETE FROM portal_email_codes WHERE expires_at <= ?').run(nowIso);
-}
-
-export function insertSignupIdentity(db, { ip, deviceHash = null, email, createdAt }) {
-  db.prepare(
-    'INSERT INTO signup_identities (ip, device_hash, email, created_at) VALUES (?, ?, ?, ?)',
-  ).run(String(ip), deviceHash == null ? null : String(deviceHash), String(email), createdAt);
-}
-
-export function countSignupIdentitiesByIp(db, ip, sinceIso) {
-  return Number(db.prepare(
-    'SELECT COUNT(*) AS n FROM signup_identities WHERE ip = ? AND created_at >= ?',
-  ).get(String(ip), sinceIso)?.n ?? 0);
-}
-
-export function countSignupIdentitiesByDevice(db, deviceHash, sinceIso) {
-  if (!deviceHash) return 0;
-  return Number(db.prepare(
-    'SELECT COUNT(*) AS n FROM signup_identities WHERE device_hash = ? AND created_at >= ?',
-  ).get(String(deviceHash), sinceIso)?.n ?? 0);
-}
-
-export function cleanupSignupIdentities(db, beforeIso) {
-  db.prepare('DELETE FROM signup_identities WHERE created_at < ?').run(beforeIso);
-}
-
-export function getClientByKeyHash(db, keyHash) {
-  return mapClientRow(db.prepare('SELECT * FROM clients WHERE key_hash = ?').get(keyHash));
-}
-
-export function listClients(db) {
-  return db
-    .prepare('SELECT * FROM clients ORDER BY created_at DESC')
-    .all()
-    .map(mapClientRow);
-}
-
-export function countClients(db) {
-  const row = db.prepare(
-    `SELECT COUNT(*) AS total,
-            COALESCE(SUM(CASE WHEN enabled = 1 THEN 1 ELSE 0 END), 0) AS enabled
-       FROM clients`,
-  ).get();
-  return { total: Number(row.total), enabled: Number(row.enabled) };
-}
-
-export function insertClient(db, client) {
-  db.prepare(
-    `INSERT INTO clients (
-       id, name, key_hash, key_prefix, enabled,
-       quota_tokens, quota_requests, quota_usd,
-       used_tokens, used_requests, used_usd,
-       period, period_start, rpm_limit, concurrency_limit,
-       max_output_tokens, allowed_models, expires_at, note, created_at, email
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    client.id,
-    client.name,
-    client.keyHash,
-    client.keyPrefix,
-    client.enabled ? 1 : 0,
-    client.quotaTokens,
-    client.quotaRequests,
-    client.quotaUsd,
-    client.usedTokens ?? 0,
-    client.usedRequests ?? 0,
-    client.usedUsd ?? 0,
-    client.period,
-    client.periodStart,
-    client.rpmLimit,
-    client.concurrencyLimit,
-    client.maxOutputTokens,
-    client.allowedModels ? JSON.stringify(client.allowedModels) : null,
-    client.expiresAt,
-    client.note,
-    client.createdAt,
-    client.email ?? null,
-  );
-}
-
-export function updateClientFields(db, id, fields) {
-  const columns = {
-    name: 'name',
-    email: 'email',
-    enabled: 'enabled',
-    quotaTokens: 'quota_tokens',
-    quotaRequests: 'quota_requests',
-    quotaUsd: 'quota_usd',
-    period: 'period',
-    rpmLimit: 'rpm_limit',
-    concurrencyLimit: 'concurrency_limit',
-    maxOutputTokens: 'max_output_tokens',
-    allowedModels: 'allowed_models',
-    expiresAt: 'expires_at',
-    note: 'note',
-    keyHash: 'key_hash',
-    keyPrefix: 'key_prefix',
-  };
-  const sets = [];
-  const values = [];
-  for (const [field, column] of Object.entries(columns)) {
-    if (!(field in fields)) continue;
-    let value = fields[field];
-    if (field === 'enabled') value = value ? 1 : 0;
-    if (field === 'allowedModels') value = value && value.length ? JSON.stringify(value) : null;
-    sets.push(`${column} = ?`);
-    values.push(value);
-  }
-  if (!sets.length) return;
-  values.push(id);
-  db.prepare(`UPDATE clients SET ${sets.join(', ')} WHERE id = ?`).run(...values);
-}
-
-export function resetClientUsage(db, id, periodStart) {
-  db.prepare(
-    `UPDATE clients
-        SET used_tokens = 0, used_requests = 0, used_usd = 0, period_start = ?
-      WHERE id = ?`,
-  ).run(periodStart, id);
-}
-
-export function deleteClient(db, id) {
-  db.exec('BEGIN IMMEDIATE');
-  try {
-    db.prepare('DELETE FROM usage_logs WHERE client_id = ?').run(id);
-    db.prepare('DELETE FROM clients WHERE id = ?').run(id);
-    db.exec('COMMIT');
-  } catch (err) {
-    try {
-      db.exec('ROLLBACK');
-    } catch {
-      /* ignore */
-    }
-    throw err;
-  }
+export async function cleanupSignupIdentities(db, beforeIso) {
+  return dbDriver(db) === 'mongo' ? mongo.cleanupSignupIdentities(db, beforeIso) : sqlite.cleanupSignupIdentities(db, beforeIso);
 }
 
 /* ------------------------------ usage logs ------------------------------ */
-
-export function insertUsageLog(db, logRow) {
-  db.prepare(
-    `INSERT INTO usage_logs (
-       client_id, model, requested_model, prompt_tokens, completion_tokens, total_tokens, cost_usd,
-       status, streamed, estimated, latency_ms, error, created_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    logRow.clientId,
-    logRow.model,
-    logRow.requestedModel ?? null,
-    logRow.promptTokens,
-    logRow.completionTokens,
-    logRow.totalTokens,
-    logRow.costUsd,
-    logRow.status,
-    logRow.streamed ? 1 : 0,
-    logRow.estimated ? 1 : 0,
-    logRow.latencyMs,
-    logRow.error,
-    logRow.createdAt,
-  );
+export async function insertUsageLog(db, row) {
+  return dbDriver(db) === 'mongo' ? mongo.insertUsageLog(db, row) : sqlite.insertUsageLog(db, row);
 }
-
-export function countUsageSince(db, sinceIso) {
-  const row = db
-    .prepare(
-      `SELECT COUNT(*) AS requests,
-              COALESCE(SUM(total_tokens), 0) AS tokens,
-              COALESCE(SUM(cost_usd), 0) AS cost
-         FROM usage_logs
-        WHERE created_at >= ?`,
-    )
-    .get(sinceIso);
-  return {
-    requests: Number(row.requests),
-    tokens: Number(row.tokens),
-    cost: Number(row.cost),
-  };
+export async function insertUsageAndUpdateClient(db, row) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.insertUsageAndUpdateClient(db, row)
+    : sqlite.insertUsageAndUpdateClient(db, row);
 }
-
-export function countAllUsage(db) {
-  const row = db
-    .prepare(
-      `SELECT COUNT(*) AS requests,
-              COALESCE(SUM(total_tokens), 0) AS tokens,
-              COALESCE(SUM(cost_usd), 0) AS cost
-         FROM usage_logs`,
-    )
-    .get();
-  return {
-    requests: Number(row.requests),
-    tokens: Number(row.tokens),
-    cost: Number(row.cost),
-  };
+export async function countUsageSince(db, sinceIso) {
+  return dbDriver(db) === 'mongo' ? mongo.countUsageSince(db, sinceIso) : sqlite.countUsageSince(db, sinceIso);
 }
-
-export function usageSeriesSince(db, sinceIso) {
-  return db
-    .prepare(
-      `SELECT substr(created_at, 1, 10) AS day,
-              COUNT(*) AS requests,
-              COALESCE(SUM(total_tokens), 0) AS tokens,
-              COALESCE(SUM(cost_usd), 0) AS cost
-         FROM usage_logs
-        WHERE created_at >= ?
-        GROUP BY day
-        ORDER BY day ASC`,
-    )
-    .all(sinceIso)
-    .map((r) => ({
-      day: r.day,
-      requests: Number(r.requests),
-      tokens: Number(r.tokens),
-      cost: Number(r.cost),
-    }));
+export async function countAllUsage(db) {
+  return dbDriver(db) === 'mongo' ? mongo.countAllUsage(db) : sqlite.countAllUsage(db);
 }
-
-export function perClientUsageSince(db, sinceIso) {
-  const rows = db
-    .prepare(
-      `SELECT client_id,
-              COUNT(*) AS requests,
-              COALESCE(SUM(total_tokens), 0) AS tokens,
-              COALESCE(SUM(cost_usd), 0) AS cost
-         FROM usage_logs
-        WHERE created_at >= ?
-        GROUP BY client_id`,
-    )
-    .all(sinceIso);
-  const map = new Map();
-  for (const row of rows) {
-    map.set(row.client_id, {
-      requests: Number(row.requests),
-      tokens: Number(row.tokens),
-      cost: Number(row.cost),
-    });
-  }
-  return map;
+export async function usageSeriesSince(db, sinceIso) {
+  return dbDriver(db) === 'mongo' ? mongo.usageSeriesSince(db, sinceIso) : sqlite.usageSeriesSince(db, sinceIso);
 }
-
-export function topClientsSince(db, sinceIso, limit = 5) {
-  return db
-    .prepare(
-      `SELECT l.client_id AS clientId,
-              COALESCE(c.name, '(supprime)') AS name,
-              COUNT(*) AS requests,
-              COALESCE(SUM(l.total_tokens), 0) AS tokens,
-              COALESCE(SUM(l.cost_usd), 0) AS cost
-         FROM usage_logs l
-         LEFT JOIN clients c ON c.id = l.client_id
-        WHERE l.created_at >= ?
-        GROUP BY l.client_id
-        ORDER BY tokens DESC
-        LIMIT ?`,
-    )
-    .all(sinceIso, Math.max(1, Math.min(50, limit)))
-    .map((r) => ({
-      clientId: r.clientId,
-      name: r.name,
-      requests: Number(r.requests),
-      tokens: Number(r.tokens),
-      cost: Number(r.cost),
-    }));
+export async function perClientUsageSince(db, sinceIso) {
+  return dbDriver(db) === 'mongo' ? mongo.perClientUsageSince(db, sinceIso) : sqlite.perClientUsageSince(db, sinceIso);
 }
-
-export function listUsageLogs(db, { limit = 50, offset = 0, clientId = null } = {}) {
-  const safeLimit = Math.max(1, Math.min(200, Number(limit) || 50));
-  const safeOffset = Math.max(0, Number(offset) || 0);
-  const where = clientId ? 'WHERE l.client_id = ?' : '';
-  const params = clientId ? [clientId, safeLimit, safeOffset] : [safeLimit, safeOffset];
-  const rows = db
-    .prepare(
-      `SELECT l.*, COALESCE(c.name, '(supprime)') AS client_name
-         FROM usage_logs l
-         LEFT JOIN clients c ON c.id = l.client_id
-         ${where}
-        ORDER BY l.id DESC
-        LIMIT ? OFFSET ?`,
-    )
-    .all(...params);
-  const total = clientId
-    ? db.prepare('SELECT COUNT(*) AS n FROM usage_logs WHERE client_id = ?').get(clientId).n
-    : db.prepare('SELECT COUNT(*) AS n FROM usage_logs').get().n;
-  return {
-    total: Number(total),
-    rows: rows.map((r) => ({
-      id: Number(r.id),
-      clientId: r.client_id,
-      clientName: r.client_name,
-      model: r.model,
-      requestedModel: r.requested_model ?? null,
-      promptTokens: Number(r.prompt_tokens),
-      completionTokens: Number(r.completion_tokens),
-      totalTokens: Number(r.total_tokens),
-      costUsd: Number(r.cost_usd),
-      status: Number(r.status),
-      streamed: r.streamed === 1,
-      estimated: r.estimated === 1,
-      latencyMs: r.latency_ms == null ? null : Number(r.latency_ms),
-      error: r.error,
-      createdAt: r.created_at,
-    })),
-  };
+export async function topClientsSince(db, sinceIso, limit = 5) {
+  return dbDriver(db) === 'mongo' ? mongo.topClientsSince(db, sinceIso, limit) : sqlite.topClientsSince(db, sinceIso, limit);
+}
+export async function listUsageLogs(db, options) {
+  return dbDriver(db) === 'mongo' ? mongo.listUsageLogs(db, options) : sqlite.listUsageLogs(db, options);
+}
+export async function deleteUsageLogsBefore(db, isoDate) {
+  return dbDriver(db) === 'mongo' ? mongo.deleteUsageLogsBefore(db, isoDate) : sqlite.deleteUsageLogsBefore(db, isoDate);
+}
+export async function countClientUsageSince(db, clientId, sinceIso) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.countClientUsageSince(db, clientId, sinceIso)
+    : sqlite.countClientUsageSince(db, clientId, sinceIso);
+}
+export async function clientUsageSeriesSince(db, clientId, sinceIso) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.clientUsageSeriesSince(db, clientId, sinceIso)
+    : sqlite.clientUsageSeriesSince(db, clientId, sinceIso);
 }
 
 /* ------------------------------- sessions ------------------------------- */
-
-export function insertAdminSession(db, tokenHash, createdAt, expiresAt) {
-  db.prepare(
-    'INSERT INTO admin_sessions (token_hash, created_at, expires_at) VALUES (?, ?, ?)',
-  ).run(tokenHash, createdAt, expiresAt);
+export async function insertAdminSession(db, tokenHash, createdAt, expiresAt) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.insertAdminSession(db, tokenHash, createdAt, expiresAt)
+    : sqlite.insertAdminSession(db, tokenHash, createdAt, expiresAt);
+}
+export async function getAdminSession(db, tokenHash) {
+  return dbDriver(db) === 'mongo' ? mongo.getAdminSession(db, tokenHash) : sqlite.getAdminSession(db, tokenHash);
+}
+export async function deleteAdminSession(db, tokenHash) {
+  return dbDriver(db) === 'mongo' ? mongo.deleteAdminSession(db, tokenHash) : sqlite.deleteAdminSession(db, tokenHash);
+}
+export async function deleteAllAdminSessions(db) {
+  return dbDriver(db) === 'mongo' ? mongo.deleteAllAdminSessions(db) : sqlite.deleteAllAdminSessions(db);
+}
+export async function cleanupAdminSessions(db, nowIso) {
+  return dbDriver(db) === 'mongo' ? mongo.cleanupAdminSessions(db, nowIso) : sqlite.cleanupAdminSessions(db, nowIso);
+}
+export async function insertPortalSession(db, tokenHash, clientId, createdAt, expiresAt) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.insertPortalSession(db, tokenHash, clientId, createdAt, expiresAt)
+    : sqlite.insertPortalSession(db, tokenHash, clientId, createdAt, expiresAt);
+}
+export async function getPortalSession(db, tokenHash) {
+  return dbDriver(db) === 'mongo' ? mongo.getPortalSession(db, tokenHash) : sqlite.getPortalSession(db, tokenHash);
+}
+export async function deletePortalSession(db, tokenHash) {
+  return dbDriver(db) === 'mongo' ? mongo.deletePortalSession(db, tokenHash) : sqlite.deletePortalSession(db, tokenHash);
+}
+export async function cleanupPortalSessions(db, nowIso) {
+  return dbDriver(db) === 'mongo' ? mongo.cleanupPortalSessions(db, nowIso) : sqlite.cleanupPortalSessions(db, nowIso);
 }
 
 /* -------------------------------- audit --------------------------------- */
-
-export function recordAdminAudit(db, { ip = null, action, target = null, details = null, now = new Date() }) {
-  db.prepare(
-    'INSERT INTO admin_audit (created_at, ip, action, target, details) VALUES (?, ?, ?, ?, ?)',
-  ).run(now.toISOString(), ip, String(action), target == null ? null : String(target), details == null ? null : String(details));
+export async function recordAdminAudit(db, entry) {
+  return dbDriver(db) === 'mongo' ? mongo.recordAdminAudit(db, entry) : sqlite.recordAdminAudit(db, entry);
 }
-
-export function listAdminAudit(db, { limit = 100, offset = 0 } = {}) {
-  const safeLimit = Math.max(1, Math.min(500, Number(limit) || 100));
-  const safeOffset = Math.max(0, Number(offset) || 0);
-  const rows = db
-    .prepare('SELECT * FROM admin_audit ORDER BY id DESC LIMIT ? OFFSET ?')
-    .all(safeLimit, safeOffset);
-  const total = Number(db.prepare('SELECT COUNT(*) AS n FROM admin_audit').get().n);
-  return {
-    total,
-    rows: rows.map((row) => ({
-      id: Number(row.id),
-      createdAt: row.created_at,
-      ip: row.ip,
-      action: row.action,
-      target: row.target,
-      details: row.details,
-    })),
-  };
-}
-
-/** Purge des journaux d'usage anterieurs a une date (retention). */
-export function deleteUsageLogsBefore(db, isoDate) {
-  const result = db.prepare('DELETE FROM usage_logs WHERE created_at < ?').run(isoDate);
-  return Number(result.changes ?? 0);
-}
-
-export function getAdminSession(db, tokenHash) {
-  return db
-    .prepare('SELECT * FROM admin_sessions WHERE token_hash = ?')
-    .get(tokenHash);
-}
-
-export function deleteAdminSession(db, tokenHash) {
-  db.prepare('DELETE FROM admin_sessions WHERE token_hash = ?').run(tokenHash);
-}
-
-export function deleteAllAdminSessions(db) {
-  db.prepare('DELETE FROM admin_sessions').run();
-}
-
-export function cleanupAdminSessions(db, nowIso) {
-  db.prepare('DELETE FROM admin_sessions WHERE expires_at <= ?').run(nowIso);
-}
-
-/* ----------------------------- portal sessions -------------------------- */
-
-export function insertPortalSession(db, tokenHash, clientId, createdAt, expiresAt) {
-  db.prepare(
-    'INSERT INTO portal_sessions (token_hash, client_id, created_at, expires_at) VALUES (?, ?, ?, ?)',
-  ).run(tokenHash, clientId, createdAt, expiresAt);
-}
-
-export function getPortalSession(db, tokenHash) {
-  return db.prepare('SELECT * FROM portal_sessions WHERE token_hash = ?').get(tokenHash);
-}
-
-export function deletePortalSession(db, tokenHash) {
-  db.prepare('DELETE FROM portal_sessions WHERE token_hash = ?').run(tokenHash);
-}
-
-export function cleanupPortalSessions(db, nowIso) {
-  db.prepare('DELETE FROM portal_sessions WHERE expires_at <= ?').run(nowIso);
-}
-
-/* ------------------------ usage par client (portail) -------------------- */
-
-export function countClientUsageSince(db, clientId, sinceIso) {
-  const row = db
-    .prepare(
-      `SELECT COUNT(*) AS requests,
-              COALESCE(SUM(total_tokens), 0) AS tokens,
-              COALESCE(SUM(cost_usd), 0) AS cost
-         FROM usage_logs
-        WHERE client_id = ? AND created_at >= ?`,
-    )
-    .get(clientId, sinceIso);
-  return {
-    requests: Number(row.requests),
-    tokens: Number(row.tokens),
-    cost: Math.round(Number(row.cost) * 1e6) / 1e6,
-  };
-}
-
-export function clientUsageSeriesSince(db, clientId, sinceIso) {
-  return db
-    .prepare(
-      `SELECT substr(created_at, 1, 10) AS day,
-              COUNT(*) AS requests,
-              COALESCE(SUM(total_tokens), 0) AS tokens,
-              COALESCE(SUM(cost_usd), 0) AS cost
-         FROM usage_logs
-        WHERE client_id = ? AND created_at >= ?
-        GROUP BY day
-        ORDER BY day ASC`,
-    )
-    .all(clientId, sinceIso)
-    .map((row) => ({
-      day: row.day,
-      requests: Number(row.requests),
-      tokens: Number(row.tokens),
-      cost: Math.round(Number(row.cost) * 1e6) / 1e6,
-    }));
+export async function listAdminAudit(db, options) {
+  return dbDriver(db) === 'mongo' ? mongo.listAdminAudit(db, options) : sqlite.listAdminAudit(db, options);
 }

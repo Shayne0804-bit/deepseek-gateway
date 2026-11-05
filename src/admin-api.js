@@ -264,10 +264,10 @@ function validateHttpUrl(value, label) {
 export function createAdminApi({ config, db, log, mailer }) {
   const loginAttempts = new Map();
 
-  function requireSession(req) {
+  async function requireSession(req) {
     const cookies = parseCookies(req.headers.cookie);
     const token = cookies[PANEL_COOKIE];
-    const session = validateAdminSession(db, token);
+    const session = await validateAdminSession(db, token);
     if (!session) return null;
     return { token, session };
   }
@@ -306,16 +306,12 @@ export function createAdminApi({ config, db, log, mailer }) {
 
   /** Journal d'audit des actions d'administration (production). */
   function audit(req, action, target = null, details = null) {
-    try {
-      recordAdminAudit(db, {
-        ip: clientIp(req, config.trustProxy),
-        action,
-        target,
-        details,
-      });
-    } catch (err) {
-      log.error(`Journal d'audit impossible : ${err.message}`);
-    }
+    recordAdminAudit(db, {
+      ip: clientIp(req, config.trustProxy),
+      action,
+      target,
+      details,
+    }).catch((err) => log.error(`Journal d'audit impossible : ${err.message}`));
   }
 
   function csvCell(value) {
@@ -323,11 +319,13 @@ export function createAdminApi({ config, db, log, mailer }) {
     return /[";\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   }
 
-  function readSettingsView() {
-    const provider = resolveProviderConfig(db, config);
-    const pricing = loadPricing(() => getSetting(db, 'pricing', null));
-    const modelAliases = loadModelAliases(() => getSetting(db, 'model_aliases', null));
-    const publicStored = getSetting(db, 'public_base_url', '') || '';
+  async function readSettingsView() {
+    const provider = await resolveProviderConfig(db, config);
+    const pricingStored = await getSetting(db, 'pricing', null);
+    const aliasesStored = await getSetting(db, 'model_aliases', null);
+    const pricing = loadPricing(() => pricingStored);
+    const modelAliases = loadModelAliases(() => aliasesStored);
+    const publicStored = (await getSetting(db, 'public_base_url', '')) || '';
     const publicBaseUrl = config.publicBaseUrl || publicStored;
     let publicBaseUrlSource = 'default';
     if (config.publicBaseUrl) publicBaseUrlSource = 'env';
@@ -380,9 +378,9 @@ export function createAdminApi({ config, db, log, mailer }) {
           trustCloudflare: config.trustCloudflare,
         },
       },
-      globalBudget: globalBudgetStatus(db),
-      globalBudgetUsd: getGlobalBudgetUsd(db),
-      admin: { passwordSource: getAdminPasswordSource(db) },
+      globalBudget: await globalBudgetStatus(db),
+      globalBudgetUsd: await getGlobalBudgetUsd(db),
+      admin: { passwordSource: await getAdminPasswordSource(db) },
       server: serverInfo(config),
     };
   }
@@ -402,7 +400,7 @@ export function createAdminApi({ config, db, log, mailer }) {
         }
         const body = await readJsonBody(req, 16 * 1024);
         const password = String(body.password ?? '');
-        if (!checkAdminPassword(db, password)) {
+        if (!await checkAdminPassword(db, password)) {
           recordLoginFailure(ip);
           audit(req, 'admin.login.failed', 'admin');
           log.warn(`Echec de connexion admin depuis ${ip}`);
@@ -411,7 +409,7 @@ export function createAdminApi({ config, db, log, mailer }) {
         }
         clearLoginFailures(ip);
         const ttlMs = config.sessionHours * 3600 * 1000;
-        const { token, expiresAt } = createAdminSession(db, ttlMs);
+        const { token, expiresAt } = await createAdminSession(db, ttlMs);
         setSessionCookie(req, res, token, Math.floor(ttlMs / 1000));
         audit(req, 'admin.login', 'admin');
         log.info(`Connexion admin depuis ${ip}`);
@@ -420,23 +418,23 @@ export function createAdminApi({ config, db, log, mailer }) {
       }
 
       if (route === '/session' && method === 'GET') {
-        const auth = requireSession(req);
+        const auth = await requireSession(req);
         if (!auth) {
           adminError(res, 401, 'Non authentifie.', 'unauthorized');
           return;
         }
-        const provider = resolveProviderConfig(db, config);
+        const provider = await resolveProviderConfig(db, config);
         sendJson(res, 200, {
           authenticated: true,
           server: serverInfo(config),
           provider: { configured: Boolean(provider.apiKey), source: provider.source },
-          admin: { passwordSource: getAdminPasswordSource(db) },
+          admin: { passwordSource: await getAdminPasswordSource(db) },
         });
         return;
       }
 
       // Toutes les routes suivantes exigent une session valide.
-      const auth = requireSession(req);
+      const auth = await requireSession(req);
       if (!auth) {
         adminError(res, 401, 'Session expiree. Reconnectez-vous.', 'unauthorized');
         return;
@@ -456,7 +454,7 @@ export function createAdminApi({ config, db, log, mailer }) {
 
       if (route === '/logout' && method === 'POST') {
         audit(req, 'admin.logout', 'admin');
-        destroyAdminSession(db, auth.token);
+        await destroyAdminSession(db, auth.token);
         res.setHeader(
           'set-cookie',
           serializeCookie(PANEL_COOKIE, '', { maxAge: 0, secure: isHttpsRequest(req, config.trustProxy) }),
@@ -471,11 +469,12 @@ export function createAdminApi({ config, db, log, mailer }) {
         const todayIso = utcStartOfToday(now);
         const sinceIso = new Date(now.getTime() - 29 * 86_400_000);
         sinceIso.setUTCHours(0, 0, 0, 0);
-        const clients = listClients(db);
-        const counts = countClients(db);
-        const todayByClient = perClientUsageSince(db, todayIso);
-        const provider = resolveProviderConfig(db, config);
-        const pricing = loadPricing(() => getSetting(db, 'pricing', null));
+        const clients = await listClients(db);
+        const counts = await countClients(db);
+        const todayByClient = await perClientUsageSince(db, todayIso);
+        const provider = await resolveProviderConfig(db, config);
+        const pricingValue = await getSetting(db, 'pricing', null);
+        const pricing = loadPricing(() => pricingValue);
         const exhausted = clients.filter((c) => checkClientAccess(c)?.code === 'insufficient_quota').length;
         sendJson(res, 200, {
           generatedAt: now.toISOString(),
@@ -486,17 +485,17 @@ export function createAdminApi({ config, db, log, mailer }) {
             clientsExhausted: exhausted,
             clientsDisabled: clients.filter((c) => !c.enabled).length,
           },
-          today: countUsageSince(db, todayIso),
-          totals: countAllUsage(db),
-          series: fillDailySeries(usageSeriesSince(db, sinceIso.toISOString()), 30, now),
-          topClients: topClientsSince(db, sinceIso.toISOString(), 5),
-          recent: listUsageLogs(db, { limit: 8 }).rows,
+          today: await countUsageSince(db, todayIso),
+          totals: await countAllUsage(db),
+          series: fillDailySeries(await usageSeriesSince(db, sinceIso.toISOString()), 30, now),
+          topClients: await topClientsSince(db, sinceIso.toISOString(), 5),
+          recent: (await listUsageLogs(db, { limit: 8 })).rows,
           pricing: {
             currency: pricing.currency,
             peakLabel: peakWindowsLabel(pricing),
             offPeakNotice: 'Les heures creuses sont a moitie prix.',
           },
-          globalBudget: globalBudgetStatus(db),
+          globalBudget: await globalBudgetStatus(db),
           clientsUsingToday: [...todayByClient.entries()]
             .map(([id, usage]) => ({ id, ...usage }))
             .sort((a, b) => b.tokens - a.tokens)
@@ -509,8 +508,8 @@ export function createAdminApi({ config, db, log, mailer }) {
       // ----------------------------- clients -----------------------------
       if (route === '/clients' && method === 'GET') {
         const todayIso = utcStartOfToday();
-        const todayByClient = perClientUsageSince(db, todayIso);
-        const clients = listClients(db).map((client) => publicClient(client, todayByClient.get(client.id)));
+        const todayByClient = await perClientUsageSince(db, todayIso);
+        const clients = (await listClients(db)).map((client) => publicClient(client, todayByClient.get(client.id)));
         sendJson(res, 200, { clients });
         return;
       }
@@ -518,11 +517,11 @@ export function createAdminApi({ config, db, log, mailer }) {
       if (route === '/clients' && method === 'POST') {
         const body = await readJsonBody(req, 64 * 1024);
         const payload = parseClientPayload(body);
-        if (listClients(db).some((c) => c.name === payload.name)) {
+        if ((await listClients(db)).some((c) => c.name === payload.name)) {
           adminError(res, 409, 'Ce nom est deja utilise par une autre cle.', 'duplicate_name');
           return;
         }
-        if (payload.email && findClientByEmail(db, payload.email)) {
+        if (payload.email && await findClientByEmail(db, payload.email)) {
           adminError(res, 409, 'Cette adresse email est deja associee a une autre cle.', 'duplicate_email');
           return;
         }
@@ -551,10 +550,10 @@ export function createAdminApi({ config, db, log, mailer }) {
           note: payload.note ?? null,
           createdAt: now.toISOString(),
         };
-        insertClient(db, client);
+        await insertClient(db, client);
         audit(req, 'client.create', client.name, client.id);
         log.info(`Cle derivee creee pour "${client.name}".`);
-        sendJson(res, 201, { client: publicClient(getClientById(db, client.id)), key: apiKey });
+        sendJson(res, 201, { client: publicClient(await getClientById(db, client.id)), key: apiKey });
         return;
       }
 
@@ -562,7 +561,7 @@ export function createAdminApi({ config, db, log, mailer }) {
       if (clientMatch) {
         const clientId = clientMatch[1];
         const subRoute = clientMatch[2] ?? '';
-        const existing = getClientById(db, clientId);
+        const existing = await getClientById(db, clientId);
         if (!existing) {
           adminError(res, 404, 'Cle introuvable.', 'not_found');
           return;
@@ -577,31 +576,31 @@ export function createAdminApi({ config, db, log, mailer }) {
           const body = await readJsonBody(req, 64 * 1024);
           const payload = parseClientPayload(body, { partial: true });
           if (payload.name != null) {
-            const duplicate = listClients(db).find((c) => c.id !== clientId && c.name === payload.name);
+            const duplicate = (await listClients(db)).find((c) => c.id !== clientId && c.name === payload.name);
             if (duplicate) {
               adminError(res, 409, 'Ce nom est deja utilise par une autre cle.', 'duplicate_name');
               return;
             }
           }
           if (payload.email) {
-            const duplicate = findClientByEmail(db, payload.email);
+            const duplicate = await findClientByEmail(db, payload.email);
             if (duplicate && duplicate.id !== clientId) {
               adminError(res, 409, 'Cette adresse email est deja associee a une autre cle.', 'duplicate_email');
               return;
             }
           }
-          updateClientFields(db, clientId, payload);
+          await updateClientFields(db, clientId, payload);
           if (payload.period && payload.period !== existing.period) {
-            resetClientUsage(db, clientId, periodKeyFor(payload.period));
+            await resetClientUsage(db, clientId, periodKeyFor(payload.period));
           }
           audit(req, 'client.update', existing.name, Object.keys(payload).join(','));
           log.info(`Cle "${existing.name}" mise a jour.`);
-          sendJson(res, 200, { client: publicClient(getClientById(db, clientId)) });
+          sendJson(res, 200, { client: publicClient(await getClientById(db, clientId)) });
           return;
         }
 
         if (!subRoute && method === 'DELETE') {
-          deleteClient(db, clientId);
+          await deleteClient(db, clientId);
           audit(req, 'client.delete', existing.name, clientId);
           log.info(`Cle "${existing.name}" supprimee (avec ses journaux).`);
           sendJson(res, 200, { ok: true });
@@ -610,21 +609,21 @@ export function createAdminApi({ config, db, log, mailer }) {
 
         if (subRoute === '/regenerate' && method === 'POST') {
           const apiKey = generateDerivedKey();
-          updateClientFields(db, clientId, {
+          await updateClientFields(db, clientId, {
             keyHash: hashApiKey(apiKey),
             keyPrefix: displayKeyPrefix(apiKey),
           });
           audit(req, 'client.key.regenerate', existing.name);
           log.info(`Cle "${existing.name}" regeneree.`);
-          sendJson(res, 200, { client: publicClient(getClientById(db, clientId)), key: apiKey });
+          sendJson(res, 200, { client: publicClient(await getClientById(db, clientId)), key: apiKey });
           return;
         }
 
         if (subRoute === '/reset' && method === 'POST') {
-          resetClientUsage(db, clientId, periodKeyFor(existing.period));
+          await resetClientUsage(db, clientId, periodKeyFor(existing.period));
           audit(req, 'client.usage.reset', existing.name);
           log.info(`Compteurs de "${existing.name}" remis a zero.`);
-          sendJson(res, 200, { client: publicClient(getClientById(db, clientId)) });
+          sendJson(res, 200, { client: publicClient(await getClientById(db, clientId)) });
           return;
         }
 
@@ -632,7 +631,7 @@ export function createAdminApi({ config, db, log, mailer }) {
         if (logsMatch && method === 'GET') {
           const limit = Number(url.searchParams.get('limit') ?? 50);
           const offset = Number(url.searchParams.get('offset') ?? 0);
-          sendJson(res, 200, listUsageLogs(db, { limit, offset, clientId }));
+          sendJson(res, 200, await listUsageLogs(db, { limit, offset, clientId }));
           return;
         }
 
@@ -645,14 +644,14 @@ export function createAdminApi({ config, db, log, mailer }) {
         const limit = Number(url.searchParams.get('limit') ?? 50);
         const offset = Number(url.searchParams.get('offset') ?? 0);
         const clientId = url.searchParams.get('clientId') || null;
-        sendJson(res, 200, listUsageLogs(db, { limit, offset, clientId }));
+        sendJson(res, 200, await listUsageLogs(db, { limit, offset, clientId }));
         return;
       }
 
       // Export CSV des journaux (production / comptabilite).
       if (route === '/export/logs.csv' && method === 'GET') {
         const clientId = url.searchParams.get('clientId') || null;
-        const { rows } = listUsageLogs(db, { limit: 5000, offset: 0, clientId });
+        const { rows } = await listUsageLogs(db, { limit: 5000, offset: 0, clientId });
         const lines = [[
           'date', 'cle', 'modele_demande', 'modele_facture', 'tokens_entree', 'tokens_sortie',
           'tokens_total', 'cout_usd', 'statut', 'latence_ms', 'streaming', 'estime',
@@ -688,13 +687,13 @@ export function createAdminApi({ config, db, log, mailer }) {
       if (route === '/audit' && method === 'GET') {
         const limit = Number(url.searchParams.get('limit') ?? 100);
         const offset = Number(url.searchParams.get('offset') ?? 0);
-        sendJson(res, 200, listAdminAudit(db, { limit, offset }));
+        sendJson(res, 200, await listAdminAudit(db, { limit, offset }));
         return;
       }
 
       // ----------------------------- settings ----------------------------
       if (route === '/settings' && method === 'GET') {
-        sendJson(res, 200, readSettingsView());
+        sendJson(res, 200, await readSettingsView());
         return;
       }
 
@@ -714,7 +713,7 @@ export function createAdminApi({ config, db, log, mailer }) {
           if (value && !value.startsWith('sk-')) {
             throw new HttpError(400, 'Cle API invalide : elle doit commencer par "sk-".', 'invalid_api_key');
           }
-          saveProviderField(db, 'apiKey', value || null, config);
+          await saveProviderField(db, 'apiKey', value || null, config);
           changed.push('providerApiKey');
         }
 
@@ -727,7 +726,7 @@ export function createAdminApi({ config, db, log, mailer }) {
             );
           }
           const value = validateHttpUrl(body.providerBaseUrl, "URL de l'API DeepSeek");
-          saveProviderField(db, 'baseUrl', value || null, config);
+          await saveProviderField(db, 'baseUrl', value || null, config);
           changed.push('providerBaseUrl');
         }
 
@@ -736,7 +735,7 @@ export function createAdminApi({ config, db, log, mailer }) {
             throw new HttpError(409, "L'URL publique est definie par PUBLIC_BASE_URL.", 'env_managed');
           }
           const value = validateHttpUrl(body.publicBaseUrl, "URL publique de la passerelle");
-          setSetting(db, 'public_base_url', value);
+          await setSetting(db, 'public_base_url', value);
           changed.push('publicBaseUrl');
         }
 
@@ -747,14 +746,14 @@ export function createAdminApi({ config, db, log, mailer }) {
           } catch (err) {
             throw new HttpError(400, `Tarification invalide : ${err.message}`, 'invalid_pricing');
           }
-          setSetting(db, 'pricing', pricing);
+          await setSetting(db, 'pricing', pricing);
           changed.push('pricing');
         }
 
         if (body.modelAliases !== undefined) {
           if (body.modelAliases === null) {
             // Retour aux alias par defaut.
-            deleteSetting(db, 'model_aliases');
+            await deleteSetting(db, 'model_aliases');
             changed.push('modelAliases(reset)');
           } else {
             let aliases;
@@ -763,7 +762,7 @@ export function createAdminApi({ config, db, log, mailer }) {
             } catch (err) {
               throw new HttpError(400, `Alias de modeles invalides : ${err.message}`, 'invalid_aliases');
             }
-            setSetting(db, 'model_aliases', aliases);
+            await setSetting(db, 'model_aliases', aliases);
             changed.push('modelAliases');
           }
         }
@@ -771,21 +770,21 @@ export function createAdminApi({ config, db, log, mailer }) {
         if (body.globalBudgetUsd !== undefined) {
           const raw = body.globalBudgetUsd;
           if (raw === null || raw === '' || Number(raw) === 0) {
-            saveGlobalBudgetUsd(db, 0);
+            await saveGlobalBudgetUsd(db, 0);
             changed.push('globalBudgetUsd(desactive)');
           } else {
             const budget = Number(raw);
             if (!Number.isFinite(budget) || budget < 0 || budget > 10_000_000) {
               throw new HttpError(400, 'Budget global invalide (USD, 0 = desactive).', 'invalid_budget');
             }
-            saveGlobalBudgetUsd(db, budget);
+            await saveGlobalBudgetUsd(db, budget);
             changed.push('globalBudgetUsd');
           }
         }
 
         log.info(`Reglages mis a jour : ${changed.join(', ') || 'aucun changement'}.`);
         audit(req, 'settings.update', 'settings', changed.join(',') || 'aucun changement');
-        sendJson(res, 200, { ok: true, settings: readSettingsView() });
+        sendJson(res, 200, { ok: true, settings: await readSettingsView() });
         return;
       }
 
@@ -793,7 +792,7 @@ export function createAdminApi({ config, db, log, mailer }) {
         const body = await readJsonBody(req, 16 * 1024);
         const currentPassword = String(body.currentPassword ?? '');
         const newPassword = String(body.newPassword ?? '');
-        if (!checkAdminPassword(db, currentPassword)) {
+        if (!await checkAdminPassword(db, currentPassword)) {
           adminError(res, 401, 'Mot de passe actuel incorrect.', 'invalid_password');
           return;
         }
@@ -801,10 +800,10 @@ export function createAdminApi({ config, db, log, mailer }) {
           adminError(res, 400, 'Le nouveau mot de passe doit contenir au moins 12 caracteres.', 'weak_password');
           return;
         }
-        changeAdminPassword(db, newPassword);
-        deleteAllAdminSessions(db);
+        await changeAdminPassword(db, newPassword);
+        await deleteAllAdminSessions(db);
         const ttlMs = config.sessionHours * 3600 * 1000;
-        const { token } = createAdminSession(db, ttlMs);
+        const { token } = await createAdminSession(db, ttlMs);
         setSessionCookie(req, res, token, Math.floor(ttlMs / 1000));
         audit(req, 'admin.password.change', 'admin');
         log.info('Mot de passe administrateur modifie.');
@@ -857,4 +856,6 @@ export function createAdminApi({ config, db, log, mailer }) {
 
   return { handle, readSettingsView };
 }
+
+
 

@@ -202,7 +202,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
       );
       return;
     }
-    let client = findClientByApiKey(db, apiKey);
+    let client = await findClientByApiKey(db, apiKey);
     if (!client) {
       sendApiError(
         res,
@@ -216,7 +216,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
     }
 
     // ---- 2. Remise a zero de periode + droits -------------------------
-    client = maybeRollPeriod(db, client);
+    client = await maybeRollPeriod(db, client);
     const denied = checkClientAccess(client);
     if (denied) {
       log.warn(`Quota/refus ${client.name} (${denied.code})`);
@@ -261,18 +261,20 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
     };
 
     const responseHeaders = { ...cors, ...quotaHeaders(client) };
-    const pricing = loadPricing(() => getSetting(db, 'pricing', null));
-    const modelAliases = loadModelAliases(() => getSetting(db, 'model_aliases', null));
+    const pricingValue = await getSetting(db, 'pricing', null);
+    const aliasesValue = await getSetting(db, 'model_aliases', null);
+    const pricing = loadPricing(() => pricingValue);
+    const modelAliases = loadModelAliases(() => aliasesValue);
 
     let recorded = false;
     // Nom de modele demande par le client quand il differe du modele facture
     // (ex. fable-5.1 -> deepseek-flash), pour un journal de facturation reel.
     let logRequestedModel = null;
-    const record = (opts) => {
+    const record = async (opts) => {
       if (recorded) return;
       recorded = true;
       try {
-        recordUsage(db, client.id, {
+        await recordUsage(db, client.id, {
           model: opts.model ?? null,
           requestedModel: opts.requestedModel ?? logRequestedModel,
           usage: opts.usage ?? null,
@@ -319,7 +321,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
 
       // Garde-fou budget global mensuel (production, multi-utilisateurs).
       if (req.method !== 'GET') {
-        const budget = globalBudgetStatus(db);
+        const budget = await globalBudgetStatus(db);
         if (budget.exceeded) {
           log.warn(
             `[${req.requestId ?? '-'}] Budget global mensuel atteint (${budget.spentUsd} / ${budget.limitUsd} USD).`,
@@ -398,7 +400,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
       }
 
       // ---- 5. Cle originale cote fournisseur --------------------------
-      const provider = resolveProvider(db, config);
+      const provider = await resolveProvider(db, config);
       if (!provider.apiKey) {
         log.error("Cle API DeepSeek originale non configuree.");
         sendApiError(
@@ -451,7 +453,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
         res.off('close', onResClose);
         const aborted = err?.name === 'AbortError';
         if (aborted && clientGone) {
-          record({
+          await record({
             model: modelFromRequest,
             usage: estimateUsage(rawBody ?? '', bytesStreamed),
             costUsd: computeCost(estimateUsage(rawBody ?? '', bytesStreamed), modelFromRequest, pricing),
@@ -465,7 +467,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           return;
         }
         if (aborted) {
-          record({ model: modelFromRequest, status: 0, error: 'upstream_timeout' });
+          await record({ model: modelFromRequest, status: 0, error: 'upstream_timeout' });
           sendApiError(
             res,
             504,
@@ -476,7 +478,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           );
           return;
         }
-        record({ model: modelFromRequest, status: 0, error: err?.message ?? 'network_error' });
+        await record({ model: modelFromRequest, status: 0, error: err?.message ?? 'network_error' });
         log.error(`Passerelle amont injoignable : ${err?.message ?? err}`);
         sendApiError(
           res,
@@ -501,7 +503,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           clearTimeout(timeout);
           res.off('close', onResClose);
           if (err?.name === 'AbortError' && clientGone) {
-            record({
+            await record({
               model: modelFromRequest,
               usage: estimateUsage(rawBody ?? '', 0),
               costUsd: computeCost(estimateUsage(rawBody ?? '', 0), modelFromRequest, pricing),
@@ -533,7 +535,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
             estimated = true;
           }
           const cost = billedUsage ? computeCost(billedUsage, modelFromRequest ?? payload?.model, pricing) : 0;
-          record({
+          await record({
             model: modelFromRequest ?? payload?.model ?? null,
             usage: billedUsage,
             costUsd: cost,
@@ -601,7 +603,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
         const usage = streamState.usage ?? estimateUsage(rawBody ?? '', bytesStreamed);
         const estimated = !streamState.usage;
         const cost = computeCost(usage, streamState.model, pricing);
-        record({
+        await record({
           model: streamState.model,
           usage,
           costUsd: cost,
@@ -632,7 +634,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
       const usage = streamState.usage ?? estimateUsage(rawBody ?? '', bytesStreamed);
       const estimated = !streamState.usage;
       const cost = computeCost(usage, streamState.model, pricing);
-      record({
+      await record({
         model: streamState.model,
         usage,
         costUsd: cost,
@@ -677,4 +679,5 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
 
   return handleProxy;
 }
+
 

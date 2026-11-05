@@ -94,9 +94,11 @@ function fillSeries(rows, days = 30, now = new Date()) {
   return series;
 }
 
-function availableModelIds(db) {
-  const pricing = loadPricing(() => getSetting(db, 'pricing', null));
-  const aliases = loadModelAliases(() => getSetting(db, 'model_aliases', null));
+async function availableModelIds(db) {
+  const pricingValue = await getSetting(db, 'pricing', null);
+  const aliasesValue = await getSetting(db, 'model_aliases', null);
+  const pricing = loadPricing(() => pricingValue);
+  const aliases = loadModelAliases(() => aliasesValue);
   const ids = new Set(Object.keys(pricing.models ?? {}));
   for (const pattern of Object.keys(aliases ?? {})) {
     ids.add(pattern.endsWith('*') ? pattern.slice(0, -1) : pattern);
@@ -153,11 +155,8 @@ export function createPortalApi({ config, db, log, mailer = null }) {
   }
 
   function audit(req, action, target = null) {
-    try {
-      recordAdminAudit(db, { ip: clientIp(req, config.trustProxy), action, target });
-    } catch (err) {
-      log.error(`Audit portail impossible : ${err.message}`);
-    }
+    recordAdminAudit(db, { ip: clientIp(req, config.trustProxy), action, target })
+      .catch((err) => log.error(`Audit portail impossible : ${err.message}`));
   }
 
   function normalizeEmail(value) {
@@ -200,12 +199,12 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     return true;
   }
 
-  function createSession(req, res, client, method = 'api_key') {
-    cleanupPortalSessions(db, new Date().toISOString());
+  async function createSession(req, res, client, method = 'api_key') {
+    await cleanupPortalSessions(db, new Date().toISOString());
     const token = crypto.randomBytes(32).toString('base64url');
     const now = new Date();
     const expiresAt = new Date(now.getTime() + SESSION_TTL_MS).toISOString();
-    insertPortalSession(db, sha256(token), client.id, now.toISOString(), expiresAt);
+    await insertPortalSession(db, sha256(token), client.id, now.toISOString(), expiresAt);
     setPortalCookie(req, res, token, Math.floor(SESSION_TTL_MS / 1000));
     loginAttempts.delete(clientIp(req, config.trustProxy));
     const loginAction = method === 'signup' ? 'portal.signup' : method === 'email' ? 'portal.login.email' : 'portal.login';
@@ -271,11 +270,11 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     const ip = requestIp(req);
     const deviceHash = deviceHashFor(deviceId, req);
     const now = Date.now();
-    cleanupSignupIdentities(db, new Date(now - 365 * 86_400_000).toISOString());
+    await cleanupSignupIdentities(db, new Date(now - 365 * 86_400_000).toISOString());
 
     if (config.signupMaxPerIp > 0) {
       const since = new Date(now - config.signupIpWindowDays * 86_400_000).toISOString();
-      const count = countSignupIdentitiesByIp(db, ip, since);
+      const count = await countSignupIdentitiesByIp(db, ip, since);
       if (count >= config.signupMaxPerIp) {
         audit(req, 'portal.signup.blocked', 'signup_ip_limit');
         throw new HttpError(
@@ -287,7 +286,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     }
     if (config.signupMaxPerDevice > 0) {
       const since = new Date(now - config.signupDeviceWindowDays * 86_400_000).toISOString();
-      const count = countSignupIdentitiesByDevice(db, deviceHash, since);
+      const count = await countSignupIdentitiesByDevice(db, deviceHash, since);
       if (count >= config.signupMaxPerDevice) {
         audit(req, 'portal.signup.blocked', 'signup_device_limit');
         throw new HttpError(
@@ -335,7 +334,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
   }
 
   /** Cree un compte d'essai (inscription autonome ou connexion email inconnue). */
-  function createTrialClient(email, identity = null) {
+  async function createTrialClient(email, identity = null) {
     const now = new Date();
     const trialExpiry = new Date(now.getTime() + config.trialDays * 86_400_000).toISOString();
     const localPart = email.split('@')[0].replace(/[._-]+/g, ' ').trim();
@@ -362,9 +361,9 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       note: 'Inscription autonome — pass d’essai',
       createdAt: now.toISOString(),
     };
-    insertClient(db, client);
+    await insertClient(db, client);
     if (identity) {
-      insertSignupIdentity(db, {
+      await insertSignupIdentity(db, {
         ip: identity.ip,
         deviceHash: identity.deviceHash,
         email,
@@ -482,19 +481,19 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     else entry.count += 1;
   }
 
-  function sessionFromRequest(req) {
+  async function sessionFromRequest(req) {
     const cookies = parseCookies(req.headers.cookie);
     const token = cookies[PORTAL_COOKIE];
     if (!token) return null;
-    const session = getPortalSession(db, sha256(token));
+    const session = await getPortalSession(db, sha256(token));
     if (!session) return null;
     if (new Date(session.expires_at).getTime() <= Date.now()) {
-      deletePortalSession(db, sha256(token));
+      await deletePortalSession(db, sha256(token));
       return null;
     }
-    const client = getClientById(db, session.client_id);
+    const client = await getClientById(db, session.client_id);
     if (!client) {
-      deletePortalSession(db, sha256(token));
+      await deletePortalSession(db, sha256(token));
       return null;
     }
     return { token, session, client };
@@ -505,10 +504,10 @@ export function createPortalApi({ config, db, log, mailer = null }) {
    * GET /portal/api/me et /logs acceptent `Authorization: Bearer sk-dsk-...`
    * ou `x-api-key`, sans session cookie ni échange de mot de passe.
    */
-  function clientFromAuthorization(req) {
+  async function clientFromAuthorization(req) {
     const token = bearerToken(req) || String(req.headers['x-api-key'] ?? '').trim();
     if (!token) return null;
-    return findClientByApiKey(db, token);
+    return await findClientByApiKey(db, token);
   }
 
   function setPortalCookie(req, res, token, maxAgeSeconds) {
@@ -522,12 +521,12 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     );
   }
 
-  function mePayload(req, client) {
+  async function mePayload(req, client) {
     const now = new Date();
-    const today = countClientUsageSince(db, client.id, utcStartOfToday(now));
-    const totals = countClientUsageSince(db, client.id, '1970-01-01T00:00:00.000Z');
+    const today = await countClientUsageSince(db, client.id, utcStartOfToday(now));
+    const totals = await countClientUsageSince(db, client.id, '1970-01-01T00:00:00.000Z');
     const series = fillSeries(
-      clientUsageSeriesSince(db, client.id, new Date(now.getTime() - 29 * 86_400_000).toISOString()),
+      await clientUsageSeriesSince(db, client.id, new Date(now.getTime() - 29 * 86_400_000).toISOString()),
       30,
       now,
     );
@@ -556,7 +555,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           ? client.allowedModels.filter((id) => id !== 'deepseek-flash')
           : null,
       },
-      models: availableModelIds(db).filter((id) => id !== 'deepseek-flash'),
+      models: (await availableModelIds(db)).filter((id) => id !== 'deepseek-flash'),
       baseUrl: `${origin}/v1`,
       anthropicBaseUrl: `${origin}/anthropic`,
       headers: [
@@ -591,15 +590,15 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         }
         const body = await readJsonBody(req, 4 * 1024);
         const apiKey = String(body.key ?? '').trim();
-        const client = findClientByApiKey(db, apiKey);
+        const client = await findClientByApiKey(db, apiKey);
         if (!client) {
           recordLoginFailure(ip);
           audit(req, 'portal.login.failed');
           portalError(res, 401, 'Clé API invalide. Vérifiez la clé fournie par l\'administrateur.', 'invalid_api_key');
           return;
         }
-        cleanupPortalSessions(db, new Date().toISOString());
-        createSession(req, res, client, 'api_key');
+        await cleanupPortalSessions(db, new Date().toISOString());
+        await createSession(req, res, client, 'api_key');
         return;
       }
 
@@ -639,7 +638,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 400, 'Adresse email invalide.', 'invalid_email');
           return;
         }
-        const client = findClientByEmail(db, email);
+        const client = await findClientByEmail(db, email);
         if (!client && !config.signupEnabled) {
           // Reponse generique : ne revele pas l'absence de compte.
           audit(req, 'portal.email.requested');
@@ -665,9 +664,9 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
         const now = new Date();
         const expiresAt = new Date(now.getTime() + config.otpExpiresMinutes * 60_000).toISOString();
-        cleanupPortalEmailCodes(db, now.toISOString());
-        deletePortalEmailCodes(db, email);
-        insertPortalEmailCode(db, {
+        await cleanupPortalEmailCodes(db, now.toISOString());
+        await deletePortalEmailCodes(db, email);
+        await insertPortalEmailCode(db, {
           email,
           codeHash: otpHash(email, code),
           createdAt: now.toISOString(),
@@ -678,7 +677,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           await mailer.sendPortalCode({ to: email, code, minutes: config.otpExpiresMinutes });
         } catch (err) {
           releaseEmailSend(email);
-          deletePortalEmailCodes(db, email);
+          await deletePortalEmailCodes(db, email);
           audit(req, 'portal.email.send_failed', client?.name ?? null);
           log.error(`[${req.requestId ?? '-'}] Envoi email impossible : ${err.message}`);
           sendJson(res, 502, {
@@ -726,15 +725,15 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
           return;
         }
-        const record = getActivePortalEmailCode(db, email);
+        const record = await getActivePortalEmailCode(db, email);
         if (!record || new Date(record.expires_at).getTime() <= Date.now()) {
-          if (record) deletePortalEmailCode(db, record.id);
+          if (record) await deletePortalEmailCode(db, record.id);
           portalError(res, 401, 'Code expiré ou déjà utilisé. Demandez un nouveau code.', 'expired_code');
           return;
         }
         // Si l'inscription autonome est active, une adresse inconnue est acceptee :
         // le compte sera cree apres validation du code.
-        const client = findClientByEmail(db, email);
+        const client = await findClientByEmail(db, email);
         if (!client && !config.signupEnabled) {
           portalError(
             res,
@@ -744,9 +743,9 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           );
           return;
         }
-        incrementPortalEmailCodeAttempts(db, record.id);
+        await incrementPortalEmailCodeAttempts(db, record.id);
         if (Number(record.attempts) + 1 > MAX_CODE_ATTEMPTS) {
-          deletePortalEmailCode(db, record.id);
+          await deletePortalEmailCode(db, record.id);
           audit(req, 'portal.email.failed');
           portalError(res, 401, 'Trop de tentatives. Demandez un nouveau code.', 'too_many_attempts');
           return;
@@ -757,15 +756,15 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 401, 'Code incorrect. Vérifiez le dernier code reçu.', 'invalid_code');
           return;
         }
-        deletePortalEmailCode(db, record.id);
+        await deletePortalEmailCode(db, record.id);
         if (client) {
-          createSession(req, res, client, 'email');
+          await createSession(req, res, client, 'email');
           return;
         }
-        const created = createTrialClient(email, await enforceSignupPolicy(req, email, body.deviceId));
+        const created = await createTrialClient(email, await enforceSignupPolicy(req, email, body.deviceId));
         audit(req, 'portal.signup', created.name);
         log.info(`[${req.requestId ?? '-'}] Nouveau compte email via connexion : ${created.name} (essai ${config.trialDays} j)`);
-        createSession(req, res, created, 'signup');
+        await createSession(req, res, created, 'signup');
         return;
       }
 
@@ -794,7 +793,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 400, 'Adresse email invalide.', 'invalid_email');
           return;
         }
-        const existing = findClientByEmail(db, email);
+        const existing = await findClientByEmail(db, email);
         if (!existing) {
           await assertTurnstile(req, body.turnstileToken);
           await enforceSignupPolicy(req, email, body.deviceId);
@@ -814,9 +813,9 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
         const now = new Date();
         const expiresAt = new Date(now.getTime() + config.otpExpiresMinutes * 60_000).toISOString();
-        cleanupPortalEmailCodes(db, now.toISOString());
-        deletePortalEmailCodes(db, email);
-        insertPortalEmailCode(db, {
+        await cleanupPortalEmailCodes(db, now.toISOString());
+        await deletePortalEmailCodes(db, email);
+        await insertPortalEmailCode(db, {
           email,
           codeHash: otpHash(email, code),
           createdAt: now.toISOString(),
@@ -827,7 +826,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           await mailer.sendPortalCode({ to: email, code, minutes: config.otpExpiresMinutes });
         } catch (err) {
           releaseEmailSend(email);
-          deletePortalEmailCodes(db, email);
+          await deletePortalEmailCodes(db, email);
           audit(req, 'portal.signup.send_failed');
           log.error(`[${req.requestId ?? '-'}] Envoi email inscription impossible : ${err.message}`);
           sendJson(res, 502, {
@@ -870,15 +869,15 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
           return;
         }
-        const record = getActivePortalEmailCode(db, email);
+        const record = await getActivePortalEmailCode(db, email);
         if (!record || new Date(record.expires_at).getTime() <= Date.now()) {
-          if (record) deletePortalEmailCode(db, record.id);
+          if (record) await deletePortalEmailCode(db, record.id);
           portalError(res, 401, 'Code expiré ou déjà utilisé. Demandez un nouveau code.', 'expired_code');
           return;
         }
-        incrementPortalEmailCodeAttempts(db, record.id);
+        await incrementPortalEmailCodeAttempts(db, record.id);
         if (Number(record.attempts) + 1 > MAX_CODE_ATTEMPTS) {
-          deletePortalEmailCode(db, record.id);
+          await deletePortalEmailCode(db, record.id);
           portalError(res, 401, 'Trop de tentatives. Demandez un nouveau code.', 'too_many_attempts');
           return;
         }
@@ -887,30 +886,30 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 401, 'Code incorrect. Vérifiez le dernier code reçu.', 'invalid_code');
           return;
         }
-        deletePortalEmailCode(db, record.id);
+        await deletePortalEmailCode(db, record.id);
 
         // Compte déjà existant : on connecte simplement (pas de doublon).
-        const existing = findClientByEmail(db, email);
+        const existing = await findClientByEmail(db, email);
         if (existing) {
-          createSession(req, res, existing, 'email');
+          await createSession(req, res, existing, 'email');
           return;
         }
 
-        const client = createTrialClient(email, await enforceSignupPolicy(req, email, body.deviceId));
+        const client = await createTrialClient(email, await enforceSignupPolicy(req, email, body.deviceId));
         audit(req, 'portal.signup', client.name);
         log.info(`[${req.requestId ?? '-'}] Nouveau compte email : ${client.name} (essai ${config.trialDays} j)`);
-        createSession(req, res, client, 'signup');
+        await createSession(req, res, client, 'signup');
         return;
       }
 
       if (route === '/key' && method === 'POST') {
-        const current = sessionFromRequest(req);
+        const current = await sessionFromRequest(req);
         if (!current) {
           portalError(res, 401, 'Session portail expirée. Reconnectez-vous.', 'unauthorized');
           return;
         }
         if (!requireCsrf(req, res)) return;
-        const client = getClientById(db, current.client.id);
+        const client = await getClientById(db, current.client.id);
         if (!client) {
           portalError(res, 401, 'Compte introuvable.', 'unauthorized');
           return;
@@ -920,7 +919,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           return;
         }
         const apiKey = generateDerivedKey();
-        updateClientFields(db, client.id, {
+        await updateClientFields(db, client.id, {
           keyHash: hashApiKey(apiKey),
           keyPrefix: displayKeyPrefix(apiKey),
         });
@@ -931,19 +930,19 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       }
 
       if (route === '/key/rotate' && method === 'POST') {
-        const current = sessionFromRequest(req);
+        const current = await sessionFromRequest(req);
         if (!current) {
           portalError(res, 401, 'Session portail expirée. Reconnectez-vous.', 'unauthorized');
           return;
         }
         if (!requireCsrf(req, res)) return;
-        const client = getClientById(db, current.client.id);
+        const client = await getClientById(db, current.client.id);
         if (!client || !hasKeyFor(client)) {
           portalError(res, 409, 'Aucune clé API à régénérer.', 'no_key');
           return;
         }
         const apiKey = generateDerivedKey();
-        updateClientFields(db, client.id, {
+        await updateClientFields(db, client.id, {
           keyHash: hashApiKey(apiKey),
           keyPrefix: displayKeyPrefix(apiKey),
         });
@@ -954,7 +953,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       }
 
       if (route === '/profile' && method === 'PUT') {
-        const current = sessionFromRequest(req);
+        const current = await sessionFromRequest(req);
         if (!current) {
           portalError(res, 401, 'Session portail expirée. Reconnectez-vous.', 'unauthorized');
           return;
@@ -966,16 +965,16 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 400, 'Le nom doit contenir entre 1 et 80 caractères.', 'invalid_name');
           return;
         }
-        updateClientFields(db, current.client.id, { name });
+        await updateClientFields(db, current.client.id, { name });
         audit(req, 'portal.profile.update', name);
         sendJson(res, 200, { ok: true, name });
         return;
       }
 
       if (route === '/logout' && method === 'POST') {
-        const current = sessionFromRequest(req);
+        const current = await sessionFromRequest(req);
         if (current) {
-          deletePortalSession(db, sha256(current.token));
+          await deletePortalSession(db, sha256(current.token));
           audit(req, 'portal.logout', current.client.name);
         }
         setPortalCookie(req, res, '', 0);
@@ -984,28 +983,28 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       }
 
       if (route === '/me' && method === 'GET') {
-        const current = sessionFromRequest(req);
-        const authorizedClient = current ? null : clientFromAuthorization(req);
+        const current = await sessionFromRequest(req);
+        const authorizedClient = current ? null : await clientFromAuthorization(req);
         if (!current && !authorizedClient) {
           portalError(res, 401, 'Session portail expirée. Reconnectez-vous.', 'unauthorized');
           return;
         }
-        let client = maybeRollPeriod(db, current?.client ?? authorizedClient);
-        client = getClientById(db, client.id) ?? client;
-        sendJson(res, 200, mePayload(req, client));
+        let client = await maybeRollPeriod(db, current?.client ?? authorizedClient);
+        client = await getClientById(db, client.id) ?? client;
+        sendJson(res, 200, await mePayload(req, client));
         return;
       }
 
       if (route === '/logs' && method === 'GET') {
-        const current = sessionFromRequest(req);
-        const authorizedClient = current ? null : clientFromAuthorization(req);
+        const current = await sessionFromRequest(req);
+        const authorizedClient = current ? null : await clientFromAuthorization(req);
         if (!current && !authorizedClient) {
           portalError(res, 401, 'Session portail expirée. Reconnectez-vous.', 'unauthorized');
           return;
         }
         const limit = Number(url.searchParams.get('limit') ?? 50);
         const logsClient = current?.client ?? authorizedClient;
-        const data = listUsageLogs(db, { limit, offset: 0, clientId: logsClient.id });
+        const data = await listUsageLogs(db, { limit, offset: 0, clientId: logsClient.id });
         sendJson(res, 200, {
           total: data.total,
           // Les utilisateurs ne doivent pas voir le modele reellement facture.
@@ -1042,4 +1041,11 @@ export function createPortalApi({ config, db, log, mailer = null }) {
 
   return { handle };
 }
+
+
+
+
+
+
+
 
