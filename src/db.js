@@ -85,6 +85,17 @@ CREATE TABLE IF NOT EXISTS admin_audit (
   details TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_audit_created ON admin_audit (created_at);
+
+-- Traçabilite anti-abus des inscriptions (1 compte par IP / appareil).
+CREATE TABLE IF NOT EXISTS signup_identities (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ip TEXT NOT NULL,
+  device_hash TEXT,
+  email TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_signup_ip ON signup_identities (ip, created_at);
+CREATE INDEX IF NOT EXISTS idx_signup_device ON signup_identities (device_hash, created_at);
 `;
 
 export function openDb(dataDir) {
@@ -230,6 +241,29 @@ export function deletePortalEmailCode(db, id) {
 
 export function cleanupPortalEmailCodes(db, nowIso) {
   db.prepare('DELETE FROM portal_email_codes WHERE expires_at <= ?').run(nowIso);
+}
+
+export function insertSignupIdentity(db, { ip, deviceHash = null, email, createdAt }) {
+  db.prepare(
+    'INSERT INTO signup_identities (ip, device_hash, email, created_at) VALUES (?, ?, ?, ?)',
+  ).run(String(ip), deviceHash == null ? null : String(deviceHash), String(email), createdAt);
+}
+
+export function countSignupIdentitiesByIp(db, ip, sinceIso) {
+  return Number(db.prepare(
+    'SELECT COUNT(*) AS n FROM signup_identities WHERE ip = ? AND created_at >= ?',
+  ).get(String(ip), sinceIso)?.n ?? 0);
+}
+
+export function countSignupIdentitiesByDevice(db, deviceHash, sinceIso) {
+  if (!deviceHash) return 0;
+  return Number(db.prepare(
+    'SELECT COUNT(*) AS n FROM signup_identities WHERE device_hash = ? AND created_at >= ?',
+  ).get(String(deviceHash), sinceIso)?.n ?? 0);
+}
+
+export function cleanupSignupIdentities(db, beforeIso) {
+  db.prepare('DELETE FROM signup_identities WHERE created_at < ?').run(beforeIso);
 }
 
 export function getClientByKeyHash(db, keyHash) {

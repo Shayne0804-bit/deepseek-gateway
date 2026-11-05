@@ -159,6 +159,41 @@ export function loadConfig(overrides = {}) {
     trialRpmLimit: overrides.trialRpmLimit ?? intOr(raw('TRIAL_RPM_LIMIT'), 20),
     trialConcurrencyLimit: overrides.trialConcurrencyLimit ?? intOr(raw('TRIAL_CONCURRENCY_LIMIT'), 2),
     trialMaxOutputTokens: overrides.trialMaxOutputTokens ?? intOr(raw('TRIAL_MAX_OUTPUT_TOKENS'), 4096),
+    // Anti-abus inscription : 1 compte par IP / appareil sur une fenetre.
+    signupMaxPerIp: overrides.signupMaxPerIp ?? intOr(raw('SIGNUP_MAX_PER_IP'), 1),
+    signupIpWindowDays: overrides.signupIpWindowDays ?? intOr(raw('SIGNUP_IP_WINDOW_DAYS'), 30),
+    signupMaxPerDevice: overrides.signupMaxPerDevice ?? intOr(raw('SIGNUP_MAX_PER_DEVICE'), 1),
+    signupDeviceWindowDays: overrides.signupDeviceWindowDays ?? intOr(raw('SIGNUP_DEVICE_WINDOW_DAYS'), 30),
+    blockTempMail: overrides.blockTempMail ?? boolOr(raw('BLOCK_TEMP_MAIL'), true),
+    blockedEmailDomains: overrides.blockedEmailDomains
+      ?? String(raw('BLOCKED_EMAIL_DOMAINS') ?? '')
+        .split(',').map((entry) => entry.trim()).filter(Boolean),
+    // Verification anti-bot Cloudflare Turnstile (recommande, gratuit).
+    turnstileSiteKey: overrides.turnstileSiteKey ?? raw('TURNSTILE_SITE_KEY') ?? '',
+    turnstileSecretKey: overrides.turnstileSecretKey ?? raw('TURNSTILE_SECRET_KEY') ?? '',
+    turnstileVerifyUrl: overrides.turnstileVerifyUrl
+      ?? raw('TURNSTILE_VERIFY_URL')
+      ?? 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+    turnstileRequired: overrides.turnstileRequired ?? boolOr(raw('TURNSTILE_REQUIRED'), true),
+    turnstileTimeoutMs: overrides.turnstileTimeoutMs ?? intOr(raw('TURNSTILE_TIMEOUT_MS'), 5000),
+    // Intelligence IP + email (IPQualityScore) pour VPN et emails jetables.
+    ipqsApiKey: overrides.ipqsApiKey ?? raw('IPQS_API_KEY') ?? '',
+    ipqsApiBase: stripTrailingSlash(overrides.ipqsApiBase ?? raw('IPQS_API_BASE') ?? 'https://ipqualityscore.com/api/json'),
+    ipqsMinFraudScore: overrides.ipqsMinFraudScore ?? intOr(raw('IPQS_MIN_FRAUD_SCORE'), 85),
+    ipqsBlockVpn: overrides.ipqsBlockVpn ?? boolOr(raw('IPQS_BLOCK_VPN'), true),
+    ipqsBlockHosting: overrides.ipqsBlockHosting ?? boolOr(raw('IPQS_BLOCK_HOSTING'), true),
+    fraudCheckEnabled: overrides.fraudCheckEnabled ?? boolOr(raw('FRAUD_CHECK_ENABLED'), true),
+    emailValidationEnabled: overrides.emailValidationEnabled ?? boolOr(raw('EMAIL_VALIDATION_ENABLED'), false),
+    fraudFailClosed: overrides.fraudFailClosed ?? boolOr(raw('FRAUD_FAIL_CLOSED'), true),
+    fraudTimeoutMs: overrides.fraudTimeoutMs ?? intOr(raw('FRAUD_TIMEOUT_MS'), 5000),
+    trustCloudflare: overrides.trustCloudflare ?? boolOr(raw('TRUST_CLOUDFLARE'), false),
+    ipIntelEnabled: overrides.ipIntelEnabled ?? boolOr(raw('IP_INTEL_ENABLED'), false),
+    ipIntelUrl: overrides.ipIntelUrl
+      ?? raw('IP_INTEL_URL')
+      ?? 'http://ip-api.com/json/{ip}?fields=status,proxy,hosting,mobile,country,isp',
+    ipIntelTimeoutMs: overrides.ipIntelTimeoutMs ?? intOr(raw('IP_INTEL_TIMEOUT_MS'), 2500),
+    ipIntelFailClosed: overrides.ipIntelFailClosed ?? boolOr(raw('IP_INTEL_FAIL_CLOSED'), false),
+    blockVpn: overrides.blockVpn ?? boolOr(raw('BLOCK_VPN'), true),
   };
 
   if (!Number.isInteger(config.port) || config.port < 0 || config.port > 65535) {
@@ -192,6 +227,36 @@ export function loadConfig(overrides = {}) {
   if (!Number.isFinite(config.otpMaxPerIp) || config.otpMaxPerIp < 1 || config.otpMaxPerIp > 50) {
     config.otpMaxPerIp = 10;
   }
+  for (const key of ['signupMaxPerIp', 'signupMaxPerDevice']) {
+    if (!Number.isFinite(config[key]) || config[key] < 0 || config[key] > 10) config[key] = 1;
+  }
+  for (const key of ['signupIpWindowDays', 'signupDeviceWindowDays']) {
+    if (!Number.isFinite(config[key]) || config[key] < 1 || config[key] > 365) config[key] = 30;
+  }
+  if (!Number.isFinite(config.ipIntelTimeoutMs) || config.ipIntelTimeoutMs < 500 || config.ipIntelTimeoutMs > 10_000) {
+    config.ipIntelTimeoutMs = 2500;
+  }
+  config.blockTempMail = Boolean(config.blockTempMail);
+  config.ipIntelEnabled = Boolean(config.ipIntelEnabled);
+  config.ipIntelFailClosed = Boolean(config.ipIntelFailClosed);
+  config.blockVpn = Boolean(config.blockVpn);
+  config.trustCloudflare = Boolean(config.trustCloudflare);
+  if (!Number.isFinite(config.ipqsMinFraudScore) || config.ipqsMinFraudScore < 0 || config.ipqsMinFraudScore > 100) {
+    config.ipqsMinFraudScore = 85;
+  }
+  if (!Number.isFinite(config.turnstileTimeoutMs) || config.turnstileTimeoutMs < 500 || config.turnstileTimeoutMs > 15_000) {
+    config.turnstileTimeoutMs = 5000;
+  }
+  if (!Number.isFinite(config.fraudTimeoutMs) || config.fraudTimeoutMs < 500 || config.fraudTimeoutMs > 15_000) {
+    config.fraudTimeoutMs = 5000;
+  }
+  config.turnstileConfigured = Boolean(config.turnstileSiteKey && config.turnstileSecretKey);
+  config.turnstileRequired = Boolean(config.turnstileRequired) && config.turnstileConfigured;
+  config.fraudCheckEnabled = Boolean(config.fraudCheckEnabled) && Boolean(config.ipqsApiKey);
+  config.ipqsBlockVpn = Boolean(config.ipqsBlockVpn);
+  config.ipqsBlockHosting = Boolean(config.ipqsBlockHosting);
+  config.emailValidationEnabled = Boolean(config.emailValidationEnabled) && config.fraudCheckEnabled;
+  config.fraudFailClosed = Boolean(config.fraudFailClosed);
   // BILLED_MODEL=none / off : desactive le forcage (comportement historique).
   if (['none', 'off', '0', 'false'].includes(String(config.billedModel ?? '').trim().toLowerCase())) {
     config.billedModel = '';
@@ -221,6 +286,7 @@ export function loadConfig(overrides = {}) {
   config.signupEnabled = Boolean(config.signupEnabled);
   return config;
 }
+
 
 
 

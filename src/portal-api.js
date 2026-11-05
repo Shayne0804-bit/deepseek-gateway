@@ -10,8 +10,11 @@ import { APP_VERSION } from './config.js';
 import {
   cleanupPortalEmailCodes,
   cleanupPortalSessions,
+  cleanupSignupIdentities,
   clientUsageSeriesSince,
   countClientUsageSince,
+  countSignupIdentitiesByDevice,
+  countSignupIdentitiesByIp,
   deletePortalEmailCode,
   deletePortalEmailCodes,
   deletePortalSession,
@@ -24,6 +27,7 @@ import {
   insertClient,
   insertPortalEmailCode,
   insertPortalSession,
+  insertSignupIdentity,
   listUsageLogs,
   recordAdminAudit,
   updateClientFields,
@@ -44,6 +48,8 @@ import {
 } from './quota.js';
 import { loadPricing } from './pricing.js';
 import { loadModelAliases } from './model-aliases.js';
+import { deviceHashFor, isDisposableEmail } from './abuse.js';
+import { lookupIpqsEmail, lookupIpqsIp, verifyTurnstile } from './fraud.js';
 import {
   bearerToken,
   clientIp,
@@ -122,6 +128,25 @@ export function createPortalApi({ config, db, log, mailer = null }) {
   const emailVerifyAttempts = new Map();
   const emailLastSend = new Map();
   const emailSendWindow = new Map();
+  const fraudIpCache = new Map();
+  const fraudEmailCache = new Map();
+  const FRAUD_CACHE_MS = 10 * 60 * 1000;
+
+  async function fraudIp(ip) {
+    const cached = fraudIpCache.get(ip);
+    if (cached && Date.now() - cached.at < FRAUD_CACHE_MS) return cached.value;
+    const value = await lookupIpqsIp(ip, config);
+    fraudIpCache.set(ip, { at: Date.now(), value });
+    return value;
+  }
+
+  async function fraudEmail(email) {
+    const cached = fraudEmailCache.get(email);
+    if (cached && Date.now() - cached.at < FRAUD_CACHE_MS) return cached.value;
+    const value = await lookupIpqsEmail(email, config);
+    fraudEmailCache.set(email, { at: Date.now(), value });
+    return value;
+  }
 
   function portalError(res, status, message, code = null) {
     sendApiError(res, status, message, status === 429 ? 'rate_limit_error' : 'invalid_request_error', code);
@@ -199,8 +224,118 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     return Boolean(client?.keyPrefix && String(client.keyPrefix).startsWith('sk-dsk-'));
   }
 
+  /** IP reelle derriere Cloudflare si TRUST_CLOUDFLARE=1, sinon proxy standard. */
+  function requestIp(req) {
+    const cloudflareIp = String(req.headers['cf-connecting-ip'] ?? '').trim();
+    if (config.trustCloudflare && cloudflareIp) return cloudflareIp;
+    return clientIp(req, config.trustProxy);
+  }
+
+  /** Verification anti-bot Turnstile, fail-closed si le service est en erreur. */
+  async function assertTurnstile(req, token) {
+    if (!config.turnstileRequired) return;
+    try {
+      const result = await verifyTurnstile(token, requestIp(req), config);
+      if (!result.ok) {
+        audit(req, 'portal.signup.blocked', 'turnstile_failed');
+        throw new HttpError(
+          403,
+          'Vérification anti-bot échouée. Rechargez la page, attendez la validation du captcha puis réessayez.',
+          'turnstile_failed',
+        );
+      }
+    } catch (err) {
+      if (err instanceof HttpError) throw err;
+      log.error(`[${req.requestId ?? '-'}] Verification Turnstile impossible : ${err.message}`);
+      throw new HttpError(
+        503,
+        'La vérification anti-bot est momentanément indisponible. Réessayez dans quelques instants.',
+        'turnstile_unavailable',
+      );
+    }
+  }
+
+  /**
+   * Anti-abus avant creation d'un compte : email jetable, 1 compte par IP et
+   * par appareil sur la fenetre configuree, VPN/proxy optionnel.
+   */
+  async function enforceSignupPolicy(req, email, deviceId) {
+    if (config.blockTempMail && isDisposableEmail(email, config.blockedEmailDomains)) {
+      audit(req, 'portal.signup.blocked', 'email_disposable');
+      throw new HttpError(
+        400,
+        'Les adresses email jetables (temp mail) ne sont pas acceptées. Utilisez une adresse personnelle.',
+        'email_disposable',
+      );
+    }
+    const ip = requestIp(req);
+    const deviceHash = deviceHashFor(deviceId, req);
+    const now = Date.now();
+    cleanupSignupIdentities(db, new Date(now - 365 * 86_400_000).toISOString());
+
+    if (config.signupMaxPerIp > 0) {
+      const since = new Date(now - config.signupIpWindowDays * 86_400_000).toISOString();
+      const count = countSignupIdentitiesByIp(db, ip, since);
+      if (count >= config.signupMaxPerIp) {
+        audit(req, 'portal.signup.blocked', 'signup_ip_limit');
+        throw new HttpError(
+          403,
+          `Un compte a déjà été créé depuis cette connexion. Un seul compte est autorisé par IP sur ${config.signupIpWindowDays} jours. Connectez-vous ou contactez l’administrateur.`,
+          'signup_ip_limit',
+        );
+      }
+    }
+    if (config.signupMaxPerDevice > 0) {
+      const since = new Date(now - config.signupDeviceWindowDays * 86_400_000).toISOString();
+      const count = countSignupIdentitiesByDevice(db, deviceHash, since);
+      if (count >= config.signupMaxPerDevice) {
+        audit(req, 'portal.signup.blocked', 'signup_device_limit');
+        throw new HttpError(
+          403,
+          `Un compte a déjà été créé depuis cet appareil. Un seul compte est autorisé par appareil sur ${config.signupDeviceWindowDays} jours.`,
+          'signup_device_limit',
+        );
+      }
+    }
+    if (config.fraudCheckEnabled) {
+      try {
+        const ipReputation = await fraudIp(ip);
+        if (ipReputation.blocked) {
+          audit(req, 'portal.signup.blocked', 'vpn_detected');
+          throw new HttpError(
+            403,
+            `Création de compte refusée depuis cette connexion (${ipReputation.reasons.join(', ')}). Désactivez VPN/proxy puis réessayez.`,
+            'vpn_detected',
+          );
+        }
+        if (config.emailValidationEnabled) {
+          const emailReputation = await fraudEmail(email);
+          if (emailReputation.blocked) {
+            audit(req, 'portal.signup.blocked', 'email_rejected');
+            throw new HttpError(
+              400,
+              `Adresse email refusée (${emailReputation.reasons.join(', ')}). Utilisez une adresse personnelle valide.`,
+              'email_rejected',
+            );
+          }
+        }
+      } catch (err) {
+        if (err instanceof HttpError) throw err;
+        log.error(`[${req.requestId ?? '-'}] Verification anti-fraude impossible : ${err.message}`);
+        if (config.fraudFailClosed) {
+          throw new HttpError(
+            503,
+            'La vérification anti-fraude est indisponible. Réessayez dans quelques instants.',
+            'fraud_check_unavailable',
+          );
+        }
+      }
+    }
+    return { ip, deviceHash };
+  }
+
   /** Cree un compte d'essai (inscription autonome ou connexion email inconnue). */
-  function createTrialClient(email) {
+  function createTrialClient(email, identity = null) {
     const now = new Date();
     const trialExpiry = new Date(now.getTime() + config.trialDays * 86_400_000).toISOString();
     const localPart = email.split('@')[0].replace(/[._-]+/g, ' ').trim();
@@ -228,6 +363,14 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       createdAt: now.toISOString(),
     };
     insertClient(db, client);
+    if (identity) {
+      insertSignupIdentity(db, {
+        ip: identity.ip,
+        deviceHash: identity.deviceHash,
+        email,
+        createdAt: now.toISOString(),
+      });
+    }
     return client;
   }
 
@@ -464,6 +607,8 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         sendJson(res, 200, {
           emailLoginEnabled: Boolean(mailer?.enabled),
           signupEnabled: Boolean(config.signupEnabled) && Boolean(mailer?.enabled),
+          turnstileSiteKey: config.turnstileSiteKey || null,
+          turnstileRequired: Boolean(config.turnstileRequired),
           method: mailer?.enabled ? 'email' : null,
         });
         return;
@@ -500,6 +645,10 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           audit(req, 'portal.email.requested');
           sendJson(res, 200, emailCodeMessage());
           return;
+        }
+        if (!client) {
+          await assertTurnstile(req, body.turnstileToken);
+          await enforceSignupPolicy(req, email, body.deviceId);
         }
         const send = reserveEmailSend(email);
         if (!send.ok) {
@@ -613,7 +762,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           createSession(req, res, client, 'email');
           return;
         }
-        const created = createTrialClient(email);
+        const created = createTrialClient(email, await enforceSignupPolicy(req, email, body.deviceId));
         audit(req, 'portal.signup', created.name);
         log.info(`[${req.requestId ?? '-'}] Nouveau compte email via connexion : ${created.name} (essai ${config.trialDays} j)`);
         createSession(req, res, created, 'signup');
@@ -644,6 +793,11 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         if (!EMAIL_RE.test(email) || email.length > 254) {
           portalError(res, 400, 'Adresse email invalide.', 'invalid_email');
           return;
+        }
+        const existing = findClientByEmail(db, email);
+        if (!existing) {
+          await assertTurnstile(req, body.turnstileToken);
+          await enforceSignupPolicy(req, email, body.deviceId);
         }
         const send = reserveEmailSend(email);
         if (!send.ok) {
@@ -742,7 +896,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           return;
         }
 
-        const client = createTrialClient(email);
+        const client = createTrialClient(email, await enforceSignupPolicy(req, email, body.deviceId));
         audit(req, 'portal.signup', client.name);
         log.info(`[${req.requestId ?? '-'}] Nouveau compte email : ${client.name} (essai ${config.trialDays} j)`);
         createSession(req, res, client, 'signup');

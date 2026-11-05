@@ -238,6 +238,19 @@ export async function startGateway(overrides = {}) {
     if (config.emailLoginEnabled && !config.publicBaseUrl) {
       warnings.push('Connexion email active mais PUBLIC_BASE_URL vide : renseignez l’URL publique.');
     }
+    if (config.signupEnabled) {
+      const missing = [];
+      if (!config.turnstileRequired) missing.push('Cloudflare Turnstile');
+      if (!config.fraudCheckEnabled) missing.push('IPQualityScore (VPN/emails jetables)');
+      if (missing.length) {
+        warnings.push(
+          `Inscription autonome sans ${missing.join(' ni ')} : protection anti multi-comptes limitee. Configurez TURNSTILE_* et IPQS_API_KEY.`,
+        );
+      }
+      if (!config.trustCloudflare && config.trustProxy) {
+        warnings.push('Inscription derriere proxy : activez TRUST_CLOUDFLARE=1 pour utiliser la vraie IP client (1 compte/IP).');
+      }
+    }
     return warnings;
   }
 

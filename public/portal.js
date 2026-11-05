@@ -50,6 +50,96 @@
     return data;
   }
 
+  /** Identifiant d'appareil persistant (localStorage), non secret. */
+  const DEVICE_ID = (() => {
+    try {
+      const key = 'valaria_device_id';
+      let id = localStorage.getItem(key);
+      if (!id) {
+        id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        localStorage.setItem(key, id);
+      }
+      return id;
+    } catch {
+      return null;
+    }
+  })();
+
+  function deviceFields() {
+    return DEVICE_ID ? { deviceId: DEVICE_ID } : {};
+  }
+
+  /* ---------------- Cloudflare Turnstile (anti-bot) ---------------- */
+  const turnstile = { siteKey: null, widgets: {}, tokens: {}, loading: null };
+
+  function ensureTurnstileSlot(kind) {
+    const panel = $(kind === 'email' ? '#panel-email' : '#panel-signup');
+    if (!panel) return null;
+    let slot = panel.querySelector(`#${kind}-turnstile`);
+    if (!slot) {
+      slot = document.createElement('div');
+      slot.id = `${kind}-turnstile`;
+      slot.className = 'turnstile-slot';
+      const error = panel.querySelector('.login-error');
+      if (error) error.after(slot);
+      else panel.prepend(slot);
+    }
+    return slot;
+  }
+
+  function loadTurnstileScript() {
+    if (window.turnstile) return Promise.resolve(window.turnstile);
+    if (turnstile.loading) return turnstile.loading;
+    turnstile.loading = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => resolve(window.turnstile);
+      script.onerror = () => reject(new Error('Impossible de charger la vérification anti-bot.'));
+      document.head.appendChild(script);
+    });
+    return turnstile.loading;
+  }
+
+  async function initTurnstile(siteKey) {
+    turnstile.siteKey = siteKey || null;
+    if (!siteKey) return;
+    try {
+      await loadTurnstileScript();
+      for (const kind of ['email', 'signup']) {
+        const slot = ensureTurnstileSlot(kind);
+        slot.classList.remove('hidden');
+        slot.innerHTML = '';
+        if (window.turnstile) {
+          turnstile.widgets[kind] = window.turnstile.render(slot, {
+            sitekey: siteKey,
+            callback: (token) => { turnstile.tokens[kind] = token; },
+            'expired-callback': () => { turnstile.tokens[kind] = null; },
+            'error-callback': () => { turnstile.tokens[kind] = null; },
+          });
+        }
+      }
+    } catch (err) {
+      turnstile.tokens.email = null;
+      turnstile.tokens.signup = null;
+      const message = err?.message || 'Vérification anti-bot indisponible.';
+      showEmailError(message);
+      showSignupError(message);
+    }
+  }
+
+  function resetTurnstile(kind) {
+    turnstile.tokens[kind] = null;
+    try {
+      if (window.turnstile && turnstile.widgets[kind] != null) {
+        window.turnstile.reset(turnstile.widgets[kind]);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
   const resendTimers = { email: null, signup: null };
 
   function stopResendTimer(kind) {
@@ -159,7 +249,10 @@
     button.disabled = true;
     button.textContent = 'Envoi…';
     try {
-      const data = await api('/email/request', { method: 'POST', body: { email } });
+      const data = await api('/email/request', {
+        method: 'POST',
+        body: { email, ...deviceFields(), turnstileToken: turnstile.tokens.email ?? null },
+      });
       $('#email-sent-note').textContent = `Code envoyé à ${email} (valable ${data.expiresMinutes ?? 10} minutes). Vérifiez aussi les spams.`;
       $('#email-request-form').classList.add('hidden');
       $('#email-verify-form').classList.remove('hidden');
@@ -181,6 +274,7 @@
       state.emailBusy = false;
       button.disabled = false;
       button.textContent = 'Recevoir un code';
+      resetTurnstile('email');
     }
   }
 
@@ -199,7 +293,7 @@
     button.disabled = true;
     button.textContent = 'Vérification…';
     try {
-      await api('/email/verify', { method: 'POST', body: { email, code } });
+      await api('/email/verify', { method: 'POST', body: { email, code, ...deviceFields() } });
       await loadMe();
     } catch (err) {
       showEmailError(err.message);
@@ -241,7 +335,10 @@
     button.disabled = true;
     button.textContent = 'Envoi…';
     try {
-      const data = await api('/signup/request', { method: 'POST', body: { email } });
+      const data = await api('/signup/request', {
+        method: 'POST',
+        body: { email, ...deviceFields(), turnstileToken: turnstile.tokens.signup ?? null },
+      });
       $('#signup-sent-note').textContent = `Un code vient d’être envoyé à ${email} (valable ${data.expiresMinutes ?? 10} minutes). Utilisez le dernier code reçu : demander un nouveau code annule le précédent.`;
       $('#signup-request-form').classList.add('hidden');
       $('#signup-verify-form').classList.remove('hidden');
@@ -263,6 +360,7 @@
       state.emailBusy = false;
       button.disabled = false;
       button.textContent = 'Créer mon compte';
+      resetTurnstile('signup');
     }
   }
 
@@ -281,7 +379,7 @@
     button.disabled = true;
     button.textContent = 'Création…';
     try {
-      await api('/signup/verify', { method: 'POST', body: { email, code } });
+      await api('/signup/verify', { method: 'POST', body: { email, code, ...deviceFields() } });
       await loadMe();
     } catch (err) {
       showSignupError(err.message);
@@ -671,6 +769,7 @@
         modes += 1;
       }
       if (modes === 1) document.querySelector('.auth-tabs').classList.add('hidden');
+      await initTurnstile(config.turnstileSiteKey);
     } catch {
       /* pas bloquant : la connexion par clé reste disponible */
       document.querySelector('.auth-tabs').classList.add('hidden');

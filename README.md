@@ -346,6 +346,46 @@ renvoie un **429 explicite avec `retry_after_seconds`** (plus de faux succès si
 échec du fournisseur email renvoie une **erreur 502** au lieu d'un message trompeur.
 Pour fermer complètement le parcours : `SIGNUP_ENABLED=0` (les comptes existants continuent de fonctionner).
 
+### Sécurité réelle de l'inscription (anti multi-comptes)
+
+Une liste locale de domaines et un cookie d'appareil ne suffisent pas : ils se contournent.
+En production, activez la couche externe :
+
+1. **Cloudflare Turnstile** (gratuit) : créez un widget dans Cloudflare → Turnstile, puis
+   `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY`. Le serveur vérifie chaque token ; en cas
+   d'échec du service, l'inscription est **refusée** (fail-closed).
+2. **IPQualityScore** (offre gratuite limitée) : `IPQS_API_KEY`. Détecte VPN/proxy/Tor,
+   hébergement/datacenter, score de fraude, et (selon le plan) les emails jetables/invalides.
+   Activez `EMAIL_VALIDATION_ENABLED=1` si votre plan inclut la validation email.
+3. **Vraie IP client** derrière Cloudflare : `TRUST_CLOUDFLARE=1` (l'IP est lue dans
+   `CF-Connecting-IP`, pas dans l'IP du proxy).
+4. **Limites locales** : 1 compte par IP et 1 par appareil sur 30 jours, blocage local des
+   domaines jetables connus, vérification d'appareil persistante.
+
+```env
+TRUST_CLOUDFLARE=1
+SIGNUP_MAX_PER_IP=1
+SIGNUP_IP_WINDOW_DAYS=30
+SIGNUP_MAX_PER_DEVICE=1
+SIGNUP_DEVICE_WINDOW_DAYS=30
+BLOCK_TEMP_MAIL=1
+TURNSTILE_SITE_KEY=0x4AAAA...
+TURNSTILE_SECRET_KEY=0x4AAAA...
+TURNSTILE_REQUIRED=1
+IPQS_API_KEY=...
+IPQS_MIN_FRAUD_SCORE=85
+IPQS_BLOCK_VPN=1
+IPQS_BLOCK_HOSTING=1
+FRAUD_CHECK_ENABLED=1
+EMAIL_VALIDATION_ENABLED=1
+FRAUD_FAIL_CLOSED=1
+```
+
+> **Limite honnête** : aucune combinaison email + IP + navigateur ne garantit « une personne =
+> un compte ». Pour une garantie forte, ajoutez une **vérification par téléphone** (Twilio
+> Verify) ou un **moyen de paiement vérifié** (Stripe Radar). C'est l'étape recommandée si les
+> comptes ont une valeur réelle.
+
 ### Choisir un transport d'envoi
 
 | Transport | Usage | Configuration |
@@ -989,7 +1029,7 @@ Serveur arrêté, copiez le dossier `data/` (ou au minimum `gateway.db`). À cha
 node --test test
 ```
 
-La suite (87 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
+La suite (95 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
 normalisation `usage` OpenAI/Anthropic, quotas (tokens, requêtes, coût, reset de période),
 limites de débit et de concurrence, authentification admin (hash scrypt, sessions),
 chiffrement/hachage des clés dérivées, proxy JSON et **streaming SSE** avec comptage,
@@ -1136,6 +1176,7 @@ et **Vue d'ensemble** (graphique 30 jours, top consommateurs).
 ---
 
 **Bonne discussion avec votre ami — et gardez votre clé originale pour vous.**
+
 
 
 

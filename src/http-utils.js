@@ -190,10 +190,11 @@ export function applySecurityHeaders(res, { https = false } = {}) {
     'content-security-policy',
     [
       "default-src 'self'",
-      "script-src 'self'",
+      "script-src 'self' https://challenges.cloudflare.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data:",
-      "connect-src 'self'",
+      "connect-src 'self' https://challenges.cloudflare.com",
+      "frame-src https://challenges.cloudflare.com",
       "object-src 'none'",
       "base-uri 'none'",
       "form-action 'self'",

@@ -1041,6 +1041,18 @@
                Il crée ensuite sa propre clé API depuis son espace.`
             : 'Activez <code>SIGNUP_ENABLED=1</code> (avec un transport email configuré) pour permettre la création de compte par email.'}
         </div>
+        <div class="alert">
+          <strong>Sécurité inscription :</strong>
+          ${fmtInt(s.signup?.security?.maxPerIp || 0)} compte(s)/IP sur ${fmtInt(s.signup?.security?.ipWindowDays || 0)} j ·
+          ${fmtInt(s.signup?.security?.maxPerDevice || 0)} compte(s)/appareil ·
+          temp mail ${s.signup?.security?.blockTempMail ? 'bloqué' : 'autorisé'} ·
+          Turnstile ${s.signup?.security?.turnstileRequired ? 'actif' : 'non configuré'} ·
+          contrôle IP ${s.signup?.security?.fraudCheckEnabled ? 'actif' : 'non configuré'}
+          ${s.signup?.security?.blockVpn ? '· VPN bloqué' : ''}.
+          ${s.signup?.security?.turnstileRequired || s.signup?.security?.fraudCheckEnabled
+            ? ''
+            : 'Configurez <code>TURNSTILE_SITE_KEY</code>/<code>TURNSTILE_SECRET_KEY</code> et <code>IPQS_API_KEY</code> pour une protection réelle.'}
+        </div>
         ${s.email?.transport === 'console'
           ? '<div class="alert warn">Mode console : les codes sont écrits dans les logs du serveur. À réserver au développement.</div>'
           : ''}

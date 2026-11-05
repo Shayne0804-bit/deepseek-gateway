@@ -220,6 +220,74 @@ test('connexion email inconnue : un code est envoye et le compte est cree', asyn
   }
 });
 
+test('inscription : email jetable refuse', async () => {
+  const { started, mailer } = await startServer();
+  try {
+    const res = await portalPost(started.url, '/signup/request', { email: 'test@mailinator.com' });
+    assert.equal(res.status, 400);
+    assert.equal((await res.json()).error.code, 'email_disposable');
+    assert.equal(mailer.sent.length, 0);
+  } finally {
+    await started.close();
+  }
+});
+
+test('inscription : un seul compte par IP', async () => {
+  const { started, mailer } = await startServer({
+    signupMaxPerIp: 1,
+    signupMaxPerDevice: 0,
+    otpCooldownSeconds: 0,
+  });
+  try {
+    await portalPost(started.url, '/signup/request', { email: 'premier-ip@gmail.com' });
+    const verify = await portalPost(started.url, '/signup/verify', { email: 'premier-ip@gmail.com', code: mailer.sent.at(-1).code });
+    assert.equal(verify.status, 200);
+
+    const second = await portalPost(started.url, '/signup/request', { email: 'second-ip@gmail.com' });
+    assert.equal(second.status, 403);
+    assert.equal((await second.json()).error.code, 'signup_ip_limit');
+    assert.equal(mailer.sent.length, 1, 'aucun email pour le second compte');
+  } finally {
+    await started.close();
+  }
+});
+
+test('inscription : Turnstile exige un token valide', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    if (String(url).startsWith('https://turnstile.test/')) {
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    return originalFetch(url, options);
+  };
+  const { started, mailer } = await startServer({
+    turnstileSiteKey: 'site-key',
+    turnstileSecretKey: 'secret-key',
+    turnstileRequired: true,
+    turnstileVerifyUrl: 'https://turnstile.test/verify',
+    signupMaxPerDevice: 0,
+  });
+  try {
+    const withoutToken = await portalPost(started.url, '/signup/request', { email: 'sans-token@gmail.com' });
+    assert.equal(withoutToken.status, 403);
+    assert.equal((await withoutToken.json()).error.code, 'turnstile_failed');
+    assert.equal(mailer.sent.length, 0);
+
+    const withToken = await portalPost(started.url, '/signup/request', {
+      email: 'avec-token@gmail.com',
+      turnstileToken: 'ok-token',
+    });
+    assert.equal(withToken.status, 200);
+    assert.equal(mailer.sent.length, 1);
+  } finally {
+    await started.close();
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('admin : test email visible et erreur Resend remontee', async () => {
   const { started, mailer } = await startServer();
   try {

@@ -1287,6 +1287,15 @@ textarea { min-height: 120px; resize: vertical; font-family: var(--mono); font-s
   min-height: 18px;
 }
 
+.turnstile-slot {
+  margin: 0 0 12px;
+  min-height: 0;
+}
+
+.turnstile-slot.hidden {
+  display: none;
+}
+
 .auth-tab:hover {
   color: var(--text);
   border-color: var(--accent);
