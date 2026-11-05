@@ -97,7 +97,8 @@ function serveAsset(req, res, config, asset) {
     const isHtml = asset.type.startsWith('text/html');
     const headers = {
       'content-type': asset.type,
-      'cache-control': isHtml ? 'no-cache' : 'public, max-age=300',
+      // Pas de cache long sur les assets : evite un HTML neuf + ancien JS apres deploiement.
+      'cache-control': isHtml ? 'no-cache' : 'no-cache, must-revalidate',
       vary: 'accept-encoding',
     };
     let payload = buffer;
