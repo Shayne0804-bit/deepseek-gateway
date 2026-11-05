@@ -270,6 +270,11 @@
     try {
       const session = await api('/session');
       state.session = session;
+      const pageVersion = document.querySelector('meta[name="app-version"]')?.content || null;
+      if (pageVersion && session.server?.version && pageVersion !== session.server.version) {
+        location.reload();
+        return;
+      }
       updateProviderPill(session.provider?.configured, session.provider?.source);
       $('#app-version').textContent = session.server?.version || '1.0.0';
       showApp();

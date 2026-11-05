@@ -156,7 +156,7 @@
       "required": 4.5,
       "size": 11.5,
       "weight": 400,
-      "text": "Léa — projet perso · clé sk-dsk-YSmR8… ·",
+      "text": "Léa — projet perso · clé sk-dsk-UYc6H… ·",
       "page": "portal-dashboard"
     },
     {
@@ -219,7 +219,7 @@
       "required": 4.5,
       "size": 12,
       "weight": 400,
-      "text": "VALARIA Gateway API v2.9.4\n        Les d",
+      "text": "VALARIA Gateway API v2.9.6\n        Les d",
       "page": "portal-dashboard"
     },
     {
@@ -278,7 +278,7 @@
     },
     {
       "selector": "#login-view input",
-      "ratio": 16.14,
+      "ratio": 16.62,
       "required": 4.5,
       "size": 14,
       "weight": 400,

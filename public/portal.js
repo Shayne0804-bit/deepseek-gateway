@@ -772,10 +772,15 @@
     if (!badge) return;
     const dot = badge.querySelector('.dot');
     const text = badge.querySelector('.status-text');
+    const pageVersion = document.querySelector('meta[name="app-version"]')?.content || null;
     try {
       const res = await fetch('/healthz', { headers: { accept: 'application/json' } });
       const data = await res.json();
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (pageVersion && data.version && pageVersion !== data.version) {
+        location.reload();
+        return;
+      }
       dot.className = 'dot ok';
       text.textContent = `en ligne · v${data.version}`;
     } catch {
