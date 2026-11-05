@@ -31,6 +31,12 @@ export async function openDb(dataDir, options = {}) {
         if (result?.imported && options.log?.info) {
           options.log.info(`Migration SQLite -> MongoDB : ${result.imported} document(s) importe(s).`);
         }
+        const alreadyMigrated = String(result?.reason || '').includes('clients existent');
+        if (options.migrateRequired && !alreadyMigrated && (result?.skipped || !result?.imported)) {
+          throw new Error(
+            `Migration MongoDB requise mais aucun document importe (${result?.reason || 'base SQLite vide ou introuvable'}).`,
+          );
+        }
       } catch (err) {
         if (options.migrateRequired) throw err;
         if (options.log?.warn) options.log.warn(`Migration SQLite -> MongoDB ignoree : ${err.message}`);
