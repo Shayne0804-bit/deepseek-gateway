@@ -19,7 +19,7 @@ let stopping = false;
 async function shutdown(signal) {
   if (stopping) return;
   stopping = true;
-  console.log(`\n  Arret (${signal})...`);
+  if (!started.log?.silent) console.log(`\n  Arret (${signal})...`);
   try {
     await started.close();
   } catch {

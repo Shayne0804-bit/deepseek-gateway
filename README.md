@@ -246,7 +246,7 @@ sauf `DEEPSEEK_API_KEY` (ou la clé saisie dans le panneau).
 | `DATA_DIR` | `./data` | Dossier de la base SQLite (une valeur vide = `./data`). |
 | `MAX_BODY_BYTES` | `33554432` (32 Mo) | Taille maximale d'une requête entrante. `0` = illimité (attention à la mémoire). |
 | `UPSTREAM_TIMEOUT_MS` | `1800000` | Délai maximal d'un appel vers DeepSeek (30 min). |
-| `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`. |
+| `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`, ou **`silent`** (aucune sortie normale : ni bannière, ni accès, ni avertissements). |
 | `HTTPS_PORT` | `8788` | Port HTTPS (actif seulement si un certificat est configuré). |
 | `TLS_CERT_FILE` | — | Certificat PEM (`data/tls/server.crt`). |
 | `TLS_KEY_FILE` | — | Clé privée PEM (`data/tls/server.key`). |

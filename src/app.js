@@ -31,11 +31,13 @@ import {
 } from './http-utils.js';
 
 const LEVELS = { debug: 10, info: 20, warn: 30, error: 40 };
+const SILENT_LEVELS = new Set(['silent', 'none', 'off', '0']);
 
 export function createLogger(level = 'info', format = 'text') {
-  const threshold = LEVELS[level] ?? LEVELS.info;
+  const silent = SILENT_LEVELS.has(String(level).trim().toLowerCase());
+  const threshold = silent ? Number.POSITIVE_INFINITY : (LEVELS[level] ?? LEVELS.info);
   const emit = (name, message) => {
-    if ((LEVELS[name] ?? 20) < threshold) return;
+    if (silent || (LEVELS[name] ?? 20) < threshold) return;
     if (format === 'json') {
       const line = JSON.stringify({ ts: new Date().toISOString(), level: name, msg: String(message) });
       if (name === 'error' || name === 'warn') console.error(line);
@@ -47,8 +49,9 @@ export function createLogger(level = 'info', format = 'text') {
     else console.log(line);
   };
   return {
-    level,
+    level: silent ? 'silent' : level,
     format,
+    silent,
     debug: (m) => emit('debug', m),
     info: (m) => emit('info', m),
     warn: (m) => emit('warn', m),
@@ -435,6 +438,7 @@ export async function startGateway(overrides = {}) {
 
 /** Affiche le message de demarrage convivial (utilise par server.js). */
 export function printStartupBanner(started, log = console.log) {
+  if (started.log?.silent) return;
   const { config, port, host, httpsPort } = started;
   const displayHost = host === '0.0.0.0' || host === '::' || host === '' ? '127.0.0.1' : host;
   log('');
