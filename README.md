@@ -38,6 +38,7 @@ Le produit tient en **trois surfaces web** :
 - [HTTPS local (Claude Desktop)](#https-local-claude-desktop)
 - [Docker](#docker)
 - [Déployer sur Railway](#déployer-sur-railway)
+- [Sous-domaine d'un domaine existant](#sous-domaine-dun-domaine-existant-cloudflare--railway)
 - [Passer en production](#passer-en-production)
 - [Données, sauvegardes et sécurité](#données-sauvegardes-et-sécurité)
 - [Tests](#tests)
@@ -806,6 +807,103 @@ RESEND_API_KEY=re_...
 - Restez en **mono-réplique** : les compteurs de débit en mémoire ne sont pas partagés.
 - Le disque du conteneur hors `/data` est éphémère ; n'y stockez rien.
 - Les logs sont consultables dans *Deployments/Logs* (JSON si `LOG_FORMAT=json`).
+
+## Sous-domaine d'un domaine existant (Cloudflare + Railway)
+
+Cas typique : vous possédez déjà `valariamenu.com` (site en ligne, DNS chez Cloudflare) et
+vous voulez la passerelle sur **`api.valariamenu.com`**. Un sous-domaine est indépendant des
+enregistrements `@` et `www` : le site existant et ses e-mails ne sont pas modifiés.
+
+### 1. Créer le sous-domaine (2 minutes)
+
+1. **Railway** → service → *Settings → Networking → Custom Domain* →
+   ajoutez `api.valariamenu.com`.
+2. Railway affiche une cible `…up.railway.app`. Dans **Cloudflare → DNS → Add record** :
+   - **Type** : `CNAME`
+   - **Name** : `api`
+   - **Target** : la cible Railway (ex. `xxxx.up.railway.app`)
+   - **Proxy status** : **DNS only** (nuage **gris**) pour commencer.
+3. Attendez la validation Railway (certificat HTTPS automatique, quelques minutes).
+
+> Ne touchez pas aux enregistrements `@`, `www` ou MX/SPF existants du domaine principal.
+
+### 2. Variables Railway
+
+```env
+PUBLIC_BASE_URL=https://api.valariamenu.com
+HOST=0.0.0.0
+DATA_DIR=/data
+TRUST_PROXY=1
+BILLED_MODEL=deepseek-flash
+LOG_FORMAT=json
+# Emails (plus tard) :
+# MAIL_TRANSPORT=resend
+# MAIL_FROM=no-reply@mail.valariamenu.com
+# RESEND_API_KEY=re_…
+```
+
+Redéployez, puis vérifiez :
+
+```bash
+curl -sS https://api.valariamenu.com/healthz
+curl -sS -o /dev/null -w '%{http_code}\n' https://api.valariamenu.com/admin
+curl -sS -o /dev/null -w '%{http_code}\n' https://api.valariamenu.com/portal
+curl -sS -H "Authorization: Bearer sk-dsk-…" https://api.valariamenu.com/v1/models
+```
+
+Attendu : `{"ok":true,"name":"valaria-gateway",…}`, **200** pour `/admin` et `/portal`,
+et la liste des modèles pour `/v1/models`.
+
+### 3. Cloudflare : proxy, cache et WAF
+
+- **DNS only** (gris) est le plus sûr pour une API : pas de challenge WAF sur les clients
+  non-navigateur, pas de cache inattendu, SSE/WebSockets directs.
+- Si vous activez le **proxy orange** plus tard :
+  - SSL/TLS du domaine → **Full (strict)** ;
+  - désactivez **Rocket Loader** (il réécrit les scripts et peut entrer en conflit avec la CSP) ;
+  - désactivez les défis **Bot Fight / WAF** sur `api` pour ne pas bloquer les clients CLI/SDK ;
+  - vérifiez que les réponses SSE arrivent bien (sinon repassez en DNS only).
+- Le certificat HTTPS est fourni par Railway ; Cloudflare n'est pas nécessaire pour TLS si gris.
+
+### 4. Client npm : URL par défaut
+
+Une fois le sous-domaine validé, renseignez dans `package.json` avant publication :
+
+```json
+"valaria": { "defaultUrl": "https://api.valariamenu.com" }
+```
+
+Les utilisateurs n'auront plus qu'à faire :
+
+```bash
+valaria-gateway login --key sk-dsk-…
+valaria-gateway
+```
+
+En attendant, ils peuvent toujours utiliser `login --url https://api.valariamenu.com --key …`.
+
+### 5. Connexion email : sous-domaine d'envoi séparé
+
+Pour les codes OTP, n'utilisez **pas** `valariamenu.com` directement : son MX/SPF sert déjà
+au site. Créez un sous-domaine d'envoi dédié, par exemple **`mail.valariamenu.com`** :
+
+1. Chez Resend → *Add Domain* → `mail.valariamenu.com`.
+2. Recopiez **exactement** les enregistrements fournis dans Cloudflare (DNS only) :
+   `MX`, `TXT` SPF, `TXT`/`CNAME` DKIM.
+3. Ne touchez pas aux MX/SPF de la racine, et n'activez **pas** Cloudflare Email Routing
+   sur ce sous-domaine d'envoi.
+4. Optionnel : ajoutez un DMARC isolé `_dmarc.mail.valariamenu.com`
+   (`v=DMARC1; p=none; rua=mailto:vous@valariamenu.com`) sans modifier celui de la racine.
+5. Variables Railway : `MAIL_TRANSPORT=resend`, `MAIL_FROM=no-reply@mail.valariamenu.com`,
+   `RESEND_API_KEY=…`. Testez avec un vrai envoi depuis `/portal` → « Code par email ».
+
+### 6. Bon à savoir
+
+- Les cookies de session portail sont **host-only** sur `api.valariamenu.com` : aucune
+  interférence avec le site principal.
+- `valariamenu.com` peut garder son proxy Cloudflare actuel ; le sous-domaine est indépendant.
+- La console reste accessible par URL directe (`/admin`), non référencée sur le site public.
+- Une fois en place, mettez `PUBLIC_BASE_URL` et `defaultUrl` à jour, puis republiez le paquet npm.
 
 ## Passer en production
 
