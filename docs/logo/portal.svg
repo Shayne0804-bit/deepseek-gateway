@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none" role="img" aria-label="VALARIA Gateway — portail">
+  <defs>
+    <linearGradient id="portal-b" x1="28" y1="20" x2="68" y2="76" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C5FAD8"/>
+      <stop offset=".55" stop-color="#7FE3AA"/>
+      <stop offset="1" stop-color="#48BD82"/>
+    </linearGradient>
+  </defs>
+  <rect x="1.5" y="1.5" width="93" height="93" rx="26" fill="#0E1712" stroke="#2E4638" stroke-width="2"/>
+  <path d="M27 73V44c0-16 9-27 21-27s21 11 21 27v29" stroke="url(#portal-b)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M38 43l10 16 10-16" stroke="#F0C674" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="24" y="76" width="48" height="3" rx="1.5" fill="#7FE3AA" fill-opacity=".35"/>
+</svg>

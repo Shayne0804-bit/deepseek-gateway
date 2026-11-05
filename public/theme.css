@@ -727,3 +727,85 @@ tbody tr:hover td { background: rgba(127, 227, 170, 0.035); }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ----------------------- logo & fond animé ------------------------- */
+
+img.brand-logo,
+img.login-logo {
+  display: block;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  object-fit: contain;
+  flex: none;
+}
+.site-brand .brand-logo { width: 34px; height: 34px; }
+.brand img.brand-logo { width: 40px; height: 40px; }
+img.login-logo { width: 46px; height: 46px; margin-bottom: 20px; }
+
+.site-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(127, 227, 170, 0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(127, 227, 170, 0.032) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 10%, #000 0%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 10%, #000 0%, transparent 78%);
+  opacity: 0.7;
+}
+
+.site-bg::before,
+.site-bg::after {
+  content: "";
+  position: absolute;
+  width: 72vmax;
+  height: 72vmax;
+  border-radius: 50%;
+  will-change: transform;
+}
+
+.site-bg::before {
+  left: -26vmax;
+  top: -34vmax;
+  background: radial-gradient(circle, rgba(127, 227, 170, 0.19), rgba(127, 227, 170, 0.05) 38%, transparent 66%);
+  animation: bg-aurora-a 30s ease-in-out infinite alternate;
+}
+
+.site-bg::after {
+  right: -30vmax;
+  bottom: -38vmax;
+  background: radial-gradient(circle, rgba(240, 198, 116, 0.12), rgba(240, 198, 116, 0.03) 40%, transparent 68%);
+  animation: bg-aurora-b 38s ease-in-out infinite alternate;
+}
+
+@keyframes bg-aurora-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(9vw, 7vh, 0) scale(1.16); }
+}
+
+@keyframes bg-aurora-b {
+  from { transform: translate3d(0, 0, 0) scale(1.08); }
+  to { transform: translate3d(-8vw, -6vh, 0) scale(0.96); }
+}
+
+.site-header,
+.site-footer,
+.public-page main,
+.login-screen,
+.app {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-bg::before,
+  .site-bg::after {
+    animation: none;
+  }
+}

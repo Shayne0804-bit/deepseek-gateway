@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none" role="img" aria-label="VALARIA Gateway — signal">
+  <defs>
+    <linearGradient id="signal-c" x1="20" y1="24" x2="76" y2="74" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C5FAD8"/>
+      <stop offset=".55" stop-color="#7FE3AA"/>
+      <stop offset="1" stop-color="#48BD82"/>
+    </linearGradient>
+  </defs>
+  <circle cx="48" cy="48" r="46.5" fill="#0E1712" stroke="#2E4638" stroke-width="2"/>
+  <path d="M20 28 48 70" stroke="url(#signal-c)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M76 28 48 70" stroke="url(#signal-c)" stroke-opacity=".55" stroke-width="8" stroke-linecap="round"/>
+  <path d="M34 21 48 47l14-26" stroke="#F0C674" stroke-opacity=".9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="48" cy="70" r="5.5" fill="#F0C674"/>
+</svg>

@@ -11,12 +11,13 @@
   <link rel="stylesheet" href="/assets/theme.css?v={{APP_VERSION}}">
 </head>
 <body>
+  <div class="site-bg" aria-hidden="true"></div>
   <a class="skip-link" href="#main-view">Aller au contenu</a>
   <!-- ============================ Connexion ============================ -->
   <div id="login-view" class="login-screen hidden">
     <form class="login-card" data-form="login" autocomplete="on">
       <div class="login-kicker">Console d'administration</div>
-      <div class="login-logo" aria-hidden="true">V</div>
+      <img class="login-logo" src="/assets/logo-mark.svg?v={{APP_VERSION}}" alt="" aria-hidden="true" width="40" height="40">
       <h1>VALARIA Gateway API</h1>
       <p>Gérez les accès, les quotas et les journaux de votre passerelle.</p>
       <div class="login-error" id="login-error"></div>
@@ -35,7 +36,7 @@
   <div id="app-view" class="app hidden">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-logo" aria-hidden="true">V</div>
+        <img class="brand-logo" src="/assets/logo-mark.svg?v={{APP_VERSION}}" alt="" aria-hidden="true" width="40" height="40">
         <div>
           <div class="brand-name">VALARIA Gateway</div>
           <div class="brand-sub">Console API</div>
@@ -79,6 +80,8 @@
   <script src="/assets/app.js?v={{APP_VERSION}}" defer></script>
 </body>
 </html>
+
+
 
 
 
