@@ -809,3 +809,38 @@ img.login-logo { width: 46px; height: 46px; margin-bottom: 20px; }
     animation: none;
   }
 }
+
+.onboarding-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 20px 0 22px;
+}
+.onboarding-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.022);
+  min-width: 0;
+}
+.onboarding-step .step-index {
+  display: inline-grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 10px;
+  flex: none;
+}
+.onboarding-step h3 { margin: 0 0 4px; font-size: 13.5px; font-weight: 700; }
+.onboarding-step p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+@media (max-width: 680px) {
+  .onboarding-steps { grid-template-columns: 1fr; }
+}

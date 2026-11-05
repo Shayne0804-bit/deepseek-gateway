@@ -149,11 +149,25 @@
       <section id="no-key-panel" class="panel hidden" aria-labelledby="no-key-title">
         <div class="panel-head">
           <div>
-            <h2 id="no-key-title">Votre compte est créé</h2>
-            <span class="hint">Il ne manque plus que votre clé API pour utiliser la passerelle.</span>
+            <h2 id="no-key-title">Bienvenue dans votre espace</h2>
+            <span class="hint">Trois étapes pour commencer.</span>
           </div>
         </div>
-        <p id="no-key-copy">Créez votre clé API : elle sera affichée <strong>une seule fois</strong>. Vous pourrez ensuite vous connecter avec cette clé ou avec votre email.</p>
+        <p id="no-key-copy">Votre compte est actif. Créez votre clé API pour utiliser la passerelle : elle sera affichée une seule fois.</p>
+        <div class="onboarding-steps" id="onboarding-steps">
+          <div class="onboarding-step">
+            <span class="step-index">01</span>
+            <div><h3>Créez votre clé</h3><p>Une clé personnelle, liée à ce compte.</p></div>
+          </div>
+          <div class="onboarding-step">
+            <span class="step-index">02</span>
+            <div><h3>Copiez-la</h3><p>Affichée une seule fois, à conserver en lieu sûr.</p></div>
+          </div>
+          <div class="onboarding-step">
+            <span class="step-index">03</span>
+            <div><h3>Branchez votre outil</h3><p>SDK OpenAI, Claude Code ou simple requête HTTP.</p></div>
+          </div>
+        </div>
         <div id="key-error" class="login-error" role="alert" aria-live="assertive"></div>
         <div class="form-actions" style="justify-content:flex-start">
           <button type="button" class="btn btn-primary" id="create-key-btn">Créer ma clé API</button>
@@ -168,6 +182,7 @@
         </div>
       </section>
 
+      <div id="portal-dashboard" class="hidden">
       <div class="stat-grid" id="portal-quotas"></div>
 
       <div class="two-col">
@@ -183,7 +198,7 @@
         </section>
       </div>
 
-      <section class="panel">
+      <section class="panel" id="portal-logs-panel">
         <div class="panel-head">
           <div><h2>Dernières requêtes</h2><span class="hint" id="portal-logs-hint"></span></div>
         </div>
@@ -202,6 +217,7 @@
         </div>
         <div id="portal-usage"></div>
       </section>
+      </div>
 
       <footer class="portal-footer">
         <span>VALARIA Gateway API <span class="mono" id="portal-version"></span></span>
