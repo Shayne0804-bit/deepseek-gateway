@@ -143,11 +143,20 @@ test('email OTP : anti-spam, unicité et clé API toujours valide', async () => 
     assert.equal(second.status, 409);
     assert.equal((await second.json()).error.code, 'duplicate_email');
 
-    await portalPost(started.url, '/email/request', { email: 'premier@example.com' });
+    const firstRequest = await portalPost(started.url, '/email/request', { email: 'premier@example.com' });
+    assert.equal(firstRequest.status, 200);
+    const firstData = await firstRequest.json();
+    assert.equal(firstData.sent, true);
+    assert.equal(firstData.sends_in_window, 1);
+    assert.equal(firstData.max_sends, 5);
+    assert.ok(firstData.resend_in_seconds > 0);
     const code = mailer.sent[0].code;
     const before = mailer.sent.length;
     const again = await portalPost(started.url, '/email/request', { email: 'premier@example.com' });
-    assert.equal(again.status, 200);
+    assert.equal(again.status, 429);
+    const againBody = await again.json();
+    assert.equal(againBody.error.code, 'email_cooldown');
+    assert.ok(againBody.retry_after_seconds > 0);
     assert.equal(mailer.sent.length, before, 'cooldown : aucun second envoi immédiat');
 
     // La connexion par clé reste disponible et renvoie la méthode.

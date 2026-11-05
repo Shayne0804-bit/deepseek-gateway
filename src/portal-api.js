@@ -207,14 +207,86 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     };
   }
 
-  /** Anti-spam : 1 envoi / cooldown configure (60 s par defaut) et 5 / 15 min par adresse. */
-  function saveEmailRequestMarker(email) {
+  /** Anti-spam : fenetre glissante simple, avec delai restant expose au client. */
+  function windowState(map, key, limit, windowMs) {
+    const now = Date.now();
+    const entry = map.get(key);
+    if (!entry || now - entry.first > windowMs) {
+      map.set(key, { first: now, count: 1 });
+      return { allowed: true, retryAfterSeconds: 0, count: 1, max: limit };
+    }
+    entry.count += 1;
+    const allowed = entry.count <= limit;
+    return {
+      allowed,
+      retryAfterSeconds: allowed ? 0 : Math.max(1, Math.ceil((entry.first + windowMs - now) / 1000)),
+      count: entry.count,
+      max: limit,
+    };
+  }
+
+  /** Etat d'envoi pour un email : cooldown + nombre d'envois dans la fenetre. */
+  function emailSendState(email) {
     const now = Date.now();
     const last = emailLastSend.get(email) ?? 0;
-    if (now - last < config.otpCooldownSeconds * 1000) return false;
-    if (!hitWindow(emailSendWindow, email, 5, LOGIN_WINDOW_MS)) return false;
+    const entry = emailSendWindow.get(email);
+    const active = entry && now - entry.first <= LOGIN_WINDOW_MS;
+    const count = active ? entry.count : 0;
+    const cooldownLeft = Math.max(0, Math.ceil((last + config.otpCooldownSeconds * 1000 - now) / 1000));
+    const windowLeft = active && count >= config.otpMaxPerEmail
+      ? Math.max(1, Math.ceil((entry.first + LOGIN_WINDOW_MS - now) / 1000))
+      : 0;
+    return {
+      allowed: cooldownLeft <= 0 && count < config.otpMaxPerEmail,
+      retryAfterSeconds: Math.max(cooldownLeft, windowLeft),
+      count,
+      max: config.otpMaxPerEmail,
+    };
+  }
+
+  function reserveEmailSend(email) {
+    const state = emailSendState(email);
+    if (!state.allowed) return { ok: false, ...state };
+    const now = Date.now();
     emailLastSend.set(email, now);
-    return true;
+    const entry = emailSendWindow.get(email);
+    if (!entry || now - entry.first > LOGIN_WINDOW_MS) {
+      emailSendWindow.set(email, { first: now, count: 1 });
+    } else {
+      entry.count += 1;
+    }
+    return {
+      ok: true,
+      retryAfterSeconds: config.otpCooldownSeconds,
+      count: emailSendWindow.get(email).count,
+      max: config.otpMaxPerEmail,
+    };
+  }
+
+  function releaseEmailSend(email) {
+    emailLastSend.delete(email);
+    const entry = emailSendWindow.get(email);
+    if (entry && entry.count > 0) entry.count -= 1;
+  }
+
+  function sendRateLimited(res, message, code, retryAfterSeconds, info = {}) {
+    const retry = Math.max(1, Number(retryAfterSeconds) || 1);
+    sendJson(
+      res,
+      429,
+      {
+        error: {
+          message,
+          type: 'rate_limit_error',
+          code,
+          param: null,
+          retry_after_seconds: retry,
+        },
+        retry_after_seconds: retry,
+        ...info,
+      },
+      { 'retry-after': String(retry), 'cache-control': 'no-store' },
+    );
   }
 
   function loginRateLimited(ip) {
@@ -369,9 +441,16 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           return;
         }
         if (!requireCsrf(req, res)) return;
-        if (!hitWindow(emailRequestAttempts, ip, 5, LOGIN_WINDOW_MS)) {
+        const ipState = windowState(emailRequestAttempts, ip, config.otpMaxPerIp, LOGIN_WINDOW_MS);
+        if (!ipState.allowed) {
           audit(req, 'portal.email.request.rate_limited');
-          portalError(res, 429, 'Trop de demandes de code. Réessayez dans quelques minutes.', 'too_many_attempts');
+          sendRateLimited(
+            res,
+            `Trop de demandes de code. Réessayez dans ${ipState.retryAfterSeconds} s.`,
+            'too_many_requests',
+            ipState.retryAfterSeconds,
+            { max_requests: ipState.max },
+          );
           return;
         }
         const body = await readJsonBody(req, 4 * 1024);
@@ -381,35 +460,63 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           return;
         }
         const client = findClientByEmail(db, email);
-        const canSend = saveEmailRequestMarker(email) && Boolean(client);
-        if (client) {
-          if (!canSend) {
-            // Silencieux : evite le spam et ne revele pas l'existence du compte.
-            sendJson(res, 200, emailCodeMessage());
-            return;
-          }
-          const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
-          const now = new Date();
-          const expiresAt = new Date(now.getTime() + config.otpExpiresMinutes * 60_000).toISOString();
-          cleanupPortalEmailCodes(db, now.toISOString());
-          deletePortalEmailCodes(db, email);
-          insertPortalEmailCode(db, {
-            email,
-            codeHash: otpHash(email, code),
-            createdAt: now.toISOString(),
-            expiresAt,
-          });
-          audit(req, 'portal.email.requested', client.name);
-          try {
-            await mailer.sendPortalCode({ to: email, code, minutes: config.otpExpiresMinutes });
-            log.info(`[${req.requestId ?? '-'}] Code de connexion email envoyé (${client.name}).`);
-          } catch (err) {
-            log.error(`[${req.requestId ?? '-'}] Envoi email impossible : ${err.message}`);
-          }
-        } else {
+        if (!client) {
+          // Reponse generique : ne revele pas l'absence de compte.
           audit(req, 'portal.email.requested');
+          sendJson(res, 200, emailCodeMessage());
+          return;
         }
-        sendJson(res, 200, emailCodeMessage());
+        const send = reserveEmailSend(email);
+        if (!send.ok) {
+          audit(req, 'portal.email.request.rate_limited', client.name);
+          sendRateLimited(
+            res,
+            `Un code a déjà été demandé. Patientez ${send.retryAfterSeconds} s avant de renvoyer.`,
+            'email_cooldown',
+            send.retryAfterSeconds,
+            { sends_in_window: send.count, max_sends: send.max },
+          );
+          return;
+        }
+        const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + config.otpExpiresMinutes * 60_000).toISOString();
+        cleanupPortalEmailCodes(db, now.toISOString());
+        deletePortalEmailCodes(db, email);
+        insertPortalEmailCode(db, {
+          email,
+          codeHash: otpHash(email, code),
+          createdAt: now.toISOString(),
+          expiresAt,
+        });
+        audit(req, 'portal.email.requested', client.name);
+        try {
+          await mailer.sendPortalCode({ to: email, code, minutes: config.otpExpiresMinutes });
+        } catch (err) {
+          releaseEmailSend(email);
+          deletePortalEmailCodes(db, email);
+          audit(req, 'portal.email.send_failed', client.name);
+          log.error(`[${req.requestId ?? '-'}] Envoi email impossible : ${err.message}`);
+          sendJson(res, 502, {
+            error: {
+              message: 'L’envoi du code a échoué. Réessayez dans un instant ou contactez l’administrateur.',
+              type: 'api_error',
+              code: 'mail_send_failed',
+              param: null,
+            },
+          });
+          return;
+        }
+        log.info(`[${req.requestId ?? '-'}] Code de connexion email envoyé (${client.name}).`);
+        sendJson(res, 200, {
+          ok: true,
+          sent: true,
+          message: 'Code de connexion envoyé. Vérifiez votre boîte email.',
+          expiresMinutes: config.otpExpiresMinutes,
+          resend_in_seconds: send.retryAfterSeconds,
+          sends_in_window: send.count,
+          max_sends: send.max,
+        });
         return;
       }
 
@@ -475,9 +582,16 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           return;
         }
         if (!requireCsrf(req, res)) return;
-        if (!hitWindow(emailRequestAttempts, ip, 5, LOGIN_WINDOW_MS)) {
+        const ipState = windowState(emailRequestAttempts, ip, config.otpMaxPerIp, LOGIN_WINDOW_MS);
+        if (!ipState.allowed) {
           audit(req, 'portal.signup.rate_limited');
-          portalError(res, 429, 'Trop de demandes. Réessayez dans quelques minutes.', 'too_many_attempts');
+          sendRateLimited(
+            res,
+            `Trop de demandes de code. Réessayez dans ${ipState.retryAfterSeconds} s.`,
+            'too_many_requests',
+            ipState.retryAfterSeconds,
+            { max_requests: ipState.max },
+          );
           return;
         }
         const body = await readJsonBody(req, 4 * 1024);
@@ -486,29 +600,55 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 400, 'Adresse email invalide.', 'invalid_email');
           return;
         }
-        if (saveEmailRequestMarker(email)) {
-          const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
-          const now = new Date();
-          const expiresAt = new Date(now.getTime() + config.otpExpiresMinutes * 60_000).toISOString();
-          cleanupPortalEmailCodes(db, now.toISOString());
+        const send = reserveEmailSend(email);
+        if (!send.ok) {
+          audit(req, 'portal.signup.rate_limited');
+          sendRateLimited(
+            res,
+            `Un code a déjà été demandé. Patientez ${send.retryAfterSeconds} s avant de renvoyer.`,
+            'email_cooldown',
+            send.retryAfterSeconds,
+            { sends_in_window: send.count, max_sends: send.max },
+          );
+          return;
+        }
+        const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + config.otpExpiresMinutes * 60_000).toISOString();
+        cleanupPortalEmailCodes(db, now.toISOString());
+        deletePortalEmailCodes(db, email);
+        insertPortalEmailCode(db, {
+          email,
+          codeHash: otpHash(email, code),
+          createdAt: now.toISOString(),
+          expiresAt,
+        });
+        audit(req, 'portal.signup.requested');
+        try {
+          await mailer.sendPortalCode({ to: email, code, minutes: config.otpExpiresMinutes });
+        } catch (err) {
+          releaseEmailSend(email);
           deletePortalEmailCodes(db, email);
-          insertPortalEmailCode(db, {
-            email,
-            codeHash: otpHash(email, code),
-            createdAt: now.toISOString(),
-            expiresAt,
+          audit(req, 'portal.signup.send_failed');
+          log.error(`[${req.requestId ?? '-'}] Envoi email inscription impossible : ${err.message}`);
+          sendJson(res, 502, {
+            error: {
+              message: 'L’envoi du code a échoué. Réessayez dans un instant ou contactez l’administrateur.',
+              type: 'api_error',
+              code: 'mail_send_failed',
+              param: null,
+            },
           });
-          audit(req, 'portal.signup.requested');
-          try {
-            await mailer.sendPortalCode({ to: email, code, minutes: config.otpExpiresMinutes });
-          } catch (err) {
-            log.error(`[${req.requestId ?? '-'}] Envoi email inscription impossible : ${err.message}`);
-          }
+          return;
         }
         sendJson(res, 200, {
           ok: true,
-          message: 'Si cette adresse n’a pas encore de compte, un code de création vient d’être envoyé. Sinon, connectez-vous avec le code reçu.',
+          sent: true,
+          message: 'Code envoyé. Vérifiez votre boîte email (et les spams).',
           expiresMinutes: config.otpExpiresMinutes,
+          resend_in_seconds: send.retryAfterSeconds,
+          sends_in_window: send.count,
+          max_sends: send.max,
         });
         return;
       }
@@ -710,3 +850,4 @@ export function createPortalApi({ config, db, log, mailer = null }) {
 
   return { handle };
 }
+

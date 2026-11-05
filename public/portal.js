@@ -41,9 +41,57 @@
     if (!res.ok) {
       const error = new Error(data?.error?.message || `Erreur HTTP ${res.status}`);
       error.status = res.status;
+      error.code = data?.error?.code;
+      error.retryAfterSeconds = data?.retry_after_seconds ?? data?.error?.retry_after_seconds;
+      error.sendsInWindow = data?.sends_in_window;
+      error.maxSends = data?.max_sends;
       throw error;
     }
     return data;
+  }
+
+  const resendTimers = { email: null, signup: null };
+
+  function stopResendTimer(kind) {
+    if (resendTimers[kind]) {
+      clearInterval(resendTimers[kind]);
+      resendTimers[kind] = null;
+    }
+  }
+
+  /** Affiche un decompte de renvoi et grise le bouton pendant l'attente. */
+  function startResendCountdown(kind, seconds, info = {}) {
+    stopResendTimer(kind);
+    const isEmail = kind === 'email';
+    const button = $(isEmail ? '#email-resend' : '#signup-resend');
+    const status = $(isEmail ? '#email-resend-status' : '#signup-resend-status');
+    let remaining = Math.max(0, Math.ceil(Number(seconds) || 0));
+    const count = Number(info.count) || 0;
+    const max = Number(info.max) || 0;
+    const countLabel = count && max ? ` (${count}/${max})` : '';
+    const render = () => {
+      if (remaining > 0) {
+        button.disabled = true;
+        button.textContent = `Renvoyer dans ${remaining} s`;
+        status.textContent = `Code envoyé${countLabel}. Nouveau code possible dans ${remaining} s.`;
+        return;
+      }
+      button.disabled = false;
+      button.textContent = 'Renvoyer un code';
+      status.textContent = count
+        ? `Code envoyé${countLabel}. Vous pouvez demander un nouveau code.`
+        : 'Vous pouvez demander un nouveau code.';
+    };
+    render();
+    if (remaining <= 0) return;
+    resendTimers[kind] = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        remaining = 0;
+        stopResendTimer(kind);
+      }
+      render();
+    }, 1000);
   }
 
   function showLogin(message = '') {
@@ -86,6 +134,10 @@
   }
 
   function resetEmailFlow() {
+    stopResendTimer('email');
+    $('#email-resend-status').textContent = '';
+    $('#email-resend').disabled = false;
+    $('#email-resend').textContent = 'Renvoyer un code';
     $('#email-request-form').classList.remove('hidden');
     $('#email-verify-form').classList.add('hidden');
     $('#email-code').value = '';
@@ -108,12 +160,22 @@
     button.textContent = 'Envoi…';
     try {
       const data = await api('/email/request', { method: 'POST', body: { email } });
-      $('#email-sent-note').textContent = `${data.message} Le code est valable ${data.expiresMinutes ?? 10} minutes.`;
+      $('#email-sent-note').textContent = `Code envoyé à ${email} (valable ${data.expiresMinutes ?? 10} minutes). Vérifiez aussi les spams.`;
       $('#email-request-form').classList.add('hidden');
       $('#email-verify-form').classList.remove('hidden');
       $('#email-code').value = '';
       $('#email-code').focus();
+      startResendCountdown('email', data.resend_in_seconds ?? 30, {
+        count: data.sends_in_window,
+        max: data.max_sends,
+      });
     } catch (err) {
+      if (err.retryAfterSeconds && !$('#email-verify-form').classList.contains('hidden')) {
+        startResendCountdown('email', err.retryAfterSeconds, {
+          count: err.sendsInWindow,
+          max: err.maxSends,
+        });
+      }
       showEmailError(err.message);
     } finally {
       state.emailBusy = false;
@@ -154,6 +216,10 @@
   }
 
   function resetSignupFlow() {
+    stopResendTimer('signup');
+    $('#signup-resend-status').textContent = '';
+    $('#signup-resend').disabled = false;
+    $('#signup-resend').textContent = 'Renvoyer un code';
     $('#signup-request-form').classList.remove('hidden');
     $('#signup-verify-form').classList.add('hidden');
     $('#signup-code').value = '';
@@ -181,7 +247,17 @@
       $('#signup-verify-form').classList.remove('hidden');
       $('#signup-code').value = '';
       $('#signup-code').focus();
+      startResendCountdown('signup', data.resend_in_seconds ?? 30, {
+        count: data.sends_in_window,
+        max: data.max_sends,
+      });
     } catch (err) {
+      if (err.retryAfterSeconds && !$('#signup-verify-form').classList.contains('hidden')) {
+        startResendCountdown('signup', err.retryAfterSeconds, {
+          count: err.sendsInWindow,
+          max: err.maxSends,
+        });
+      }
       showSignupError(err.message);
     } finally {
       state.emailBusy = false;

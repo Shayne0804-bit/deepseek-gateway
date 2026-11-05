@@ -69,7 +69,7 @@ test('inscription autonome : code email, compte, clé API et double connexion', 
     const request = await portalPost(started.url, '/signup/request', { email: 'nouveau@gmail.com' });
     assert.equal(request.status, 200);
     const message = (await request.json()).message;
-    assert.match(message, /compte/i);
+    assert.match(message, /code envoyé/i);
     assert.equal(mailer.sent.length, 1);
     const code = mailer.sent[0].code;
     assert.match(code, /^\d{6}$/);

@@ -328,12 +328,17 @@ TRIAL_QUOTA_REQUESTS=200    # requêtes incluses
 TRIAL_RPM_LIMIT=20
 TRIAL_CONCURRENCY_LIMIT=2
 TRIAL_MAX_OUTPUT_TOKENS=4096
-OTP_COOLDOWN_SECONDS=60     # délai minimum entre deux envois pour un même email
+OTP_COOLDOWN_SECONDS=30     # délai minimum entre deux envois pour un même email
+OTP_MAX_PER_EMAIL=5         # envois max par email / 15 min
+OTP_MAX_PER_IP=10           # demandes max par IP / 15 min
 ```
 
 Sécurité : code à usage unique, expiration 10 min, 5 essais max, limitation par IP et par email,
-et création impossible sans vérification de l'adresse. Pour fermer complètement le parcours :
-`SIGNUP_ENABLED=0` (les comptes existants continuent de fonctionner).
+et création impossible sans vérification de l'adresse. Le portail affiche un **compte à rebours
+de renvoi** et le nombre d'envois (`n/5`) dès la première demande ; une demande trop rapprochée
+renvoie un **429 explicite avec `retry_after_seconds`** (plus de faux succès silencieux), et un
+échec du fournisseur email renvoie une **erreur 502** au lieu d'un message trompeur.
+Pour fermer complètement le parcours : `SIGNUP_ENABLED=0` (les comptes existants continuent de fonctionner).
 
 ### Choisir un transport d'envoi
 
