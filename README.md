@@ -84,7 +84,7 @@ Le produit tient en **trois surfaces web** :
   et le journal (`requestedModel`), le modèle facturé est flash.
 - **HTTP + HTTPS** : HTTP sur `8787` et, si un certificat est fourni, HTTPS sur `8788`
   (requis par Claude Desktop). Voir [HTTPS local](#https-local-claude-desktop).
-- **Interface soignée** : direction « Signal Ledger » — typographie Manrope lisible, IBM Plex Mono
+- **Interface soignée** : direction « Signal Ledger » — typographie Plus Jakarta Sans lisible, JetBrains Mono
   réservé au code, palette graphite/jade/ambre, cartes et espacements responsive. Les pages publiques,
   le portail et la console partagent le même système visuel ; états chargement / vide / erreur /
   partiel / succès / permission soignés, focus clavier visible, contraste WCAG AA et
@@ -1176,6 +1176,7 @@ et **Vue d'ensemble** (graphique 30 jours, top consommateurs).
 ---
 
 **Bonne discussion avec votre ami — et gardez votre clé originale pour vous.**
+
 
 
 

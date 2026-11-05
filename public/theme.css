@@ -6,25 +6,17 @@
    ============================================================ */
 
 @font-face {
-  font-family: "Manrope";
-  src: url("/assets/fonts/manrope-latin-var.woff2") format("woff2");
+  font-family: "Plus Jakarta Sans";
+  src: url("/assets/fonts/plus-jakarta-sans-latin-var.woff2") format("woff2");
   font-weight: 400 800;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "IBM Plex Mono";
-  src: url("/assets/fonts/ibm-plex-mono-400.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "IBM Plex Mono";
-  src: url("/assets/fonts/ibm-plex-mono-500.woff2") format("woff2");
-  font-weight: 500;
+  font-family: "JetBrains Mono";
+  src: url("/assets/fonts/jetbrains-mono-latin.woff2") format("woff2");
+  font-weight: 400 500;
   font-style: normal;
   font-display: swap;
 }
@@ -63,8 +55,8 @@
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.32);
   --glow: 0 0 0 1px rgba(127, 227, 170, 0.04);
 
-  --font: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --mono: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
+  --font: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
 }
 
 html {
@@ -843,4 +835,77 @@ img.login-logo { width: 46px; height: 46px; margin-bottom: 20px; }
 
 @media (max-width: 680px) {
   .onboarding-steps { grid-template-columns: 1fr; }
+}
+
+/* ---------------------- typographie & menu mobile ------------------- */
+
+.topbar-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.menu-toggle {
+  display: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font-size: 17px;
+  cursor: pointer;
+  flex: none;
+}
+.nav-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  background: rgba(3, 7, 5, 0.58);
+  backdrop-filter: blur(2px);
+}
+body.menu-open { overflow: hidden; }
+
+@media (max-width: 960px) {
+  .menu-toggle { display: inline-flex; }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100dvh;
+    width: min(286px, 84vw);
+    z-index: 60;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    padding: 24px 16px;
+    overflow-y: auto;
+    transform: translateX(-102%);
+    transition: transform 220ms ease;
+    box-shadow: 24px 0 60px rgba(0, 0, 0, 0.35);
+  }
+  .sidebar.open { transform: none; }
+  .sidebar .brand { padding: 0 4px; }
+  .sidebar .nav { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+  .sidebar .nav-item {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 11px 12px;
+    font-size: 13.5px;
+    white-space: normal;
+  }
+  .sidebar-foot {
+    margin-top: auto;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 0 4px;
+  }
+  .sidebar-link { display: inline; }
+  .provider-pill span.text { display: inline; }
+  .main { padding-top: 20px; }
+}
+
+.mobile-brand { display: none; align-items: center; }
+.mobile-brand img { width: 28px; height: 28px; display: block; }
+@media (max-width: 960px) {
+  .mobile-brand { display: inline-flex; }
 }

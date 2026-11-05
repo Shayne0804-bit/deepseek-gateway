@@ -34,7 +34,7 @@
 
   <!-- ============================== Panneau ============================ -->
   <div id="app-view" class="app hidden">
-    <aside class="sidebar">
+    <aside class="sidebar" id="app-sidebar">
       <div class="brand">
         <img class="brand-logo" src="/assets/logo-mark.svg?v={{APP_VERSION}}" alt="" aria-hidden="true" width="40" height="40">
         <div>
@@ -62,9 +62,15 @@
 
     <main class="main" id="main-view">
       <header class="topbar">
-        <div>
-          <h1 id="page-title">Vue d'ensemble</h1>
-          <div class="topbar-sub" id="page-sub"></div>
+        <div class="topbar-title">
+          <button type="button" class="menu-toggle" id="menu-toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="app-sidebar">☰</button>
+          <a class="mobile-brand" href="/" aria-label="VALARIA Gateway — accueil">
+            <img src="/assets/logo-mark.svg?v={{APP_VERSION}}" alt="" width="28" height="28" aria-hidden="true">
+          </a>
+          <div>
+            <h1 id="page-title">Vue d'ensemble</h1>
+            <div class="topbar-sub" id="page-sub"></div>
+          </div>
         </div>
         <div class="topbar-actions">
           <a class="btn btn-ghost" href="/portal">Espace utilisateur</a>
@@ -74,6 +80,7 @@
       <div id="view"></div>
     </main>
   </div>
+  <div class="nav-backdrop hidden" id="nav-backdrop" aria-hidden="true"></div>
 
   <div id="modal-root"></div>
   <div id="toasts" aria-live="polite"></div>

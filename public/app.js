@@ -1605,6 +1605,26 @@
     if (event.key === 'Escape') closeModal();
   });
 
+  // Menu mobile : meme sidebar que le bureau, en tiroir.
+  const menuToggle = document.getElementById('menu-toggle');
+  const appSidebar = document.getElementById('app-sidebar');
+  const navBackdrop = document.getElementById('nav-backdrop');
+  function setMobileMenu(open) {
+    if (!appSidebar) return;
+    appSidebar.classList.toggle('open', open);
+    if (navBackdrop) navBackdrop.classList.toggle('hidden', !open);
+    if (menuToggle) menuToggle.setAttribute('aria-expanded', String(open));
+    document.body.classList.toggle('menu-open', open);
+  }
+  menuToggle?.addEventListener('click', () => setMobileMenu(!appSidebar.classList.contains('open')));
+  navBackdrop?.addEventListener('click', () => setMobileMenu(false));
+  appSidebar?.querySelectorAll('.nav-item').forEach((item) => {
+    item.addEventListener('click', () => setMobileMenu(false));
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setMobileMenu(false);
+  });
+
   init();
 })();
 
