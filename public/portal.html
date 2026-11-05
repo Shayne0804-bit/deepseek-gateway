@@ -34,12 +34,13 @@
         <p class="hero-kicker">Espace utilisateur</p>
         <h1 id="login-title">Mon espace</h1>
         <p>
-          Entrez la clé API fournie par le responsable de la passerelle pour consulter vos quotas,
-          votre consommation et vos dernières requêtes.
+          Connectez-vous avec votre clé API, ou créez votre compte avec votre email pour obtenir
+          votre propre clé et suivre vos quotas, votre consommation et vos dernières requêtes.
         </p>
         <p class="small muted">
-          La clé commence par <code>sk-dsk-</code>. Elle n'est enregistrée ni dans l'URL ni dans
-          le navigateur : la session expire après 7 jours.
+          Nouveau ? Utilisez l'onglet <strong>Créer un compte</strong> : un code de vérification est
+          envoyé par email, puis vous créez votre clé API dans votre espace. Ensuite, connexion au
+          choix par email ou par clé.
         </p>
         <p class="small muted">
           <strong>Durée d'accès :</strong> votre pass s'arrête à sa date de fin <em>ou</em> à
@@ -68,7 +69,8 @@
       <div class="panel portal-login-form">
         <div class="auth-tabs" role="tablist" aria-label="Méthode de connexion">
           <button type="button" class="auth-tab active" id="tab-key" role="tab" aria-selected="true" aria-controls="panel-key">Clé API</button>
-          <button type="button" class="auth-tab hidden" id="tab-email" role="tab" aria-selected="false" aria-controls="panel-email" tabindex="-1">Code par email</button>
+          <button type="button" class="auth-tab hidden" id="tab-email" role="tab" aria-selected="false" aria-controls="panel-email" tabindex="-1">Code email</button>
+          <button type="button" class="auth-tab hidden" id="tab-signup" role="tab" aria-selected="false" aria-controls="panel-signup" tabindex="-1">Créer un compte</button>
         </div>
 
         <div id="panel-key" role="tabpanel" aria-labelledby="tab-key">
@@ -77,7 +79,7 @@
             <label class="field full">
               <span>Clé API</span>
               <input type="password" id="portal-key" name="key" placeholder="sk-dsk-…" autocomplete="off" spellcheck="false" required>
-              <small>Fournie par le responsable de la passerelle, au format <code>sk-dsk-…</code>.</small>
+              <small>Votre clé commence par <code>sk-dsk-</code>. Vous pouvez aussi créer un compte avec l'onglet <strong>Créer un compte</strong>.</small>
             </label>
             <button type="submit" class="btn btn-primary btn-block">Ouvrir mon espace</button>
           </form>
@@ -107,6 +109,35 @@
             </div>
           </form>
         </div>
+
+        <div id="panel-signup" role="tabpanel" aria-labelledby="tab-signup" class="hidden">
+          <div id="signup-error" class="login-error" role="alert" aria-live="assertive"></div>
+          <form id="signup-request-form" novalidate>
+            <label class="field full">
+              <span>Créer un compte avec votre email</span>
+              <input type="email" id="signup-email" name="email" placeholder="vous@gmail.com" autocomplete="email" maxlength="254" required>
+              <small>Un code de vérification sera envoyé à cette adresse. Un pass d'essai est créé automatiquement (durée et quotas fixés par l'administrateur).</small>
+            </label>
+            <button type="submit" class="btn btn-primary btn-block" id="signup-request-btn">Créer mon compte</button>
+          </form>
+          <form id="signup-verify-form" class="hidden" novalidate>
+            <p class="small muted email-sent-note" id="signup-sent-note"></p>
+            <label class="field full">
+              <span>Code à 6 chiffres</span>
+              <input type="text" id="signup-code" name="code" placeholder="000000" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="7" required>
+              <small>Valable quelques minutes, à usage unique.</small>
+            </label>
+            <button type="submit" class="btn btn-primary btn-block" id="signup-verify-btn">Vérifier et créer mon compte</button>
+            <div class="auth-links">
+              <button type="button" class="btn btn-ghost btn-sm" id="signup-resend">Renvoyer un code</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="signup-back">Changer d'adresse</button>
+            </div>
+          </form>
+          <p class="small muted" style="margin:14px 0 0">
+            Déjà un compte ? <button type="button" class="link-btn" id="signup-login-link">Se connecter par email</button>
+            · <button type="button" class="link-btn" id="signup-key-link">Se connecter par clé API</button>
+          </p>
+        </div>
       </div>
     </section>
 
@@ -125,6 +156,28 @@
       </div>
 
       <div id="portal-status" class="portal-status" role="status" aria-live="polite"></div>
+
+      <section id="no-key-panel" class="panel hidden" aria-labelledby="no-key-title">
+        <div class="panel-head">
+          <div>
+            <h2 id="no-key-title">Votre compte est créé</h2>
+            <span class="hint">Il ne manque plus que votre clé API pour utiliser la passerelle.</span>
+          </div>
+        </div>
+        <p id="no-key-copy">Créez votre clé API : elle sera affichée <strong>une seule fois</strong>. Vous pourrez ensuite vous connecter avec cette clé ou avec votre email.</p>
+        <div id="key-error" class="login-error" role="alert" aria-live="assertive"></div>
+        <div class="form-actions" style="justify-content:flex-start">
+          <button type="button" class="btn btn-primary" id="create-key-btn">Créer ma clé API</button>
+          <button type="button" class="btn btn-ghost hidden" id="dismiss-key-btn">J'ai copié ma clé</button>
+        </div>
+        <div id="new-key-box" class="hidden">
+          <div class="alert warn"><strong>Copiez cette clé maintenant :</strong> elle ne sera plus jamais affichée en entier.</div>
+          <div class="key-reveal">
+            <code id="new-key-value"></code>
+            <button type="button" class="btn btn-ghost" id="copy-new-key">Copier</button>
+          </div>
+        </div>
+      </section>
 
       <div class="stat-grid" id="portal-quotas"></div>
 
@@ -152,7 +205,10 @@
         <div class="panel-head">
           <div>
             <h2>Utiliser l'API</h2>
-            <span class="hint">Remplacez <code>VOTRE_CLE</code> par la clé fournie par le responsable de la passerelle.</span>
+            <span class="hint">Remplacez <code>VOTRE_CLE</code> par la clé créée dans votre espace.</span>
+          </div>
+          <div class="panel-head-actions">
+            <button type="button" class="btn btn-ghost btn-sm" id="rotate-key-btn">Régénérer ma clé</button>
           </div>
         </div>
         <div id="portal-usage"></div>

@@ -1027,7 +1027,16 @@
           Transport : <code>${esc(s.email?.transport || '—')}</code>${s.email?.from ? ` · expéditeur : <code>${esc(s.email.from)}</code>` : ''}
           · validité du code : ${fmtInt(s.email?.otpExpiresMinutes || 10)} min.
           Configurez <code>MAIL_TRANSPORT</code>, <code>MAIL_FROM</code> et <code>SMTP_URL</code> ou <code>RESEND_API_KEY</code>.
-          Chaque utilisateur doit avoir une adresse email dans sa fiche.
+          Chaque compte possède une adresse email : créée par l'utilisateur (inscription autonome) ou ajoutée par vous dans sa fiche.
+        </div>
+        <div class="alert ${s.signup?.enabled ? '' : 'warn'}">
+          <strong>Inscription autonome :</strong> ${s.signup?.enabled ? 'activée' : 'désactivée'}.
+          ${s.signup?.enabled
+            ? `Un nouvel inscrit reçoit un pass d'essai : <strong>${fmtInt(s.signup.trialDays)} jours</strong>,
+               <strong>${fmtInt(s.signup.trialQuotaRequests)} requêtes</strong>,
+               crédit <strong>${fmtUsd(s.signup.trialQuotaUsd)}</strong>.
+               Il crée ensuite sa propre clé API depuis son espace.`
+            : 'Activez <code>SIGNUP_ENABLED=1</code> (avec un transport email configuré) pour permettre la création de compte par email.'}
         </div>
         ${s.email?.transport === 'console'
           ? '<div class="alert warn">Mode console : les codes sont écrits dans les logs du serveur. À réserver au développement.</div>'

@@ -10,7 +10,7 @@
   const DAY_LABEL = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit' });
 
   const $ = (selector) => document.querySelector(selector);
-  const state = { me: null, busy: false, emailBusy: false };
+  const state = { me: null, busy: false, emailBusy: false, newKey: null };
 
   function esc(value) {
     return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
@@ -48,31 +48,36 @@
 
   function showLogin(message = '') {
     state.me = null;
+    state.newKey = null;
     $('#portal-app').classList.add('hidden');
     $('#login-view').classList.remove('hidden');
     $('#portal-error').textContent = message;
     resetEmailFlow();
+    resetSignupFlow();
     setAuthTab('key');
     $('#portal-key').focus();
   }
 
   function setAuthTab(mode) {
-    const emailMode = mode === 'email';
-    const keyTab = $('#tab-key');
-    const emailTab = $('#tab-email');
-    const keyPanel = $('#panel-key');
-    const emailPanel = $('#panel-email');
-    if (!keyTab || !emailTab) return;
-    keyTab.classList.toggle('active', !emailMode);
-    keyTab.setAttribute('aria-selected', String(!emailMode));
-    keyTab.tabIndex = emailMode ? -1 : 0;
-    emailTab.classList.toggle('active', emailMode);
-    emailTab.setAttribute('aria-selected', String(emailMode));
-    emailTab.tabIndex = emailMode ? 0 : -1;
-    keyPanel.classList.toggle('hidden', emailMode);
-    emailPanel.classList.toggle('hidden', !emailMode);
+    const entries = {
+      key: ['#tab-key', '#panel-key'],
+      email: ['#tab-email', '#panel-email'],
+      signup: ['#tab-signup', '#panel-signup'],
+    };
+    const normalized = entries[mode] ? mode : 'key';
+    for (const [name, [tabSelector, panelSelector]] of Object.entries(entries)) {
+      const tab = $(tabSelector);
+      const panel = $(panelSelector);
+      const active = name === normalized;
+      tab.classList.toggle('active', active);
+      tab.setAttribute('aria-selected', String(active));
+      tab.tabIndex = active ? 0 : -1;
+      panel.classList.toggle('hidden', !active);
+    }
     $('#email-error').textContent = '';
-    if (emailMode) $('#email-address').focus();
+    $('#signup-error').textContent = '';
+    if (normalized === 'email') $('#email-address').focus();
+    else if (normalized === 'signup') $('#signup-email').focus();
     else $('#portal-key').focus();
   }
 
@@ -141,6 +146,109 @@
       state.emailBusy = false;
       button.disabled = false;
       button.textContent = 'Valider le code';
+    }
+  }
+
+  function showSignupError(message = '') {
+    $('#signup-error').textContent = message;
+  }
+
+  function resetSignupFlow() {
+    $('#signup-request-form').classList.remove('hidden');
+    $('#signup-verify-form').classList.add('hidden');
+    $('#signup-code').value = '';
+    $('#signup-sent-note').textContent = '';
+    showSignupError('');
+  }
+
+  async function requestSignup() {
+    if (state.emailBusy) return;
+    const email = $('#signup-email').value.trim();
+    showSignupError('');
+    if (!email) {
+      showSignupError('Entrez votre adresse email.');
+      $('#signup-email').focus();
+      return;
+    }
+    state.emailBusy = true;
+    const button = $('#signup-request-btn');
+    button.disabled = true;
+    button.textContent = 'Envoi…';
+    try {
+      const data = await api('/signup/request', { method: 'POST', body: { email } });
+      $('#signup-sent-note').textContent = `${data.message} Le code est valable ${data.expiresMinutes ?? 10} minutes.`;
+      $('#signup-request-form').classList.add('hidden');
+      $('#signup-verify-form').classList.remove('hidden');
+      $('#signup-code').value = '';
+      $('#signup-code').focus();
+    } catch (err) {
+      showSignupError(err.message);
+    } finally {
+      state.emailBusy = false;
+      button.disabled = false;
+      button.textContent = 'Créer mon compte';
+    }
+  }
+
+  async function verifySignup() {
+    if (state.emailBusy) return;
+    const email = $('#signup-email').value.trim();
+    const code = $('#signup-code').value.replace(/\s+/g, '');
+    showSignupError('');
+    if (!/^\d{6}$/.test(code)) {
+      showSignupError('Entrez le code à 6 chiffres reçu par email.');
+      $('#signup-code').focus();
+      return;
+    }
+    state.emailBusy = true;
+    const button = $('#signup-verify-btn');
+    button.disabled = true;
+    button.textContent = 'Création…';
+    try {
+      await api('/signup/verify', { method: 'POST', body: { email, code } });
+      await loadMe();
+    } catch (err) {
+      showSignupError(err.message);
+      $('#signup-code').focus();
+    } finally {
+      state.emailBusy = false;
+      button.disabled = false;
+      button.textContent = 'Vérifier et créer mon compte';
+    }
+  }
+
+  async function createApiKey() {
+    const button = $('#create-key-btn');
+    $('#key-error').textContent = '';
+    button.disabled = true;
+    button.textContent = 'Création…';
+    try {
+      const data = await api('/key', { method: 'POST' });
+      state.newKey = data.key;
+      await loadMe();
+    } catch (err) {
+      $('#key-error').textContent = err.message;
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Créer ma clé API';
+    }
+  }
+
+  async function rotateApiKey() {
+    if (!window.confirm('Régénérer votre clé API ? L’ancienne clé cessera de fonctionner immédiatement.')) return;
+    const button = $('#rotate-key-btn');
+    button.disabled = true;
+    button.textContent = 'Régénération…';
+    try {
+      const data = await api('/key/rotate', { method: 'POST' });
+      state.newKey = data.key;
+      await loadMe();
+    } catch (err) {
+      $('#portal-status').className = 'portal-status alert danger';
+      $('#portal-status').innerHTML = `<strong>${esc(err.message)}</strong>`;
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Régénérer ma clé';
     }
   }
 
@@ -301,6 +409,31 @@
       status.textContent = '';
     }
 
+    const hasKey = me.client.hasKey !== false;
+    const noKeyPanel = $('#no-key-panel');
+    if (!hasKey || state.newKey) {
+      noKeyPanel.classList.remove('hidden');
+      $('#key-error').textContent = '';
+      if (state.newKey) {
+        $('#no-key-title').textContent = 'Votre clé API est créée';
+        $('#no-key-copy').textContent = 'Copiez-la et conservez-la maintenant : elle ne sera plus jamais affichée en entier.';
+        $('#create-key-btn').classList.add('hidden');
+        $('#dismiss-key-btn').classList.remove('hidden');
+        $('#new-key-box').classList.remove('hidden');
+        $('#new-key-value').textContent = state.newKey;
+      } else {
+        $('#no-key-title').textContent = 'Votre compte est créé';
+        $('#no-key-copy').textContent = 'Créez votre clé API pour utiliser la passerelle. Elle sera affichée une seule fois ; vous pourrez ensuite vous connecter avec cette clé ou avec votre email.';
+        $('#create-key-btn').classList.remove('hidden');
+        $('#dismiss-key-btn').classList.add('hidden');
+        $('#new-key-box').classList.add('hidden');
+        $('#new-key-value').textContent = '';
+      }
+    } else {
+      noKeyPanel.classList.add('hidden');
+    }
+    $('#portal-usage-panel').classList.toggle('hidden', !hasKey);
+
     const q = me.quota;
     $('#portal-quotas').innerHTML = [
       quotaCard('Tokens', q.tokens, fmtCompact),
@@ -364,13 +497,24 @@
   function wire() {
     $('#login-form').addEventListener('submit', handleLogin);
     $('#logout-btn').addEventListener('click', handleLogout);
-    $('#tab-key').addEventListener('click', () => setAuthTab('key'));
-    $('#tab-email').addEventListener('click', () => setAuthTab('email'));
-    for (const id of ['tab-key', 'tab-email']) {
+    const authTabs = [
+      ['tab-key', 'key'],
+      ['tab-email', 'email'],
+      ['tab-signup', 'signup'],
+    ];
+    for (const [id, mode] of authTabs) {
+      $(`#${id}`).addEventListener('click', () => setAuthTab(mode));
       $(`#${id}`).addEventListener('keydown', (event) => {
-        if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+        if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
         event.preventDefault();
-        setAuthTab($('#tab-email').classList.contains('active') ? 'key' : 'email');
+        const visible = authTabs.map(([tabId]) => tabId).filter((tabId) => !$(`#${tabId}`).classList.contains('hidden'));
+        const current = visible.indexOf(id);
+        const next = event.key === 'ArrowRight' || event.key === 'End'
+          ? (current + 1) % visible.length
+          : (current - 1 + visible.length) % visible.length;
+        const nextMode = authTabs.find(([tabId]) => tabId === visible[next])?.[1] ?? 'key';
+        setAuthTab(nextMode);
+        $(`#${visible[next]}`).focus();
       });
     }
     $('#email-request-form').addEventListener('submit', (event) => {
@@ -383,6 +527,34 @@
     });
     $('#email-resend').addEventListener('click', requestEmailCode);
     $('#email-change').addEventListener('click', resetEmailFlow);
+    $('#signup-request-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      requestSignup();
+    });
+    $('#signup-verify-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      verifySignup();
+    });
+    $('#signup-resend').addEventListener('click', requestSignup);
+    $('#signup-back').addEventListener('click', resetSignupFlow);
+    $('#signup-login-link').addEventListener('click', () => setAuthTab('email'));
+    $('#signup-key-link').addEventListener('click', () => setAuthTab('key'));
+    $('#create-key-btn').addEventListener('click', createApiKey);
+    $('#rotate-key-btn').addEventListener('click', rotateApiKey);
+    $('#dismiss-key-btn').addEventListener('click', () => {
+      state.newKey = null;
+      if (state.me) renderMe(state.me);
+    });
+    $('#copy-new-key').addEventListener('click', async () => {
+      const button = $('#copy-new-key');
+      try {
+        await navigator.clipboard.writeText($('#new-key-value').textContent || '');
+        button.textContent = 'Copié';
+        setTimeout(() => { button.textContent = 'Copier'; }, 1500);
+      } catch {
+        button.textContent = 'Copie impossible';
+      }
+    });
     document.addEventListener('click', async (event) => {
       const button = event.target.closest('[data-copy]');
       if (!button) return;
@@ -400,12 +572,16 @@
   async function detectEmailLogin() {
     try {
       const config = await api('/config');
+      let modes = 1;
       if (config.emailLoginEnabled) {
         $('#tab-email').classList.remove('hidden');
-      } else {
-        // Un seul mode : la barre d'onglets n'apporte rien.
-        document.querySelector('.auth-tabs').classList.add('hidden');
+        modes += 1;
       }
+      if (config.signupEnabled) {
+        $('#tab-signup').classList.remove('hidden');
+        modes += 1;
+      }
+      if (modes === 1) document.querySelector('.auth-tabs').classList.add('hidden');
     } catch {
       /* pas bloquant : la connexion par clé reste disponible */
       document.querySelector('.auth-tabs').classList.add('hidden');

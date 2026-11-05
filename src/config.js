@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '2.6.2';
+export const APP_VERSION = '2.7.0';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -148,6 +148,15 @@ export function loadConfig(overrides = {}) {
     resendApiKey: overrides.resendApiKey ?? raw('RESEND_API_KEY') ?? '',
     resendApiBase: stripTrailingSlash(overrides.resendApiBase ?? raw('RESEND_API_BASE') ?? 'https://api.resend.com'),
     otpExpiresMinutes: intOr(raw('OTP_EXPIRES_MINUTES'), 10),
+    otpCooldownSeconds: overrides.otpCooldownSeconds ?? intOr(raw('OTP_COOLDOWN_SECONDS'), 60),
+    // Inscription autonome par email + pass d'essai cree automatiquement.
+    signupEnabled: overrides.signupEnabled ?? boolOr(raw('SIGNUP_ENABLED'), true),
+    trialDays: overrides.trialDays ?? intOr(raw('TRIAL_DAYS'), 7),
+    trialQuotaUsd: overrides.trialQuotaUsd ?? Number(raw('TRIAL_QUOTA_USD') ?? 1),
+    trialQuotaRequests: overrides.trialQuotaRequests ?? intOr(raw('TRIAL_QUOTA_REQUESTS'), 200),
+    trialRpmLimit: overrides.trialRpmLimit ?? intOr(raw('TRIAL_RPM_LIMIT'), 20),
+    trialConcurrencyLimit: overrides.trialConcurrencyLimit ?? intOr(raw('TRIAL_CONCURRENCY_LIMIT'), 2),
+    trialMaxOutputTokens: overrides.trialMaxOutputTokens ?? intOr(raw('TRIAL_MAX_OUTPUT_TOKENS'), 4096),
   };
 
   if (!Number.isInteger(config.port) || config.port < 0 || config.port > 65535) {
@@ -172,6 +181,9 @@ export function loadConfig(overrides = {}) {
   if (!Number.isFinite(config.otpExpiresMinutes) || config.otpExpiresMinutes < 5 || config.otpExpiresMinutes > 30) {
     config.otpExpiresMinutes = 10;
   }
+  if (!Number.isFinite(config.otpCooldownSeconds) || config.otpCooldownSeconds < 0 || config.otpCooldownSeconds > 600) {
+    config.otpCooldownSeconds = 60;
+  }
   // BILLED_MODEL=none / off : desactive le forcage (comportement historique).
   if (['none', 'off', '0', 'false'].includes(String(config.billedModel ?? '').trim().toLowerCase())) {
     config.billedModel = '';
@@ -190,6 +202,15 @@ export function loadConfig(overrides = {}) {
     && (config.mailTransport !== 'smtp' || Boolean(config.smtpUrl))
     && (config.mailTransport !== 'resend' || Boolean(config.resendApiKey))
     && (config.mailTransport === 'console' || Boolean(config.mailFrom));
+  // Valeurs d'essai coherentes (un pass d'essai ne doit jamais etre infini par accident).
+  if (!Number.isFinite(config.trialDays) || config.trialDays < 1 || config.trialDays > 90) config.trialDays = 7;
+  if (!Number.isFinite(config.trialQuotaUsd) || config.trialQuotaUsd < 0) config.trialQuotaUsd = 1;
+  if (!Number.isFinite(config.trialQuotaRequests) || config.trialQuotaRequests < 0) config.trialQuotaRequests = 200;
+  if (!Number.isFinite(config.trialRpmLimit) || config.trialRpmLimit < 1) config.trialRpmLimit = 20;
+  if (!Number.isFinite(config.trialConcurrencyLimit) || config.trialConcurrencyLimit < 1) config.trialConcurrencyLimit = 2;
+  if (!Number.isFinite(config.trialMaxOutputTokens) || config.trialMaxOutputTokens < 1) config.trialMaxOutputTokens = 4096;
+  // L'activation effective (transport email present) est verifiee dans l'API portail.
+  config.signupEnabled = Boolean(config.signupEnabled);
   return config;
 }
 

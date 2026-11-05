@@ -1,0 +1,162 @@
+// Tests de l'inscription autonome par email, création de clé et connexions.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { startGateway } from '../src/app.js';
+
+const ADMIN_PASSWORD = 'signup-admin-password-123';
+const silentLogger = { debug() {}, info() {}, warn() {}, error() {} };
+
+function tmpDir(prefix) {
+  return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+}
+
+function fakeMailer() {
+  const sent = [];
+  return {
+    enabled: true,
+    transport: 'test',
+    sent,
+    async sendPortalCode(payload) { sent.push(payload); return { ok: true }; },
+  };
+}
+
+async function startServer(overrides = {}) {
+  const mailer = overrides.mailer ?? fakeMailer();
+  const started = await startGateway({
+    dataDir: tmpDir('dsg-signup-'),
+    host: '127.0.0.1',
+    port: 0,
+    httpsPort: 0,
+    tlsCertFile: '',
+    tlsKeyFile: '',
+    ipRateLimitPerMin: 0,
+    otpCooldownSeconds: 0,
+    providerApiKey: 'sk-test-signup',
+    providerBaseUrl: 'http://127.0.0.1:1',
+    adminPassword: ADMIN_PASSWORD,
+    logLevel: 'error',
+    logger: silentLogger,
+    mailer,
+    ...overrides,
+  });
+  return { started, mailer };
+}
+
+async function adminLogin(base) {
+  const res = await fetch(`${base}/admin/api/login`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-requested-with': 'dsk-admin' },
+    body: JSON.stringify({ password: ADMIN_PASSWORD }),
+  });
+  return res.headers.getSetCookie()[0].split(';')[0];
+}
+
+function portalPost(base, pathname, body, extra = {}) {
+  return fetch(`${base}/portal/api${pathname}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-requested-with': 'dsk-portal', ...extra },
+    body: JSON.stringify(body),
+  });
+}
+
+test('inscription autonome : code email, compte, clé API et double connexion', async () => {
+  const { started, mailer } = await startServer();
+  try {
+    // Demande de code pour un nouvel email.
+    const request = await portalPost(started.url, '/signup/request', { email: 'nouveau@gmail.com' });
+    assert.equal(request.status, 200);
+    const message = (await request.json()).message;
+    assert.match(message, /compte/i);
+    assert.equal(mailer.sent.length, 1);
+    const code = mailer.sent[0].code;
+    assert.match(code, /^\d{6}$/);
+
+    // Vérification : le compte est créé, une session est ouverte.
+    const verify = await portalPost(started.url, '/signup/verify', { email: 'nouveau@gmail.com', code });
+    assert.equal(verify.status, 200);
+    const cookie = verify.headers.getSetCookie()[0].split(';')[0];
+    const me = await fetch(`${started.url}/portal/api/me`, { headers: { cookie } });
+    assert.equal(me.status, 200);
+    const data = await me.json();
+    assert.equal(data.client.email, 'nouveau@gmail.com');
+    assert.equal(data.client.hasKey, false, 'aucune clé API au départ');
+    assert.equal(data.quota.requests.limit, 200, 'quota d’essai appliqué');
+    assert.ok(data.client.expiresAt, 'date de fin d’essai');
+
+    // Le compte apparaît une seule fois (pas de doublon admin).
+    const adminCookie = await adminLogin(started.url);
+    const clients = await (await fetch(`${started.url}/admin/api/clients`, { headers: { cookie: adminCookie } })).json();
+    assert.equal(clients.clients.filter((c) => c.email === 'nouveau@gmail.com').length, 1);
+    assert.equal(clients.clients.find((c) => c.email === 'nouveau@gmail.com').hasKey, false);
+
+    // Création de la clé API par l'utilisateur.
+    const keyRes = await portalPost(started.url, '/key', {}, { cookie });
+    assert.equal(keyRes.status, 201);
+    const created = await keyRes.json();
+    assert.match(created.key, /^sk-dsk-/);
+    const apiKey = created.key;
+
+    // L'ancienne session voit maintenant hasKey=true.
+    const me2 = await (await fetch(`${started.url}/portal/api/me`, { headers: { cookie } })).json();
+    assert.equal(me2.client.hasKey, true);
+    assert.ok(me2.client.keyPrefix.startsWith('sk-dsk-'));
+
+    // Connexion par email (code) même compte.
+    const request2 = await portalPost(started.url, '/signup/request', { email: 'nouveau@gmail.com' });
+    assert.equal(request2.status, 200);
+    await fetch(`${started.url}/portal/api/logout`, {
+      method: 'POST',
+      headers: { cookie, 'x-requested-with': 'dsk-portal' },
+    });
+    const code2 = mailer.sent.at(-1).code;
+    const loginEmail = await portalPost(started.url, '/signup/verify', { email: 'nouveau@gmail.com', code: code2 });
+    assert.equal(loginEmail.status, 200);
+    assert.equal((await loginEmail.json()).method, 'email');
+
+    // Connexion par clé API.
+    const loginKey = await portalPost(started.url, '/login', { key: apiKey });
+    assert.equal(loginKey.status, 200);
+    assert.equal((await loginKey.json()).method, 'api_key');
+  } finally {
+    await started.close();
+  }
+});
+
+test('inscription : désactivée par SIGNUP_ENABLED=0', async () => {
+  const { started, mailer } = await startServer({ signupEnabled: false });
+  try {
+    const request = await portalPost(started.url, '/signup/request', { email: 'blocked@gmail.com' });
+    assert.equal(request.status, 403);
+    assert.equal(mailer.sent.length, 0);
+  } finally {
+    await started.close();
+  }
+});
+
+test('clé API : une seule création, régénération possible', async () => {
+  const { started, mailer } = await startServer();
+  try {
+    await portalPost(started.url, '/signup/request', { email: 'cle@gmail.com' });
+    const verify = await portalPost(started.url, '/signup/verify', { email: 'cle@gmail.com', code: mailer.sent.at(-1).code });
+    const cookie = verify.headers.getSetCookie()[0].split(';')[0];
+    const first = await (await portalPost(started.url, '/key', {}, { cookie })).json();
+    const second = await portalPost(started.url, '/key', {}, { cookie });
+    assert.equal(second.status, 409);
+    assert.equal((await second.json()).error.code, 'key_exists');
+    const rotate = await portalPost(started.url, '/key/rotate', {}, { cookie });
+    assert.equal(rotate.status, 200);
+    const rotated = await rotate.json();
+    assert.match(rotated.key, /^sk-dsk-/);
+    assert.notEqual(rotated.key, first.key);
+    // L'ancienne clé ne fonctionne plus.
+    const oldLogin = await portalPost(started.url, '/login', { key: first.key });
+    assert.equal(oldLogin.status, 401);
+    const newLogin = await portalPost(started.url, '/login', { key: rotated.key });
+    assert.equal(newLogin.status, 200);
+  } finally {
+    await started.close();
+  }
+});

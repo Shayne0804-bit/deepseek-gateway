@@ -21,12 +21,17 @@ import {
   getPortalSession,
   getSetting,
   incrementPortalEmailCodeAttempts,
+  insertClient,
   insertPortalEmailCode,
   insertPortalSession,
   listUsageLogs,
   recordAdminAudit,
+  updateClientFields,
 } from './db.js';
 import {
+  displayKeyPrefix,
+  generateDerivedKey,
+  hashApiKey,
   sha256,
 } from './auth.js';
 import { getMasterKey } from './secrets.js';
@@ -34,6 +39,7 @@ import {
   checkClientAccess,
   findClientByApiKey,
   maybeRollPeriod,
+  periodKeyFor,
   remainingFor,
 } from './quota.js';
 import { loadPricing } from './pricing.js';
@@ -177,14 +183,20 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     insertPortalSession(db, sha256(token), client.id, now.toISOString(), expiresAt);
     setPortalCookie(req, res, token, Math.floor(SESSION_TTL_MS / 1000));
     loginAttempts.delete(clientIp(req, config.trustProxy));
-    audit(req, method === 'email' ? 'portal.login.email' : 'portal.login', client.name);
+    const loginAction = method === 'signup' ? 'portal.signup' : method === 'email' ? 'portal.login.email' : 'portal.login';
+    audit(req, loginAction, client.name);
     log.info(`[${req.requestId ?? '-'}] Connexion portail (${method}) : ${client.name}`);
     sendJson(res, 200, {
       ok: true,
       method,
-      client: { name: client.name, email: client.email ?? null, keyPrefix: client.keyPrefix },
+      client: { name: client.name, email: client.email ?? null, keyPrefix: client.keyPrefix, hasKey: hasKeyFor(client) },
       expiresAt,
     });
+  }
+
+  /** Un compte peut exister sans cle API active (inscription autonome). */
+  function hasKeyFor(client) {
+    return Boolean(client?.keyPrefix && String(client.keyPrefix).startsWith('sk-dsk-'));
   }
 
   function emailCodeMessage() {
@@ -195,11 +207,11 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     };
   }
 
-  /** Anti-spam : 1 envoi / 60 s et 5 envois / 15 min par adresse. */
+  /** Anti-spam : 1 envoi / cooldown configure (60 s par defaut) et 5 / 15 min par adresse. */
   function saveEmailRequestMarker(email) {
     const now = Date.now();
     const last = emailLastSend.get(email) ?? 0;
-    if (now - last < 60_000) return false;
+    if (now - last < config.otpCooldownSeconds * 1000) return false;
     if (!hitWindow(emailSendWindow, email, 5, LOGIN_WINDOW_MS)) return false;
     emailLastSend.set(email, now);
     return true;
@@ -278,6 +290,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         name: client.name,
         email: client.email ?? null,
         keyPrefix: client.keyPrefix,
+        hasKey: hasKeyFor(client),
         period: client.period,
         periodStart: client.periodStart,
         expiresAt: client.expiresAt,
@@ -343,6 +356,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       if (route === '/config' && method === 'GET') {
         sendJson(res, 200, {
           emailLoginEnabled: Boolean(mailer?.enabled),
+          signupEnabled: Boolean(config.signupEnabled) && Boolean(mailer?.enabled),
           method: mailer?.enabled ? 'email' : null,
         });
         return;
@@ -444,6 +458,178 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           return;
         }
         createSession(req, res, client, 'email');
+        return;
+      }
+
+      if (route === '/signup/request' && method === 'POST') {
+        const ip = clientIp(req, config.trustProxy);
+        if (!config.signupEnabled || !mailer?.enabled) {
+          portalError(res, 403, 'L’inscription par email est désactivée sur cette passerelle.', 'signup_disabled');
+          return;
+        }
+        if (!requireCsrf(req, res)) return;
+        if (!hitWindow(emailRequestAttempts, ip, 5, LOGIN_WINDOW_MS)) {
+          audit(req, 'portal.signup.rate_limited');
+          portalError(res, 429, 'Trop de demandes. Réessayez dans quelques minutes.', 'too_many_attempts');
+          return;
+        }
+        const body = await readJsonBody(req, 4 * 1024);
+        const email = normalizeEmail(body.email);
+        if (!EMAIL_RE.test(email) || email.length > 254) {
+          portalError(res, 400, 'Adresse email invalide.', 'invalid_email');
+          return;
+        }
+        if (saveEmailRequestMarker(email)) {
+          const code = String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+          const now = new Date();
+          const expiresAt = new Date(now.getTime() + config.otpExpiresMinutes * 60_000).toISOString();
+          cleanupPortalEmailCodes(db, now.toISOString());
+          deletePortalEmailCodes(db, email);
+          insertPortalEmailCode(db, {
+            email,
+            codeHash: otpHash(email, code),
+            createdAt: now.toISOString(),
+            expiresAt,
+          });
+          audit(req, 'portal.signup.requested');
+          try {
+            await mailer.sendPortalCode({ to: email, code, minutes: config.otpExpiresMinutes });
+          } catch (err) {
+            log.error(`[${req.requestId ?? '-'}] Envoi email inscription impossible : ${err.message}`);
+          }
+        }
+        sendJson(res, 200, {
+          ok: true,
+          message: 'Si cette adresse n’a pas encore de compte, un code de création vient d’être envoyé. Sinon, connectez-vous avec le code reçu.',
+          expiresMinutes: config.otpExpiresMinutes,
+        });
+        return;
+      }
+
+      if (route === '/signup/verify' && method === 'POST') {
+        const ip = clientIp(req, config.trustProxy);
+        if (!config.signupEnabled || !mailer?.enabled) {
+          portalError(res, 403, 'L’inscription par email est désactivée sur cette passerelle.', 'signup_disabled');
+          return;
+        }
+        if (!requireCsrf(req, res)) return;
+        if (!hitWindow(emailVerifyAttempts, ip, 20, LOGIN_WINDOW_MS)) {
+          portalError(res, 429, 'Trop de tentatives. Réessayez dans quelques minutes.', 'too_many_attempts');
+          return;
+        }
+        const body = await readJsonBody(req, 4 * 1024);
+        const email = normalizeEmail(body.email);
+        const code = String(body.code ?? '').replace(/\s+/g, '');
+        if (!EMAIL_RE.test(email) || !/^\d{6}$/.test(code)) {
+          portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
+          return;
+        }
+        const record = getActivePortalEmailCode(db, email);
+        if (!record || new Date(record.expires_at).getTime() <= Date.now()) {
+          if (record) deletePortalEmailCode(db, record.id);
+          portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
+          return;
+        }
+        incrementPortalEmailCodeAttempts(db, record.id);
+        if (Number(record.attempts) + 1 > MAX_CODE_ATTEMPTS) {
+          deletePortalEmailCode(db, record.id);
+          portalError(res, 401, 'Trop de tentatives. Demandez un nouveau code.', 'too_many_attempts');
+          return;
+        }
+        if (!safeEqualHex(otpHash(email, code), record.code_hash)) {
+          recordLoginFailure(ip);
+          portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
+          return;
+        }
+        deletePortalEmailCode(db, record.id);
+
+        // Compte déjà existant : on connecte simplement (pas de doublon).
+        const existing = findClientByEmail(db, email);
+        if (existing) {
+          createSession(req, res, existing, 'email');
+          return;
+        }
+
+        const now = new Date();
+        const trialExpiry = new Date(now.getTime() + config.trialDays * 86_400_000).toISOString();
+        const localPart = email.split('@')[0].replace(/[._-]+/g, ' ').trim();
+        const client = {
+          id: crypto.randomUUID(),
+          name: (localPart || 'Nouveau compte').slice(0, 80),
+          email,
+          keyHash: sha256(`pending:${crypto.randomUUID()}`),
+          keyPrefix: 'en attente',
+          enabled: true,
+          quotaTokens: null,
+          quotaRequests: config.trialQuotaRequests || null,
+          quotaUsd: config.trialQuotaUsd || null,
+          usedTokens: 0,
+          usedRequests: 0,
+          usedUsd: 0,
+          period: 'total',
+          periodStart: periodKeyFor('total', now),
+          rpmLimit: config.trialRpmLimit || null,
+          concurrencyLimit: config.trialConcurrencyLimit || null,
+          maxOutputTokens: config.trialMaxOutputTokens || null,
+          allowedModels: null,
+          expiresAt: trialExpiry,
+          note: 'Inscription autonome — pass d’essai',
+          createdAt: now.toISOString(),
+        };
+        insertClient(db, client);
+        audit(req, 'portal.signup', client.name);
+        log.info(`[${req.requestId ?? '-'}] Nouveau compte email : ${client.name} (essai ${config.trialDays} j)`);
+        createSession(req, res, client, 'signup');
+        return;
+      }
+
+      if (route === '/key' && method === 'POST') {
+        const current = sessionFromRequest(req);
+        if (!current) {
+          portalError(res, 401, 'Session portail expirée. Reconnectez-vous.', 'unauthorized');
+          return;
+        }
+        if (!requireCsrf(req, res)) return;
+        const client = getClientById(db, current.client.id);
+        if (!client) {
+          portalError(res, 401, 'Compte introuvable.', 'unauthorized');
+          return;
+        }
+        if (hasKeyFor(client)) {
+          portalError(res, 409, 'Une clé API existe déjà pour ce compte. Utilisez la régénération.', 'key_exists');
+          return;
+        }
+        const apiKey = generateDerivedKey();
+        updateClientFields(db, client.id, {
+          keyHash: hashApiKey(apiKey),
+          keyPrefix: displayKeyPrefix(apiKey),
+        });
+        audit(req, 'portal.key.create', client.name);
+        log.info(`[${req.requestId ?? '-'}] Clé API créée par ${client.name}.`);
+        sendJson(res, 201, { ok: true, key: apiKey, client: { name: client.name, hasKey: true } });
+        return;
+      }
+
+      if (route === '/key/rotate' && method === 'POST') {
+        const current = sessionFromRequest(req);
+        if (!current) {
+          portalError(res, 401, 'Session portail expirée. Reconnectez-vous.', 'unauthorized');
+          return;
+        }
+        if (!requireCsrf(req, res)) return;
+        const client = getClientById(db, current.client.id);
+        if (!client || !hasKeyFor(client)) {
+          portalError(res, 409, 'Aucune clé API à régénérer.', 'no_key');
+          return;
+        }
+        const apiKey = generateDerivedKey();
+        updateClientFields(db, client.id, {
+          keyHash: hashApiKey(apiKey),
+          keyPrefix: displayKeyPrefix(apiKey),
+        });
+        audit(req, 'portal.key.rotate', client.name);
+        log.info(`[${req.requestId ?? '-'}] Clé API régénérée par ${client.name}.`);
+        sendJson(res, 200, { ok: true, key: apiKey, client: { name: client.name, hasKey: true } });
         return;
       }
 

@@ -304,15 +304,36 @@ route d'administration ; les tentatives de connexion sont limitées par IP et jo
 
 ## Connexion par email (code OTP) et domaine
 
-Le portail accepte **deux modes de connexion** :
+Le portail accepte **trois parcours** :
 
-1. **Clé API** (`sk-dsk-…`) — toujours disponible, aucun service externe.
-2. **Code par email** — l'utilisateur saisit l'adresse email associée à sa clé, reçoit un
-   **code à 6 chiffres, valable 10 minutes et à usage unique**, puis ouvre son espace.
+1. **Inscription autonome** — l'utilisateur saisit son email, reçoit un code, vérifie-le et son
+   compte est créé avec un **pass d'essai**. Il crée ensuite sa propre clé API depuis l'espace.
+2. **Code par email** — pour un compte existant, sans ressaisir la clé.
+3. **Clé API** (`sk-dsk-…`) — toujours disponible, aucun service externe.
 
 Le code est haché en base (HMAC), limité à 5 essais, redemandé au plus une fois par minute,
 et la réponse est toujours générique (« si un compte existe… ») pour ne pas révéler les comptes.
-Chaque utilisateur doit avoir une **adresse email** renseignée dans sa fiche (panneau → clé → Email).
+
+### Inscription autonome (signup)
+
+Activée par défaut dès qu'un transport email est configuré. Un nouvel inscrit reçoit un pass
+d'essai, puis peut créer lui-même sa clé API (affichée une seule fois). L'administrateur peut
+ensuite modifier ses quotas, sa date de fin ou la désactiver dans le panneau.
+
+```env
+SIGNUP_ENABLED=1            # 0 pour fermer les inscriptions
+TRIAL_DAYS=7                # durée du pass d'essai
+TRIAL_QUOTA_USD=1           # crédit d'essai (USD)
+TRIAL_QUOTA_REQUESTS=200    # requêtes incluses
+TRIAL_RPM_LIMIT=20
+TRIAL_CONCURRENCY_LIMIT=2
+TRIAL_MAX_OUTPUT_TOKENS=4096
+OTP_COOLDOWN_SECONDS=60     # délai minimum entre deux envois pour un même email
+```
+
+Sécurité : code à usage unique, expiration 10 min, 5 essais max, limitation par IP et par email,
+et création impossible sans vérification de l'adresse. Pour fermer complètement le parcours :
+`SIGNUP_ENABLED=0` (les comptes existants continuent de fonctionner).
 
 ### Choisir un transport d'envoi
 
@@ -954,7 +975,7 @@ Serveur arrêté, copiez le dossier `data/` (ou au minimum `gateway.db`). À cha
 node --test test
 ```
 
-La suite (79 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
+La suite (83 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
 normalisation `usage` OpenAI/Anthropic, quotas (tokens, requêtes, coût, reset de période),
 limites de débit et de concurrence, authentification admin (hash scrypt, sessions),
 chiffrement/hachage des clés dérivées, proxy JSON et **streaming SSE** avec comptage,
