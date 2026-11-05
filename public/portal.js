@@ -412,6 +412,7 @@
   function limitsMarkup(me) {
     const rows = [
       ['période', PERIOD_LABELS[me.client.period] || me.client.period],
+      ['facturation', me.billing?.billedModel || 'modèle demandé'],
       ['débit', me.limits.rpmLimit ? `${fmtInt(me.limits.rpmLimit)} req/min` : 'non limité'],
       ['sortie max', me.limits.maxOutputTokens ? `${fmtInt(me.limits.maxOutputTokens)} tokens` : 'non plafonnée'],
       ['depuis', fmtDate(me.client.createdAt)],

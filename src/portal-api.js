@@ -412,6 +412,10 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         allowedModels: client.allowedModels,
       },
       models: availableModelIds(db),
+      billing: {
+        billedModel: config.billedModel || null,
+        transparent: Boolean(config.billedModel),
+      },
       baseUrl: `${origin}/v1`,
       anthropicBaseUrl: `${origin}/anthropic`,
       headers: [

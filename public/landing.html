@@ -34,7 +34,7 @@
     <section class="hero">
       <div class="hero-copy">
         <p class="hero-kicker">API DeepSeek · Passerelle privée</p>
-        <h1>La puissance de DeepSeek, sans partager votre clé.</h1>
+        <h1>La puissance de <span class="accent-word">DeepSeek</span>, sans partager votre clé.</h1>
         <p class="hero-lede">
           Une seule clé fournisseur reste côté serveur. Chaque personne reçoit son propre accès,
           avec un quota, un crédit et un suivi de consommation.
@@ -61,10 +61,11 @@
 
 <span class="t-http">HTTP/1.1 200 OK</span>
 <span class="t-h">x-quota-tokens-remaining: <b>1 987 412</b></span>
+<span class="t-h">x-gateway-requested-model: <b>claude-opus-5.5</b></span>
 <span class="t-h">x-gateway-billed-model: <b>deepseek-flash</b></span>
 
 {"model":"deepseek-flash","usage":{"total_tokens":118}}</pre>
-        <figcaption class="transcript-foot">La clé fournisseur ne quitte jamais le serveur.</figcaption>
+        <figcaption class="transcript-foot">Modèle réellement facturé : <strong>deepseek-flash</strong>. Le nom demandé reste visible dans les en-têtes.</figcaption>
       </figure>
     </section>
 
@@ -88,7 +89,7 @@
         <article class="feature-card">
           <span class="feature-icon">03</span>
           <h3>Coûts transparents</h3>
-          <p>Chaque requête est facturée au modèle réellement utilisé, visible dans le journal.</p>
+          <p>Chaque requête affiche le modèle réellement facturé — aujourd'hui <strong>deepseek-flash</strong>.</p>
         </article>
         <article class="feature-card">
           <span class="feature-icon">04</span>
@@ -143,7 +144,7 @@ ANTHROPIC_AUTH_TOKEN=sk-dsk-…</pre>
   </main>
 
   <footer class="site-footer">
-    <span>VALARIA Gateway API</span>
+    <span>VALARIA Gateway API · pour DeepSeek · facturation deepseek-flash</span>
     <span class="site-footer-links">
       <a href="/portal">Mon espace</a>
       <a href="#brancher">Intégration</a>

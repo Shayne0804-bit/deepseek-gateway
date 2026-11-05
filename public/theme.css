@@ -419,6 +419,7 @@ tbody tr:hover td { background: rgba(127, 227, 170, 0.035); }
   margin-bottom: 22px;
   text-wrap: balance;
 }
+.accent-word { color: var(--accent); }
 .hero-lede {
   font-size: 17px;
   line-height: 1.65;
