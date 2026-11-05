@@ -161,6 +161,22 @@ test('clé API : une seule création, régénération possible', async () => {
   }
 });
 
+test('pas de plafond d envois par email (cooldown court en test)', async () => {
+  const { started, mailer } = await startServer();
+  try {
+    for (let i = 0; i < 6; i += 1) {
+      const res = await portalPost(started.url, '/signup/request', { email: 'illimite@gmail.com' });
+      assert.equal(res.status, 200, `envoi ${i + 1}`);
+      const body = await res.json();
+      assert.equal(body.sent, true);
+      assert.equal(body.max_sends, 0);
+    }
+    assert.equal(mailer.sent.length, 6, 'chaque demande doit envoyer un email');
+  } finally {
+    await started.close();
+  }
+});
+
 test('code demande en inscription mais saisi en connexion : non consomme et message clair', async () => {
   const { started, mailer } = await startServer();
   try {

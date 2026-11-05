@@ -68,7 +68,7 @@
     let remaining = Math.max(0, Math.ceil(Number(seconds) || 0));
     const count = Number(info.count) || 0;
     const max = Number(info.max) || 0;
-    const countLabel = count && max ? ` (${count}/${max})` : '';
+    const countLabel = count ? (max > 0 ? ` (${count}/${max})` : ` (${count})`) : '';
     const render = () => {
       if (remaining > 0) {
         button.disabled = true;
@@ -354,6 +354,24 @@
     </article>`;
   }
 
+  function passCard(me) {
+    const expiresAt = me.client.expiresAt ? new Date(me.client.expiresAt) : null;
+    if (!expiresAt) {
+      return `<article class="stat-card quota-card">
+        <div class="stat-label">Fin du pass</div>
+        <div class="stat-value pass-date">Sans date</div>
+        <div class="small muted">arrêt à l'épuisement du quota</div>
+      </article>`;
+    }
+    const days = Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000);
+    const dateLabel = expiresAt.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+    return `<article class="stat-card quota-card">
+      <div class="stat-label">Fin du pass</div>
+      <div class="stat-value">${days > 0 ? `${fmtInt(days)} j` : 'Terminé'}</div>
+      <div class="small muted">${days > 0 ? `jusqu'au ${dateLabel}` : 'pass expiré'}</div>
+    </article>`;
+  }
+
   function chartMarkup(series) {
     const tokens = series.map((row) => Number(row.tokens) || 0);
     const total = tokens.reduce((sum, value) => sum + value, 0);
@@ -469,10 +487,10 @@
     if (me.client.expiresAt) {
       const expiresAt = new Date(me.client.expiresAt);
       const daysLeft = Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000);
-      passLine.textContent = `Pass valable jusqu’au ${fmtDate(me.client.expiresAt)} (${daysLeft > 0 ? `dans ${daysLeft} j` : 'expiré'}) OU jusqu’à épuisement du quota.`;
+      passLine.textContent = `Pass actif jusqu’au ${fmtDate(me.client.expiresAt)} · arrêt aussi au quota.`;
       passLine.classList.toggle('pass-expired', daysLeft <= 0);
     } else {
-      passLine.textContent = 'Pass sans date de fin : il s’arrête à l’épuisement du quota (tokens, requêtes ou coût).';
+      passLine.textContent = 'Accès sans date de fin · arrêt à l’épuisement du quota.';
       passLine.classList.remove('pass-expired');
     }
 
@@ -512,17 +530,17 @@
 
     const q = me.quota;
     $('#portal-quotas').innerHTML = [
-      quotaCard('Tokens', q.tokens, fmtCompact),
       quotaCard('Requêtes', q.requests, fmtInt),
-      quotaCard('Coût estimé', q.usd, fmtUsd),
+      quotaCard('Crédit', q.usd, fmtUsd),
+      passCard(me),
     ].join('');
 
     const series = me.usage?.series ?? [];
-    $('#portal-chart-hint').textContent = `${fmtInt(me.usage?.totals?.requests ?? 0)} requêtes (historique) · ${fmtUsd(me.usage?.totals?.cost ?? 0)}`;
+    $('#portal-chart-hint').textContent = `${fmtInt(me.usage?.totals?.requests ?? 0)} requêtes · ${fmtUsd(me.usage?.totals?.cost ?? 0)}`;
     $('#portal-chart').innerHTML = chartMarkup(series);
 
     $('#portal-limits').innerHTML = limitsMarkup(me);
-    $('#portal-logs-hint').textContent = `${fmtInt(me.usage?.totals?.requests ?? 0)} au total · aujourd'hui : ${fmtInt(me.usage?.today?.requests ?? 0)}`;
+    $('#portal-logs-hint').textContent = `${fmtInt(me.usage?.totals?.requests ?? 0)} requêtes · ${fmtInt(me.usage?.today?.requests ?? 0)} aujourd'hui`;
     $('#portal-usage').innerHTML = usageMarkup(me);
 
     $('#portal-logs').innerHTML = '<div class="muted small">Chargement des requêtes…</div>';

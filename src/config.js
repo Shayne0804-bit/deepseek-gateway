@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '2.8.0';
+export const APP_VERSION = '2.8.1';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -149,7 +149,7 @@ export function loadConfig(overrides = {}) {
     resendApiBase: stripTrailingSlash(overrides.resendApiBase ?? raw('RESEND_API_BASE') ?? 'https://api.resend.com'),
     otpExpiresMinutes: intOr(raw('OTP_EXPIRES_MINUTES'), 10),
     otpCooldownSeconds: overrides.otpCooldownSeconds ?? intOr(raw('OTP_COOLDOWN_SECONDS'), 30),
-    otpMaxPerEmail: overrides.otpMaxPerEmail ?? intOr(raw('OTP_MAX_PER_EMAIL'), 5),
+    otpMaxPerEmail: overrides.otpMaxPerEmail ?? intOr(raw('OTP_MAX_PER_EMAIL'), 0),
     otpMaxPerIp: overrides.otpMaxPerIp ?? intOr(raw('OTP_MAX_PER_IP'), 10),
     // Inscription autonome par email + pass d'essai cree automatiquement.
     signupEnabled: overrides.signupEnabled ?? boolOr(raw('SIGNUP_ENABLED'), true),
@@ -186,8 +186,8 @@ export function loadConfig(overrides = {}) {
   if (!Number.isFinite(config.otpCooldownSeconds) || config.otpCooldownSeconds < 0 || config.otpCooldownSeconds > 600) {
     config.otpCooldownSeconds = 30;
   }
-  if (!Number.isFinite(config.otpMaxPerEmail) || config.otpMaxPerEmail < 1 || config.otpMaxPerEmail > 20) {
-    config.otpMaxPerEmail = 5;
+  if (!Number.isFinite(config.otpMaxPerEmail) || config.otpMaxPerEmail < 0 || config.otpMaxPerEmail > 50) {
+    config.otpMaxPerEmail = 0;
   }
   if (!Number.isFinite(config.otpMaxPerIp) || config.otpMaxPerIp < 1 || config.otpMaxPerIp > 50) {
     config.otpMaxPerIp = 10;
@@ -221,6 +221,7 @@ export function loadConfig(overrides = {}) {
   config.signupEnabled = Boolean(config.signupEnabled);
   return config;
 }
+
 
 
 

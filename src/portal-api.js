@@ -225,22 +225,23 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     };
   }
 
-  /** Etat d'envoi pour un email : cooldown + nombre d'envois dans la fenetre. */
+  /** Etat d'envoi pour un email : cooldown + plafond optionnel (0 = illimite). */
   function emailSendState(email) {
     const now = Date.now();
     const last = emailLastSend.get(email) ?? 0;
     const entry = emailSendWindow.get(email);
     const active = entry && now - entry.first <= LOGIN_WINDOW_MS;
     const count = active ? entry.count : 0;
+    const limited = config.otpMaxPerEmail > 0;
     const cooldownLeft = Math.max(0, Math.ceil((last + config.otpCooldownSeconds * 1000 - now) / 1000));
-    const windowLeft = active && count >= config.otpMaxPerEmail
+    const windowLeft = limited && count >= config.otpMaxPerEmail
       ? Math.max(1, Math.ceil((entry.first + LOGIN_WINDOW_MS - now) / 1000))
       : 0;
     return {
-      allowed: cooldownLeft <= 0 && count < config.otpMaxPerEmail,
+      allowed: cooldownLeft <= 0 && (!limited || count < config.otpMaxPerEmail),
       retryAfterSeconds: Math.max(cooldownLeft, windowLeft),
       count,
-      max: config.otpMaxPerEmail,
+      max: limited ? config.otpMaxPerEmail : 0,
     };
   }
 
