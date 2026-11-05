@@ -401,7 +401,9 @@
       state.newKey = data.key;
       await loadMe();
     } catch (err) {
-      $('#key-error').textContent = err.message;
+      const status = $('#portal-status');
+      status.className = 'portal-status alert danger';
+      status.textContent = err.message;
     } finally {
       button.disabled = false;
       button.textContent = 'Créer ma clé API';
@@ -597,26 +599,15 @@
 
     const hasKey = me.client.hasKey !== false;
     const noKeyPanel = $('#no-key-panel');
-    if (!hasKey || state.newKey) {
+    const headerCreate = $('#create-key-btn');
+    if (state.newKey) {
       noKeyPanel.classList.remove('hidden');
       $('#key-error').textContent = '';
-      if (state.newKey) {
-        $('#no-key-title').textContent = 'Votre clé API est créée';
-        $('#no-key-copy').textContent = 'Copiez-la et conservez-la maintenant : elle ne sera plus jamais affichée en entier.';
-        $('#create-key-btn').classList.add('hidden');
-        $('#dismiss-key-btn').classList.remove('hidden');
-        $('#new-key-box').classList.remove('hidden');
-        $('#new-key-value').textContent = state.newKey;
-      } else {
-        $('#no-key-title').textContent = 'Votre compte est créé';
-        $('#no-key-copy').textContent = 'Créez votre clé API pour utiliser la passerelle. Elle sera affichée une seule fois ; vous pourrez ensuite vous connecter avec cette clé ou avec votre email.';
-        $('#create-key-btn').classList.remove('hidden');
-        $('#dismiss-key-btn').classList.add('hidden');
-        $('#new-key-box').classList.add('hidden');
-        $('#new-key-value').textContent = '';
-      }
+      $('#new-key-value').textContent = state.newKey;
+      headerCreate.classList.add('hidden');
     } else {
       noKeyPanel.classList.add('hidden');
+      headerCreate.classList.toggle('hidden', hasKey);
     }
     $('#portal-dashboard').classList.remove('hidden');
 

@@ -140,6 +140,7 @@
           <p class="pass-line small" id="portal-pass"></p>
         </div>
         <div class="portal-actions">
+          <button type="button" class="btn btn-primary btn-sm hidden" id="create-key-btn">Créer ma clé API</button>
           <button type="button" class="btn btn-ghost btn-sm" id="logout-btn">Se déconnecter</button>
         </div>
       </div>
@@ -149,21 +150,20 @@
       <section id="no-key-panel" class="panel hidden" aria-labelledby="no-key-title">
         <div class="panel-head">
           <div>
-            <h2 id="no-key-title">Votre compte est créé</h2>
-            <span class="hint">Il ne manque plus que votre clé API pour utiliser la passerelle.</span>
+            <h2 id="no-key-title">Votre clé API est créée</h2>
+            <span class="hint">Conservez-la maintenant.</span>
           </div>
         </div>
-        <p id="no-key-copy">Créez votre clé API : elle sera affichée <strong>une seule fois</strong>. Vous pourrez ensuite vous connecter avec cette clé ou avec votre email.</p>
+        <p id="no-key-copy">Copiez-la et conservez-la en lieu sûr : elle ne sera plus jamais affichée en entier.</p>
         <div id="key-error" class="login-error" role="alert" aria-live="assertive"></div>
-        <div class="form-actions" style="justify-content:flex-start">
-          <button type="button" class="btn btn-primary" id="create-key-btn">Créer ma clé API</button>
-          <button type="button" class="btn btn-ghost hidden" id="dismiss-key-btn">J'ai copié ma clé</button>
-        </div>
-        <div id="new-key-box" class="hidden">
+        <div id="new-key-box">
           <div class="alert warn"><strong>Copiez cette clé maintenant :</strong> elle ne sera plus jamais affichée en entier.</div>
           <div class="key-reveal">
             <code id="new-key-value"></code>
             <button type="button" class="btn btn-ghost" id="copy-new-key">Copier</button>
+          </div>
+          <div class="form-actions" style="justify-content:flex-start">
+            <button type="button" class="btn btn-primary" id="dismiss-key-btn">J'ai copié ma clé</button>
           </div>
         </div>
       </section>
