@@ -412,7 +412,6 @@
   function limitsMarkup(me) {
     const rows = [
       ['période', PERIOD_LABELS[me.client.period] || me.client.period],
-      ['facturation', me.billing?.billedModel || 'modèle demandé'],
       ['débit', me.limits.rpmLimit ? `${fmtInt(me.limits.rpmLimit)} req/min` : 'non limité'],
       ['sortie max', me.limits.maxOutputTokens ? `${fmtInt(me.limits.maxOutputTokens)} tokens` : 'non plafonnée'],
       ['depuis', fmtDate(me.client.createdAt)],
@@ -421,7 +420,7 @@
       ? me.limits.allowedModels
       : me.models;
     return `${rows.map(([key, value]) => `<div class="spec-row"><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join('')}
-      <div class="spec-row"><dt>modèles</dt><dd class="chips">${models.map((model) => `<span class="chip">${esc(model)}</span>`).join('')}</dd></div>`;
+      <div class="spec-row"><dt>modèles</dt><dd class="chips">${models.length ? models.map((model) => `<span class="chip">${esc(model)}</span>`).join('') : '<span class="muted">selon votre pass</span>'}</dd></div>`;
   }
 
   function logsMarkup(rows) {
@@ -431,8 +430,8 @@
     const body = rows.map((row) => {
       const ok = Number(row.status) >= 200 && Number(row.status) < 300;
       const model = row.requestedModel
-        ? `${esc(row.requestedModel)}<br><span class="muted">facturé : ${esc(row.model || '—')}</span>`
-        : esc(row.model || '—');
+        ? esc(row.requestedModel)
+        : '<span class="muted">—</span>';
       return `<tr>
         <td class="nowrap muted small">${fmtDate(row.createdAt)}</td>
         <td class="mono small">${model}</td>
@@ -448,7 +447,7 @@
   }
 
   function usageMarkup(me) {
-    const curl = `curl ${me.baseUrl}/chat/completions \\\n  -H "Authorization: Bearer VOTRE_CLE" \\\n  -H "Content-Type: application/json" \\\n  -d '{"model":"deepseek-flash","messages":[{"role":"user","content":"Bonjour"}]}'`;
+    const curl = `curl ${me.baseUrl}/chat/completions \\\n  -H "Authorization: Bearer VOTRE_CLE" \\\n  -H "Content-Type: application/json" \\\n  -d '{"model":"claude-opus-5.5","messages":[{"role":"user","content":"Bonjour"}]}'`;
     const anthropic = `ANTHROPIC_BASE_URL=${me.anthropicBaseUrl}\nANTHROPIC_AUTH_TOKEN=VOTRE_CLE`;
     return `
       <div class="usage-grid">

@@ -409,13 +409,11 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       limits: {
         rpmLimit: client.rpmLimit,
         maxOutputTokens: client.maxOutputTokens,
-        allowedModels: client.allowedModels,
+        allowedModels: client.allowedModels
+          ? client.allowedModels.filter((id) => id !== 'deepseek-flash')
+          : null,
       },
-      models: availableModelIds(db),
-      billing: {
-        billedModel: config.billedModel || null,
-        transparent: Boolean(config.billedModel),
-      },
+      models: availableModelIds(db).filter((id) => id !== 'deepseek-flash'),
       baseUrl: `${origin}/v1`,
       anthropicBaseUrl: `${origin}/anthropic`,
       headers: [
@@ -837,10 +835,10 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         const data = listUsageLogs(db, { limit, offset: 0, clientId: logsClient.id });
         sendJson(res, 200, {
           total: data.total,
+          // Les utilisateurs ne doivent pas voir le modele reellement facture.
           rows: data.rows.map((row) => ({
             createdAt: row.createdAt,
-            model: row.model,
-            requestedModel: row.requestedModel,
+            requestedModel: row.requestedModel || null,
             promptTokens: row.promptTokens,
             completionTokens: row.completionTokens,
             totalTokens: row.totalTokens,

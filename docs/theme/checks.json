@@ -6,7 +6,7 @@
       "required": 3,
       "size": 62,
       "weight": 750,
-      "text": "La puissance de DeepSeek, sans partager ",
+      "text": "La puissance des meilleurs modèles, sans",
       "page": "public-landing"
     },
     {
@@ -24,7 +24,7 @@
       "required": 4.5,
       "size": 10,
       "weight": 400,
-      "text": "API DeepSeek · Passerelle privée",
+      "text": "Passerelle API · accès privé",
       "page": "public-landing"
     },
     {
@@ -78,7 +78,7 @@
       "required": 4.5,
       "size": 12.5,
       "weight": 400,
-      "text": "VALARIA Gateway API · pour DeepSeek · fa",
+      "text": "VALARIA Gateway API\n    \n      Mon espac",
       "page": "public-landing"
     },
     {
@@ -156,7 +156,7 @@
       "required": 4.5,
       "size": 11.5,
       "weight": 400,
-      "text": "Léa — projet perso · clé sk-dsk-uspAk… ·",
+      "text": "Léa — projet perso · clé sk-dsk-wfUjU… ·",
       "page": "portal-dashboard"
     },
     {
@@ -219,7 +219,7 @@
       "required": 4.5,
       "size": 12,
       "weight": 400,
-      "text": "VALARIA Gateway API v2.8.3\n        Les d",
+      "text": "VALARIA Gateway API v2.8.4\n        Les d",
       "page": "portal-dashboard"
     },
     {

@@ -137,7 +137,8 @@ test('portail : login, session, quotas et deconnexion', async () => {
     assert.equal(data.quota.tokens.used, 120);
     assert.equal(data.usage.totals.requests, 1);
     assert.ok(data.models.includes('claude-opus-5.5'));
-    assert.ok(data.models.includes('deepseek-flash'));
+    // Le modele reellement facture ne doit pas apparaitre cote utilisateur.
+    assert.ok(!data.models.includes('deepseek-flash'));
     assert.match(data.baseUrl, /^http:\/\/127\.0\.0\.1:\d+\/v1$/);
     assert.match(data.anthropicBaseUrl, /\/anthropic$/);
 
@@ -147,7 +148,7 @@ test('portail : login, session, quotas et deconnexion', async () => {
     const logsData = await logs.json();
     assert.equal(logsData.total, 1);
     assert.equal(logsData.rows[0].requestedModel, 'claude-opus-5.5');
-    assert.equal(logsData.rows[0].model, 'deepseek-flash');
+    assert.equal(Object.hasOwn(logsData.rows[0], 'model'), false);
 
     // Une session portail n'ouvre pas l'API admin.
     const adminAccess = await fetch(`${started.url}/admin/api/clients`, { headers: { cookie } });
