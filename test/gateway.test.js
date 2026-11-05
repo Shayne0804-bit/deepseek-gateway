@@ -229,7 +229,7 @@ test('les trois surfaces web sont servies : site public, console admin, espace u
   assert.match(await robots.text(), /Disallow: \//);
 });
 
-test('les assets texte sont servis compresses (gzip) avec cache navigateur', async () => {
+test('les assets texte sont servis compresses (gzip) sans cache long', async () => {
   const res = await new Promise((resolve, reject) => {
     http.get(`${base}/assets/styles.css`, { headers: { 'accept-encoding': 'gzip' } }, (response) => {
       response.resume();
@@ -238,7 +238,8 @@ test('les assets texte sont servis compresses (gzip) avec cache navigateur', asy
   });
   assert.equal(res.statusCode, 200);
   assert.equal(res.headers['content-encoding'], 'gzip');
-  assert.match(String(res.headers['cache-control']), /max-age=300/);
+  assert.match(String(res.headers['cache-control']), /no-cache/);
+  assert.doesNotMatch(String(res.headers['cache-control']), /max-age=300/);
   assert.match(String(res.headers['vary']), /accept-encoding/i);
 });
 
