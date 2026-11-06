@@ -366,8 +366,9 @@ Implémenté :
   - agent par défaut : un message naturel lit, modifie et teste avec approbation ;
   - TUI plein écran avec trois interfaces **Focus / Studio / Compact** ;
   - Focus organisé comme la démo Freebuff : titre projet, transcript, saisie, ligne modèle/aide ;
-  - revue de diff : fichiers modifiés/ajoutés/supprimés à gauche, lignes `+`/`−` à droite ;
-    en Studio, compte + fichiers + diff sont organisés de gauche à droite ;
+  - revue de diff en une seule colonne : liste des fichiers en haut, diff du fichier
+    sélectionné en bas ; en Studio, compte + conversation + revue restent visibles
+    côte à côte ;
   - assets de marque : logo ASCII, `◈`, spinner, pulse, splash animé ;
   - compte, pass, quotas et crédit consultables via `/account` ou `Ctrl+O` ;
   - parcours `/interview`, `/plan`, `/review`, `/diff` et suggestions `1/2/3` après réponse ;

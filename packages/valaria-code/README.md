@@ -59,16 +59,18 @@ Dans la TUI :
 
 ## Revue de diff
 
-`/diff` ouvre une revue en deux colonnes :
+`/diff` ouvre une revue compacte :
 
-- à gauche, les fichiers modifiés, ajoutés ou supprimés du répertoire ;
-- à droite, les lignes `+`/`−` du fichier sélectionné, avec numéros de ligne.
+- les fichiers modifiés, ajoutés ou supprimés sont listés en haut ;
+- le diff du fichier sélectionné s’affiche juste en dessous, dans la même colonne ;
+- les lignes ajoutées sont vertes, les lignes supprimées rouges, avec numéros de ligne.
 
-En mode **Studio**, la colonne compte reste à gauche, puis viennent la liste des
-fichiers et le diff : tout ce qui concerne les changements est donc à droite.
+En mode **Studio**, la conversation reste au centre et la revue occupe une seule
+colonne à droite : liste des fichiers en haut, diff en bas. Les messages
+utilisateur et agent restent donc visibles.
 
 Une proposition d’écriture de l’agent ouvre automatiquement cette revue ;
-`y` autorise, `n` refuse, `↑↓` change de fichier, `d` agrandit/réduit le diff et
+`y` autorise, `n` refuse, `↑↓` change de fichier, `d` agrandit/réduit la revue et
 `PgUp/PgDn` fait défiler.
 
 ## Assets et animations

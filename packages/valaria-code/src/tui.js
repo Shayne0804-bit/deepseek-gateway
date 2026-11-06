@@ -893,15 +893,14 @@ function renderDiffOverlay(state, { color = true, cols = 96, rows = 28 } = {}) {
   const wide = Boolean(review.wide);
   const header = `  ${c('◈', COLORS.accent)} ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${d('revue du diff')}   ${d(`${stats.files} fichier(s)`)}   ${c(`+${stats.additions}`, COLORS.accent)} ${c(`−${stats.deletions}`, COLORS.danger)}`;
   const footer = state.approval
-    ? `  ↑↓ fichier   PgUp/PgDn lignes   d ${wide ? 'réduire' : 'agrandir'} le diff   y autoriser   n refuser   Échap annuler`
-    : `  ↑↓ fichier   PgUp/PgDn lignes   d ${wide ? 'réduire' : 'agrandir'} le diff   Échap fermer`;
+    ? `  ↑↓ fichier  PgUp/PgDn lignes  d ${wide ? 'réduire' : 'agrandir'}  y autoriser  n refuser  Échap annuler`
+    : `  ↑↓ fichier  PgUp/PgDn lignes  d ${wide ? 'réduire' : 'agrandir'}  Échap fermer`;
   const bodyHeight = Math.max(6, rows - 4);
   const showAccount = state.layout === 'studio' && cols >= 136;
   const accountWidth = 22;
-  const conversationWidth = Math.max(28, Math.min(wide ? 48 : 72, Math.floor(cols * (wide ? 0.30 : 0.43))));
-  const filesWidth = Math.max(22, Math.min(28, Math.floor(cols * 0.16)));
-  const separators = showAccount ? 12 : 9;
-  const diffWidth = Math.max(24, cols - 2 - conversationWidth - filesWidth - separators - (showAccount ? accountWidth : 0));
+  const conversationWidth = Math.max(30, Math.floor(cols * (wide ? 0.28 : showAccount ? 0.47 : 0.66)));
+  const reviewWidth = Math.max(30, cols - 2 - conversationWidth - 3 - (showAccount ? accountWidth + 3 : 0));
+  const separators = showAccount ? 6 : 3;
 
   const accountLines = [];
   if (showAccount) {
@@ -951,28 +950,29 @@ function renderDiffOverlay(state, { color = true, cols = 96, rows = 28 } = {}) {
     recent.push(label);
     for (const line of wrap(message.content || '', Math.max(16, conversationWidth - 2))) recent.push(`  ${line}`);
   }
-  if (!recent.length) recent.push(d('  Aucun message — décrivez une tâche.'), '', d('  Les messages restent visibles'), d('  pendant la revue du diff.'));
+  if (!recent.length) recent.push(d('  Aucun message — décrivez une tâche.'), '', d('  Les messages restent visibles'), d('  pendant la revue.'));
   conversationLines.push(...recent.slice(-(bodyHeight - 2)));
 
-  const fileLines = [];
-  fileLines.push(c(`FICHIERS (${files.length})`, COLORS.muted));
-  fileLines.push(d('répertoire'));
-  const fileRows = Math.max(2, bodyHeight - 3);
-  const start = Math.max(0, Math.min(Math.max(0, files.length - fileRows), selectedIndex - Math.floor(fileRows / 2)));
-  for (let index = start; index < Math.min(files.length, start + fileRows); index += 1) {
+  const reviewLines = [];
+  reviewLines.push(c(`FICHIERS (${files.length})`, COLORS.muted));
+  reviewLines.push(d('répertoire'));
+  const listHeight = Math.min(files.length, Math.max(3, Math.floor((bodyHeight - 8) * 0.4)));
+  const fileStart = Math.max(0, Math.min(Math.max(0, files.length - listHeight), selectedIndex - Math.floor(listHeight / 2)));
+  for (let index = fileStart; index < Math.min(files.length, fileStart + listHeight); index += 1) {
     const file = files[index];
     const selectedFile = index === selectedIndex;
     const marker = selectedFile ? c('›', COLORS.accent) : ' ';
     const tone = file.status === 'A' ? COLORS.accent : file.status === 'D' ? COLORS.danger : COLORS.amber;
-    const label = `${marker} ${c(file.status, tone)} ${truncate(file.path, filesWidth - 5)}`;
-    fileLines.push(selectedFile ? b(label) : label);
-    fileLines.push(`   ${c(`+${file.additions || 0}`, COLORS.accent)} ${c(`−${file.deletions || 0}`, COLORS.danger)}`);
+    const counts = `${c(`+${file.additions || 0}`, COLORS.accent)} ${c(`−${file.deletions || 0}`, COLORS.danger)}`;
+    const pathText = truncate(file.path, Math.max(8, reviewWidth - 15));
+    const row = `${marker} ${c(file.status, tone)} ${pathText}  ${counts}`;
+    reviewLines.push(selectedFile ? b(row) : row);
   }
-
-  const diffLines = [];
-  diffLines.push(selected ? `${b(truncate(selected.path, diffWidth - 2))}  ${c(selected.status, selected.status === 'D' ? COLORS.danger : COLORS.amber)} ${c(`+${selected.additions || 0}`, COLORS.accent)} ${c(`−${selected.deletions || 0}`, COLORS.danger)}` : d('Aucun fichier'));
-  diffLines.push(d('─'.repeat(diffWidth)));
+  if (files.length > listHeight) reviewLines.push(d('  …'));
+  reviewLines.push('');
+  reviewLines.push(d('─'.repeat(reviewWidth)));
   if (selected) {
+    reviewLines.push(`${b(truncate(selected.path, reviewWidth - 2))}  ${c(selected.status, selected.status === 'D' ? COLORS.danger : COLORS.amber)} ${c(`+${selected.additions || 0}`, COLORS.accent)} ${c(`−${selected.deletions || 0}`, COLORS.danger)}`);
     let oldLine = 0;
     let newLine = 0;
     const parsed = [];
@@ -998,16 +998,16 @@ function renderDiffOverlay(state, { color = true, cols = 96, rows = 28 } = {}) {
         parsed.push({ kind: 'meta', number: '', text: line });
       }
     }
-    if (!parsed.length) diffLines.push(d('  (fichier binaire ou vide — pas d’aperçu texte)'));
-    const maxLines = Math.max(1, bodyHeight - 4);
-    const offset = Math.max(0, Math.min((parsed.length - maxLines), Number(review.scroll) || 0));
-    if (offset > 0) diffLines.push(d('  …'));
-    for (const line of parsed.slice(offset, offset + maxLines - (offset > 0 ? 1 : 0))) {
-      const text = truncate(line.text, diffWidth - 7);
-      if (line.kind === 'add') diffLines.push(`${d(line.number)} ${c('+', COLORS.accent)} ${c(text, COLORS.accent)}`);
-      else if (line.kind === 'del') diffLines.push(`${d(line.number)} ${c('−', COLORS.danger)} ${c(text, COLORS.danger)}`);
-      else if (line.kind === 'hunk') diffLines.push(`${d(line.number)} ${c(text, COLORS.amber)}`);
-      else diffLines.push(`${d(line.number)}   ${d(text)}`);
+    if (!parsed.length) reviewLines.push(d('  (fichier binaire ou vide — pas d’aperçu texte)'));
+    const available = Math.max(1, bodyHeight - reviewLines.length);
+    const offset = Math.max(0, Math.min((parsed.length - available), Number(review.scroll) || 0));
+    if (offset > 0) reviewLines.push(d('  …'));
+    for (const line of parsed.slice(offset, offset + available - (offset > 0 ? 1 : 0))) {
+      const text = truncate(line.text, reviewWidth - 7);
+      if (line.kind === 'add') reviewLines.push(`${d(line.number)} ${c('+', COLORS.accent)} ${c(text, COLORS.accent)}`);
+      else if (line.kind === 'del') reviewLines.push(`${d(line.number)} ${c('−', COLORS.danger)} ${c(text, COLORS.danger)}`);
+      else if (line.kind === 'hunk') reviewLines.push(`${d(line.number)} ${c(text, COLORS.amber)}`);
+      else reviewLines.push(`${d(line.number)}   ${d(text)}`);
     }
   }
 
@@ -1018,8 +1018,7 @@ function renderDiffOverlay(state, { color = true, cols = 96, rows = 28 } = {}) {
     const parts = [];
     if (showAccount) parts.push(pad(truncate(accountLines[index] || '', accountWidth), accountWidth));
     parts.push(pad(truncate(conversationLines[index] || '', conversationWidth), conversationWidth));
-    parts.push(pad(truncate(fileLines[index] || '', filesWidth), filesWidth));
-    parts.push(truncate(diffLines[index] || '', diffWidth));
+    parts.push(truncate(reviewLines[index] || '', reviewWidth));
     lines.push(`  ${parts.join(` ${d('│')} `)}`);
   }
   lines.push(d('─'.repeat(Math.max(0, cols - 4))));
@@ -1031,6 +1030,7 @@ export async function runPlainChat({ client, messages, model, onDelta }) {
 }
 
 export const runTui = createTui;
+
 
 
 
