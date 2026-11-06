@@ -83,6 +83,11 @@
       "observation": "Tableau de bord utilisateur en 1440x900 : quotas de la cle, graphique 30 jours, limites, historique des requetes et exemples de branchement."
     },
     {
+      "viewport": "1440x900",
+      "artifact": "19b-public-portal-pass-desktop.png",
+      "observation": "Section Mon pass : pass actif et niveaux Decouverte, Createur, Equipe et Business."
+    },
+    {
       "viewport": "390x844",
       "artifact": "20-public-portal-mobile.png",
       "observation": "Espace utilisateur en 390x844 : cartes de quota empilees, tableaux contenus, controles tactiles >= 24 px, aucun debordement."

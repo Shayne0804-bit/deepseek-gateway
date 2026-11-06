@@ -166,7 +166,7 @@
       "required": 3,
       "size": 24,
       "weight": 750,
-      "text": "0",
+      "text": "0 / 4 000",
       "page": "portal-dashboard"
     },
     {
@@ -175,7 +175,7 @@
       "required": 4.5,
       "size": 11.5,
       "weight": 400,
-      "text": "non plafonné",
+      "text": "restant : 4 000",
       "page": "portal-dashboard"
     },
     {

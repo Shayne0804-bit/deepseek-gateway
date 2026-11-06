@@ -103,7 +103,7 @@ async function main() {
 
   /* ------------------------------ donnees A ------------------------------ */
   const specs = [
-    { name: 'Léa — projet perso', quotaTokens: 2000000, period: 'monthly', rpmLimit: 30, note: 'Amie — usage quotidien', expiresAt: new Date(Date.now() + 18 * 86400000).toISOString() },
+    { name: 'Léa — projet perso', quotaTokens: 2000000, period: 'monthly', rpmLimit: 30, note: 'Amie — usage quotidien', expiresAt: new Date(Date.now() + 18 * 86400000).toISOString(), plan: 'createur' },
     { name: 'Marc — cours Python', quotaRequests: 300, quotaUsd: 1.5, period: 'monthly', note: 'Étudiant — quota serré' },
     { name: 'Équipe proto jeu', quotaTokens: 500000, period: 'daily', maxOutputTokens: 4096, note: 'Prototype remis à zéro chaque jour' },
     { name: 'Ancien test (désactivé)', quotaTokens: 100000, period: 'total', enabled: false, note: 'Désactivée le mois dernier' },
@@ -358,6 +358,12 @@ async function main() {
   const portalContrast = await evaluate(contrastScript.replace('SEL', JSON.stringify(portalSelectors)));
   checks.contrast.push(...portalContrast.map((item) => ({ ...item, page: 'portal-dashboard' })));
   await screenshot('19-public-portal-dashboard-desktop.png', 'Tableau de bord utilisateur en 1440x900 : quotas de la cle, graphique 30 jours, limites, historique des requetes et exemples de branchement.');
+
+  await evaluate("document.querySelector('[data-user-view=\\\"pass\\\"]').click()");
+  await sleep(400);
+  await screenshot('19b-public-portal-pass-desktop.png', 'Section Mon pass : pass actif et niveaux Decouverte, Createur, Equipe et Business.');
+  await evaluate("document.querySelector('[data-user-view=\\\"overview\\\"]').click()");
+  await sleep(300);
 
   await setViewport(MOBILE);
   await navigate(`${URL_A}/portal`);
@@ -652,6 +658,7 @@ main().catch((error) => {
   console.error('ECHEC SCRIPT:', error);
   process.exit(1);
 });
+
 
 
 
