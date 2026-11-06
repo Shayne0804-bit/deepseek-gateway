@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '3.1.0';
+export const APP_VERSION = '3.1.1';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -116,6 +116,7 @@ export function loadConfig(overrides = {}) {
     mongoUri: overrides.mongoUri ?? raw('MONGODB_URI') ?? '',
     mongoDb: overrides.mongoDb ?? raw('MONGODB_DB') ?? 'valaria_gateway',
     mongoMigrateSqlite: overrides.mongoMigrateSqlite ?? boolOr(raw('MONGODB_MIGRATE_SQLITE'), true),
+    mongoSqliteFile: overrides.mongoSqliteFile ?? raw('MONGODB_SQLITE_FILE') ?? '',
     mongoMigrationRequired: overrides.mongoMigrationRequired ?? boolOr(raw('MONGODB_MIGRATION_REQUIRED'), false),
     host: overrides.host ?? raw('HOST') ?? '127.0.0.1',
     port: overrides.port ?? intOr(raw('PORT'), 8787),
@@ -300,6 +301,7 @@ export function loadConfig(overrides = {}) {
   config.signupEnabled = Boolean(config.signupEnabled);
   return config;
 }
+
 
 
 

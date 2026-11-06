@@ -181,6 +181,7 @@ export async function startGateway(overrides = {}) {
     mongoUri: config.mongoUri,
     mongoDb: config.mongoDb,
     migrateSqlite: config.mongoMigrateSqlite,
+    sqliteFile: config.mongoSqliteFile || null,
     migrateRequired: config.mongoMigrationRequired,
     log,
   });

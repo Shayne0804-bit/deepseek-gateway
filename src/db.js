@@ -4,6 +4,7 @@
  * Toutes les fonctions sont asynchrones pour permettre les deux moteurs.
  * SQLite reste disponible pour les tests et le rollback.
  */
+import fs from 'node:fs';
 import path from 'node:path';
 import * as sqlite from './db-sqlite.js';
 import * as mongo from './db-mongo.js';
@@ -25,8 +26,11 @@ export async function openDb(dataDir, options = {}) {
       log: options.log || null,
     });
     if (options.migrateSqlite !== false) {
-      const sqliteFile = path.join(dataDir, 'gateway.db');
+      const sqliteFile = options.sqliteFile
+        ? path.resolve(options.sqliteFile)
+        : path.join(dataDir, 'gateway.db');
       try {
+        const exists = fs.existsSync(sqliteFile);
         const result = await mongo.migrateFromSqlite(handle, sqliteFile, options.log || null);
         if (result?.imported && options.log?.info) {
           options.log.info(`Migration SQLite -> MongoDB : ${result.imported} document(s) importe(s).`);
@@ -34,7 +38,8 @@ export async function openDb(dataDir, options = {}) {
         const alreadyMigrated = String(result?.reason || '').includes('clients existent');
         if (options.migrateRequired && !alreadyMigrated && (result?.skipped || !result?.imported)) {
           throw new Error(
-            `Migration MongoDB requise mais aucun document importe (${result?.reason || 'base SQLite vide ou introuvable'}).`,
+            `Migration MongoDB requise mais aucun document importe. Fichier SQLite cherche : ${sqliteFile} (${exists ? 'present' : 'INTROUVABLE'} ; DATA_DIR=${dataDir}). ` +
+            `Verifiez le volume Railway monte sur ${dataDir}, ou definissez MONGODB_SQLITE_FILE. Raison : ${result?.reason || 'base vide'}.`,
           );
         }
       } catch (err) {
