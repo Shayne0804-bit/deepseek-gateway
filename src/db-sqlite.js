@@ -696,3 +696,15 @@ export function insertUsageAndUpdateClient(db, logRow) {
 }
 
 
+
+/** Credit site consomme par un client dans une fenetre glissante. */
+export function clientCreditWindowSince(db, clientId, sinceIso) {
+  const row = db.prepare(
+    `SELECT COALESCE(SUM(cost_usd), 0) AS total, MIN(created_at) AS oldest
+       FROM usage_logs WHERE client_id = ? AND created_at >= ?`,
+  ).get(clientId, sinceIso);
+  return {
+    total: Math.round(Number(row?.total ?? 0) * 1e6) / 1e6,
+    oldest: row?.oldest ?? null,
+  };
+}

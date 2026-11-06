@@ -687,6 +687,21 @@ export async function countUsageSince(handle, sinceIso) {
   return sumUsage(handle, { created_at: { $gte: sinceIso } });
 }
 
+/** Credit site consomme par un client dans une fenetre glissante. */
+export async function clientCreditWindowSince(handle, clientId, sinceIso) {
+  if (clientId == null || sinceIso == null) return { total: 0, oldest: null };
+  const rows = await getCollection(handle, 'usage_logs')
+    .aggregate([
+      { $match: { client_id: clientId, created_at: { $gte: sinceIso } } },
+      { $group: { _id: null, total: { $sum: '$cost_usd' }, oldest: { $min: '$created_at' } } },
+    ])
+    .toArray();
+  return {
+    total: Math.round(Number(rows[0]?.total ?? 0) * 1e6) / 1e6,
+    oldest: rows[0]?.oldest ?? null,
+  };
+}
+
 export async function countAllUsage(handle) {
   return sumUsage(handle, {});
 }

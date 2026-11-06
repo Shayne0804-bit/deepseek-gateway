@@ -606,12 +606,29 @@ Les tarifs publics DeepSeek (2026, USD par million de tokens) sont préchargés 
 
 - **Heures pleines** : 01:00–04:00 et 06:00–10:00 UTC, du lundi au vendredi
   (hors jours fériés chinois, liste `holidays` modifiable dans le JSON du panneau).
-- Ces montants servent **uniquement à estimer** les quotas de coût, pas à facturer.
-- Ils sont modifiables dans **Réglages → Tarification** (JSON) si DeepSeek change ses prix.
-- Les modèles inconnus (anciens noms) utilisent le tarif de repli (`deepseek-flash` par défaut).
-- ⚠️ **Le tarif `deepseek-v4-pro` ci-dessus n'est pas utilisé en pratique** tant que
-  `BILLED_MODEL=deepseek-flash` (valeur par défaut) : tout est facturé au tarif flash. La ligne
-  v4-pro reste utile si vous désactivez le forçage plus tard (`BILLED_MODEL=none`).
+- Ces montants servent **en interne** à calculer le coût réel, puis le **crédit site**
+  débité au client (`coût réel × SITE_CREDIT_RATE`, 3,75 par défaut).
+- Les tarifs DeepSeek ne sont jamais exposés au client : le portail affiche uniquement le crédit site.
+
+### Crédit site et fin des pass
+
+Le crédit site est la seule unité visible côté client. Un pass s'arrête **au premier** de ces
+événements : date de fin, crédit site épuisé, ou quota de requêtes atteint.
+
+| Pass | Durée | Crédit site | Requêtes | Plafond glissant 5 h |
+|---|---:|---:|---:|---:|
+| Découverte | 7 jours | 5 $ | 1 000 | 0,45 $ |
+| Créateur | 14 jours | 15 $ | 4 000 | 0,70 $ |
+| Équipe | 30 jours | 40 $ | 10 000 | 0,90 $ |
+| Business | 30 jours | 100 $ | 25 000 | 2,10 $ |
+
+- Le plafond 5 h empêche de consommer tout le crédit d'un coup ; il est **glissant** et
+  contrôlé côté serveur (aucun réglage client).
+- Un dépassement renvoie **429 `credit_window_exceeded`** avec `retry-after`.
+- Le plan est appliqué depuis l'admin (création ou modification d'une clé) : il remplace date,
+  crédit, requêtes, RPM, concurrence et plafond 5 h.
+- Variables : `SITE_CREDIT_RATE=3.75`, `SITE_CREDIT_WINDOW_HOURS=5`.
+
 
 ## Alias de modèles (déguisement)
 

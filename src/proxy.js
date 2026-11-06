@@ -12,9 +12,10 @@ import {
   recordUsage,
   remainingFor,
 } from './quota.js';
-import { getSetting } from './db.js';
+import { getSetting, clientCreditWindowSince } from './db.js';
 import { globalBudgetStatus } from './settings.js';
 import { Semaphore } from './limits.js';
+import { getPassPlan } from './plans.js';
 import {
   bearerToken,
   corsHeaders,
@@ -261,6 +262,33 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
     };
 
     const responseHeaders = { ...cors, ...quotaHeaders(client) };
+
+    // ---- 3 bis. Plafond glissant de credit site (5 h par defaut) -------
+    const plan = getPassPlan(client.plan);
+    const windowLimit = Number(plan?.credit5hLimit ?? 0);
+    if (windowLimit > 0) {
+      const windowHours = config.siteCreditWindowHours || 5;
+      const sinceIso = new Date(Date.now() - windowHours * 3_600_000).toISOString();
+      const win = await clientCreditWindowSince(db, client.id, sinceIso);
+      if (win.total >= windowLimit) {
+        const oldestMs = win.oldest ? Date.parse(win.oldest) : NaN;
+        const retryAfter = Number.isFinite(oldestMs)
+          ? Math.max(1, Math.ceil((oldestMs + windowHours * 3_600_000 - Date.now()) / 1000))
+          : 300;
+        release();
+        log.warn(`[${req.requestId ?? '-'}] Plafond credit ${windowHours} h atteint pour ${client.name}.`);
+        sendApiError(
+          res,
+          429,
+          `Plafond de credit atteint sur ${windowHours} h (${windowLimit.toFixed(2)} $). Reessayez dans ${Math.ceil(retryAfter / 60)} min.`,
+          'rate_limit_error',
+          'credit_window_exceeded',
+          { ...responseHeaders, 'retry-after': String(retryAfter) },
+        );
+        return;
+      }
+    }
+
     const pricingValue = await getSetting(db, 'pricing', null);
     const aliasesValue = await getSetting(db, 'model_aliases', null);
     const pricing = loadPricing(() => pricingValue);
@@ -274,11 +302,13 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
       if (recorded) return;
       recorded = true;
       try {
+        const realCost = Number(opts.costUsd) || 0;
+        const billedCost = Math.round(realCost * config.siteCreditRate * 1e6) / 1e6;
         await recordUsage(db, client.id, {
           model: opts.model ?? null,
           requestedModel: opts.requestedModel ?? logRequestedModel,
           usage: opts.usage ?? null,
-          costUsd: opts.costUsd ?? 0,
+          costUsd: billedCost,
           status: opts.status ?? 0,
           streamed: Boolean(opts.streamed),
           estimated: Boolean(opts.estimated),

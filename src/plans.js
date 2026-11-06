@@ -1,9 +1,9 @@
 /**
  * Catalogue des pass VALARIA Gateway API.
  *
- * Les montants sont ceux valides avec l'administrateur : le pass est un acces
- * de 30 jours, sans reconduction automatique, arrete a la date ou au quota.
- * Les quotas sont en USD pour le credit et en nombre de requetes.
+ * Les montants sont exprimes en dollars de CREDIT SITE (pas en cout reel).
+ * Un pass s'arrete a la date, au credit site ou au quota de requetes (premier atteint).
+ * `credit5hLimit` est le plafond glissant de credit site sur 5 heures.
  */
 export const PASS_PLANS = Object.freeze([
   {
@@ -11,30 +11,32 @@ export const PASS_PLANS = Object.freeze([
     name: 'Découverte',
     tagline: 'Pour tester et partager un premier accès.',
     priceEur: 3.9,
-    durationDays: 30,
+    durationDays: 7,
     quotaRequests: 1000,
-    quotaUsd: 2.5,
+    quotaUsd: 5,
+    credit5hLimit: 0.45,
     rpmLimit: 20,
     concurrencyLimit: 2,
     maxOutputTokens: 4096,
     keys: 1,
     support: 'Email sous 72 h',
-    features: ['1 000 requêtes', '2,50 € de crédit', '20 req/min'],
+    features: ['7 jours', '1 000 requêtes', '5 $ de crédit site', '0,45 $ max / 5 h'],
   },
   {
     id: 'createur',
     name: 'Créateur',
     tagline: 'Pour un usage régulier, projets et prototypes.',
     priceEur: 11.9,
-    durationDays: 30,
+    durationDays: 14,
     quotaRequests: 4000,
-    quotaUsd: 8,
+    quotaUsd: 15,
+    credit5hLimit: 0.7,
     rpmLimit: 60,
     concurrencyLimit: 3,
     maxOutputTokens: 8192,
     keys: 3,
     support: 'Email sous 48 h',
-    features: ['4 000 requêtes', '8 € de crédit', '60 req/min'],
+    features: ['14 jours', '4 000 requêtes', '15 $ de crédit site', '0,70 $ max / 5 h'],
   },
   {
     id: 'equipe',
@@ -43,13 +45,14 @@ export const PASS_PLANS = Object.freeze([
     priceEur: 29.9,
     durationDays: 30,
     quotaRequests: 10000,
-    quotaUsd: 20,
+    quotaUsd: 40,
+    credit5hLimit: 0.9,
     rpmLimit: 150,
     concurrencyLimit: 6,
     maxOutputTokens: 16384,
     keys: 8,
     support: 'Support prioritaire 24 h',
-    features: ['10 000 requêtes', '20 € de crédit', '150 req/min'],
+    features: ['30 jours', '10 000 requêtes', '40 $ de crédit site', '0,90 $ max / 5 h'],
   },
   {
     id: 'business',
@@ -58,13 +61,14 @@ export const PASS_PLANS = Object.freeze([
     priceEur: 79,
     durationDays: 30,
     quotaRequests: 25000,
-    quotaUsd: 55,
+    quotaUsd: 100,
+    credit5hLimit: 2.1,
     rpmLimit: 400,
     concurrencyLimit: 12,
     maxOutputTokens: 32768,
     keys: 25,
     support: 'Support dédié + SLA 99,5 %',
-    features: ['25 000 requêtes', '55 € de crédit', '400 req/min'],
+    features: ['30 jours', '25 000 requêtes', '100 $ de crédit site', '2,10 $ max / 5 h'],
   },
 ]);
 
@@ -100,4 +104,3 @@ export function passPlanFields(id, now = new Date()) {
 export function publicPlan(plan) {
   return { ...plan, features: [...plan.features] };
 }
-

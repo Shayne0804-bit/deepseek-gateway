@@ -91,6 +91,7 @@ function publicClient(client, today = null) {
     plan: client.plan ?? null,
     planName: getPassPlan(client.plan)?.name
       ?? (client.plan === 'essai' ? 'Essai' : null),
+    credit5hLimit: getPassPlan(client.plan)?.credit5hLimit ?? null,
     hasKey: Boolean(client.keyPrefix && String(client.keyPrefix).startsWith('sk-dsk-')),
     keyPrefix: client.keyPrefix,
     enabled: client.enabled,
@@ -879,6 +880,7 @@ export function createAdminApi({ config, db, log, mailer }) {
 
   return { handle, readSettingsView };
 }
+
 
 
 

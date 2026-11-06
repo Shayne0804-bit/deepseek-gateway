@@ -852,6 +852,7 @@
                 </div>
                 <div class="guide-kv"><span>Auth</span><code>x-api-key: VOTRE_CLE_API</code></div>
                 <div class="guide-kv"><span>Version</span><code>anthropic-version: 2023-06-01</code></div>
+                <p class="guide-footnote">${icon('help')}<span>« 2023-06-01 » est l'identifiant de version du protocole Messages, pas une date d'expiration. Les SDK Anthropic et Claude Code l'ajoutent automatiquement.</span></p>
               </article>
             </div>
             <div class="guide-note">${icon('lock')}<span>Votre clé est personnelle et n'expose jamais le fournisseur. Ne la partagez pas et stockez-la dans un gestionnaire de secrets.</span></div>
@@ -1206,7 +1207,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     ].join('');
 
     const series = me.usage?.series ?? [];
-    $('#portal-chart-hint').textContent = `${fmtInt(me.usage?.totals?.requests ?? 0)} requêtes · ${fmtUsd(me.usage?.totals?.cost ?? 0)}`;
+    $('#portal-chart-hint').textContent = `${fmtInt(me.usage?.totals?.requests ?? 0)} requêtes · ${fmtUsd(me.usage?.totals?.cost ?? 0)} de crédit site`;
     $('#portal-chart').innerHTML = chartMarkup(series);
 
     $('#portal-limits').innerHTML = limitsMarkup(me);
@@ -1493,6 +1494,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
 
   init();
 })();
+
 
 
 

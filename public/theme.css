@@ -1419,3 +1419,16 @@ body.portal-authenticated #portal-app > main { position: relative; z-index: 1; }
 @media (max-width: 960px) {
   body.portal-authenticated #portal-app > aside { position: fixed; z-index: 30; }
 }
+
+.guide-footnote {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid rgba(125, 225, 166, 0.09);
+  color: var(--muted-2);
+  font-size: 9.5px;
+  line-height: 1.5;
+}
+.guide-footnote .icon { width: 12px; height: 12px; color: var(--accent); flex: none; margin-top: 1px; }

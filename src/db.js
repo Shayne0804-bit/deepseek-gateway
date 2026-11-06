@@ -174,6 +174,11 @@ export async function countClientUsageSince(db, clientId, sinceIso) {
     ? mongo.countClientUsageSince(db, clientId, sinceIso)
     : sqlite.countClientUsageSince(db, clientId, sinceIso);
 }
+export async function clientCreditWindowSince(db, clientId, sinceIso) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.clientCreditWindowSince(db, clientId, sinceIso)
+    : sqlite.clientCreditWindowSince(db, clientId, sinceIso);
+}
 export async function clientUsageSeriesSince(db, clientId, sinceIso) {
   return dbDriver(db) === 'mongo'
     ? mongo.clientUsageSeriesSince(db, clientId, sinceIso)

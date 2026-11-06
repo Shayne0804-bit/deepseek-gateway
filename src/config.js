@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '3.5.0';
+export const APP_VERSION = '3.5.1';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -168,6 +168,9 @@ export function loadConfig(overrides = {}) {
     trialRpmLimit: overrides.trialRpmLimit ?? intOr(raw('TRIAL_RPM_LIMIT'), 20),
     trialConcurrencyLimit: overrides.trialConcurrencyLimit ?? intOr(raw('TRIAL_CONCURRENCY_LIMIT'), 2),
     trialMaxOutputTokens: overrides.trialMaxOutputTokens ?? intOr(raw('TRIAL_MAX_OUTPUT_TOKENS'), 4096),
+    // Credit site : le client est debite du cout reel x SITE_CREDIT_RATE.
+    siteCreditRate: overrides.siteCreditRate ?? Number(raw('SITE_CREDIT_RATE') ?? 3.75),
+    siteCreditWindowHours: overrides.siteCreditWindowHours ?? intOr(raw('SITE_CREDIT_WINDOW_HOURS'), 5),
     // Anti-abus inscription : 1 compte par IP / appareil sur une fenetre.
     signupMaxPerIp: overrides.signupMaxPerIp ?? intOr(raw('SIGNUP_MAX_PER_IP'), 1),
     signupIpWindowDays: overrides.signupIpWindowDays ?? intOr(raw('SIGNUP_IP_WINDOW_DAYS'), 30),
@@ -329,10 +332,18 @@ export function loadConfig(overrides = {}) {
   if (!Number.isFinite(config.trialRpmLimit) || config.trialRpmLimit < 1) config.trialRpmLimit = 20;
   if (!Number.isFinite(config.trialConcurrencyLimit) || config.trialConcurrencyLimit < 1) config.trialConcurrencyLimit = 2;
   if (!Number.isFinite(config.trialMaxOutputTokens) || config.trialMaxOutputTokens < 1) config.trialMaxOutputTokens = 4096;
+  if (!Number.isFinite(config.siteCreditRate) || config.siteCreditRate <= 0 || config.siteCreditRate > 50) {
+    config.siteCreditRate = 3.75;
+  }
+  if (!Number.isFinite(config.siteCreditWindowHours) || config.siteCreditWindowHours < 1 || config.siteCreditWindowHours > 24) {
+    config.siteCreditWindowHours = 5;
+  }
   // L'activation effective (transport email present) est verifiee dans l'API portail.
   config.signupEnabled = Boolean(config.signupEnabled);
   return config;
 }
+
+
 
 
 

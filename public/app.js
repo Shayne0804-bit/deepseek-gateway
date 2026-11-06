@@ -451,7 +451,8 @@
     const parts = [];
     if (client.quotaTokens != null) parts.push(quotaBar('Tokens', client.usedTokens, client.quotaTokens, fmtCompact));
     if (client.quotaRequests != null) parts.push(quotaBar('Requêtes', client.usedRequests, client.quotaRequests, fmtInt));
-    if (client.quotaUsd != null) parts.push(quotaBar('Coût', client.usedUsd, client.quotaUsd, (v) => fmtUsd(v)));
+    if (client.quotaUsd != null) parts.push(quotaBar('Crédit site', client.usedUsd, client.quotaUsd, (v) => fmtUsd(v)));
+    if (client.credit5hLimit != null) parts.push(`<span class='small muted'>plafond 5 h : ${fmtUsd(client.credit5hLimit)}</span>`);
     if (parts.length === 0) return '<span class="muted small">Aucun quota (illimité)</span>';
     return parts.join('');
   }
@@ -563,7 +564,7 @@
       <section class="stat-grid">
         ${statCard('Requêtes (30 jours)', fmtInt(requests30), `${fmtInt(data.today?.requests || 0)} aujourd'hui`)}
         ${statCard('Tokens (30 jours)', fmtCompact(tokens30), `${fmtCompact(data.today?.tokens || 0)} aujourd'hui`)}
-        ${statCard('Coût estimé (30 jours)', fmtUsd(cost30), `${fmtUsd(data.today?.cost || 0)} aujourd'hui`)}
+        ${statCard('Crédit site consommé (30 jours)', fmtUsd(cost30), `${fmtUsd(data.today?.cost || 0)} aujourd'hui`)}
         ${statCard('Clés actives', `${fmtInt(counts.clientsEnabled || 0)} / ${fmtInt(counts.clientsTotal || 0)}`, `${fmtInt(counts.clientsExhausted || 0)} épuisée(s)`)}
       </section>
 
@@ -746,7 +747,7 @@
         </label>
         <label class="field"><span>Quota de coût (USD)</span>
           <input type="number" name="quotaUsd" min="0" step="0.01" value="${client?.quotaUsd ?? ''}" placeholder="ex : 3.50">
-          <small>Vide = aucun quota de coût estimé.</small>
+          <small>Vide = aucun quota de crédit site.</small>
         </label>
         <label class="field"><span>Période de remise à zéro</span>
           <select name="period">
@@ -1044,7 +1045,7 @@
         <div class="panel-head">
           <div>
             <h2>Budget global mensuel</h2>
-            <span class="hint">Plafond de coût estimé pour toutes les clés, remis à zéro le 1er du mois (UTC).</span>
+            <span class="hint">Plafond de crédit site pour toutes les clés, remis à zéro le 1er du mois (UTC).</span>
           </div>
           <span class="badge badge-muted">${s.globalBudget?.limitUsd > 0 ? `consommé : ${fmtUsd(s.globalBudget.spentUsd)}` : 'désactivé'}</span>
         </div>
@@ -1404,7 +1405,7 @@
                 <tbody>
                   <tr><td class="mono">x-quota-tokens-remaining</td><td>Tokens restants au début de la requête (si quota configuré)</td></tr>
                   <tr><td class="mono">x-quota-requests-remaining</td><td>Requêtes restantes (si quota configuré)</td></tr>
-                  <tr><td class="mono">x-quota-usd-remaining</td><td>Budget restant en USD (si quota configuré)</td></tr>
+                  <tr><td class="mono">x-quota-usd-remaining</td><td>Crédit site restant en USD (si quota configuré)</td></tr>
                   <tr><td class="mono">x-quota-period</td><td>Période de remise à zéro : <span class="mono">daily</span>, <span class="mono">monthly</span> ou <span class="mono">total</span></td></tr>
                 </tbody>
               </table></div>
@@ -1671,4 +1672,5 @@
 
   init();
 })();
+
 
