@@ -6,6 +6,8 @@
 import readline from 'node:readline';
 import { COLORS, bold, dim, paint, rule, stripAnsi, truncate, visibleLength, wrap, supportsColor } from './theme.js';
 import { runAgent } from './agent.js';
+import { MARK, PULSE, SPINNER } from './assets.js';
+import { playSplash } from './splash.js';
 import { diffText, extractCode, listFiles, readFile, runCommand, writeFile } from './tools.js';
 
 const SYSTEM_PROMPT = `Tu es VALARIA Code, un agent de code dans le terminal.
@@ -25,7 +27,7 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function createTui({ client, config, model, layout = 'focus', version = '0.5.0', color = supportsColor(), account = null, onModelChange = null, onPreferencesChange = null } = {}) {
+export function createTui({ client, config, model, layout = 'focus', version = '0.6.0', color = supportsColor(), animations = true, account = null, onModelChange = null, onPreferencesChange = null } = {}) {
   const state = {
     messages: [],
     input: '',
@@ -41,6 +43,8 @@ export function createTui({ client, config, model, layout = 'focus', version = '
     approval: null,
     abort: null,
     closed: false,
+    ready: false,
+    animations,
     model,
     version,
     account,
@@ -55,7 +59,7 @@ export function createTui({ client, config, model, layout = 'focus', version = '
     if (renderTimer) return;
     renderTimer = setTimeout(() => {
       renderTimer = null;
-      if (!state.closed) draw();
+      if (!state.closed && state.ready) draw();
     }, 40);
   };
 
@@ -303,7 +307,7 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
     const argument = rest.join(' ').trim();
     switch (command) {
       case 'help':
-        systemMessage('⚙ Votre message est exécuté par l’agent (lecture/patch/tests, avec approbations).\n/chat <message> · /agent <tâche> · /interview · /plan <objectif> · /review\n/files [dossier] · /read <fichier> · /edit <fichier> <instruction> · /run <commande>\n/models · /model <nom> · /account · /layout focus|studio|compact · /mode agent|chat · /usage · /clear · /quit\n\nCtrl+O : compte · Ctrl+P : interface · Ctrl+C : annuler · 1/2/3 : suggestion');
+        systemMessage('⚙ Votre message est exécuté par l’agent (lecture/patch/tests, avec approbations).\n/chat <message> · /agent <tâche> · /interview · /plan <objectif> · /review\n/files [dossier] · /read <fichier> · /edit <fichier> <instruction> · /run <commande>\n/models · /model <nom> · /account · /layout focus|studio|compact · /animations on|off · /mode agent|chat · /usage · /clear · /quit\n\nCtrl+O : compte · Ctrl+P : interface · Ctrl+C : annuler · 1/2/3 : suggestion');
         break;
       case 'agent': {
         await runAgentTask(argument, { explicit: true });
@@ -342,6 +346,12 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
         state.layout = next;
         if (onPreferencesChange) onPreferencesChange({ layout: next });
         systemMessage(`⚙ Interface : ${LAYOUT_LABELS[next]}. /layout focus|studio|compact pour changer.`);
+        break;
+      }
+      case 'animations':
+      case 'anim': {
+        state.animations = argument === 'off' ? false : argument === 'on' ? true : !state.animations;
+        systemMessage(`⚙ Animations : ${state.animations ? 'activées' : 'désactivées'}.`);
         break;
       }
       case 'account':
@@ -479,6 +489,10 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
 
   function onKey(key) {
     if (state.closed) return;
+    if (!state.ready) {
+      if (key === '\u0003') { cleanup(); process.exitCode = 0; }
+      return;
+    }
     if (state.overlay) {
       if (key === '\u0003' || key === '\u001b' || key === '\r' || key === '\n' || key === 'q') {
         state.overlay = null;
@@ -576,14 +590,20 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
 
   refreshAccount();
   const animation = setInterval(() => {
-    if (state.closed) return;
+    if (state.closed || !state.ready) return;
     state.tick = (state.tick + 1) % 10;
     // Animation active pendant le streaming/l'agent, pulse discret au repos.
-    if (state.streaming || state.agentRunning || state.approval || state.tick === 0) scheduleRender();
+    if (state.animations && (state.streaming || state.agentRunning || state.approval || state.tick === 0)) scheduleRender();
   }, 140);
 
-  systemMessage(`⚙ VALARIA Code prête · projet ${root}\nDécrivez votre tâche : l’agent lit, propose et modifie avec votre approbation. /help · Ctrl+O compte · Ctrl+P interface.`);
-  draw();
+  const start = () => {
+    if (state.closed) return;
+    state.ready = true;
+    systemMessage(`⚙ VALARIA Code prête · projet ${root}\nDécrivez votre tâche : l’agent lit, propose et modifie avec votre approbation. /help · Ctrl+O compte · Ctrl+P interface.`);
+    draw();
+  };
+  if (state.animations) playSplash({ color, version: state.version }).catch(() => {}).finally(start);
+  else start();
   return new Promise((resolve) => {
     const timer = setInterval(() => {
       if (state.closed) {
@@ -609,8 +629,7 @@ export function renderScreen(state, { client, config, color = true, root = proce
   const usd = (value) => `${nf.format(Math.round((Number(value) || 0) * 100) / 100)} $`;
   const active = Boolean(state.streaming || state.agentRunning || state.approval);
   const tick = Number(state.tick) || 0;
-  const spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-  const pulse = active ? spinner[tick % spinner.length] : (tick % 2 ? '●' : '○');
+  const pulse = active ? SPINNER[tick % SPINNER.length] : PULSE[tick % PULSE.length];
   const account = state.account || null;
   const planName = account?.plan?.name || account?.client?.period || '—';
   const req = account?.quota?.requests || {};
@@ -635,8 +654,8 @@ export function renderScreen(state, { client, config, color = true, root = proce
   const add = (value = '') => lines.push(value);
   const project = String(root).replace(/\\/g, '/').split('/').filter(Boolean).pop() || 'projet';
   const head = layout === 'focus'
-    ? `  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${d('—')}   ${d(project)}   ${pulse} ${d(account ? 'en ligne' : 'hors ligne')}`
-    : `  ${c('V', COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${pulse} ${account ? 'en ligne' : 'hors ligne'}   ${d(LAYOUT_LABELS[layout])}   ${c(model, COLORS.amber)}   ${d(`v${state.version || '0.5.0'}`)}`;
+    ? `  ${c(MARK, COLORS.accent)} ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${d('—')}   ${d(project)}   ${pulse} ${d(account ? 'en ligne' : 'hors ligne')}`
+    : `  ${c(MARK, COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${pulse} ${account ? 'en ligne' : 'hors ligne'}   ${d(LAYOUT_LABELS[layout])}   ${c(model, COLORS.amber)}   ${d(`v${state.version || '0.6.0'}`)}`;
   add(head);
   add(`  ${d('─'.repeat(Math.max(0, cols - 4)))}`);
 

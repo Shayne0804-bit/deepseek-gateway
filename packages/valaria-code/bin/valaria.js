@@ -64,7 +64,8 @@ function help() {
     --model <nom>                modèle par défaut
     --device-name <nom>          nom affiché dans le portail
     --no-open                    ne pas ouvrir le navigateur automatiquement
-    --no-onboarding              ne pas demander Claude/Codex au premier login
+    --no-onboarding              ne pas demander Claude/Codex/DeepSeek au premier login
+    --no-anim                    désactiver le splash et les animations
     --layout <focus|studio|compact>  interface au démarrage
     --home <dir>                 dossier de configuration
 
@@ -246,6 +247,7 @@ async function commandTui(flags) {
       model: auth.model,
       layout: auth.layout,
       version: PKG.version,
+      animations: !flags['no-anim'],
       account: me,
       onModelChange: (model) => {
         const current = loadConfig() || {};

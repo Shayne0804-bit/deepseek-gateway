@@ -15,4 +15,6 @@ export {
 export { runTui } from './tui.js';
 export { runAgent } from './agent.js';
 export { chooseModel } from './onboarding.js';
+export { playSplash } from './splash.js';
+export { LOGO_LINES, MARK, TAGLINE, WORDMARK } from './assets.js';
 export { diffText, extractCode, listFiles, readFile, runCommand, writeFile } from './tools.js';

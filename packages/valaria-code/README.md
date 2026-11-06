@@ -56,6 +56,25 @@ Dans la TUI :
 - `Ctrl+O` ou `/account` ouvre l’écran compte et quotas ;
 - `Échap`/`Entrée` ferme cet écran.
 
+## Assets et animations
+
+- logo ASCII VALARIA au démarrage ;
+- gradient animé, scanline et apparition progressive du logo ;
+- marque `◈` dans l’en-tête ;
+- spinner d’agent, curseur de streaming, pulse de connexion et caret ;
+- désactivation possible :
+
+```bash
+valaria --no-anim
+```
+
+ou dans la TUI :
+
+```text
+/animations off
+/animations on
+```
+
 ## Dans la TUI
 
 - `Entrée` envoyer un message — il lance l’agent par défaut.

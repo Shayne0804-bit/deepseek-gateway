@@ -10,6 +10,8 @@ import { createClient } from '../src/api.js';
 import { runAgent } from '../src/agent.js';
 import { clearConfig, loadConfig, saveConfig } from '../src/config.js';
 import { groupModels } from '../src/onboarding.js';
+import { LOGO_LINES, MARK, SPINNER } from '../src/assets.js';
+import { playSplash } from '../src/splash.js';
 import { renderScreen } from '../src/tui.js';
 import { diffText, listFiles, readFile, runCommand, writeFile } from '../src/tools.js';
 
@@ -181,6 +183,23 @@ test('TUI layouts : focus épuré, studio avec compte, overlay compte', () => {
   const overlay = capture({ ...base, layout: 'focus', overlay: 'account' });
   assert.match(overlay, /votre compte/);
   assert.match(overlay, /REQUÊTES/);
+});
+
+test('assets et splash animé', async () => {
+  assert.ok(LOGO_LINES.length >= 4);
+  assert.equal(MARK, '◈');
+  assert.ok(SPINNER.length >= 8);
+  const chunks = [];
+  const output = {
+    isTTY: true,
+    columns: 100,
+    rows: 30,
+    write: (chunk) => { chunks.push(String(chunk)); return true; },
+  };
+  await playSplash({ output, color: false, frameMs: 1, version: '0.6.0' });
+  const rendered = chunks.join('');
+  assert.match(rendered, /VALARIA|██/);
+  assert.match(rendered, /agent de code/);
 });
 
 test('onboarding : familles Claude, Codex et DeepSeek', () => {
