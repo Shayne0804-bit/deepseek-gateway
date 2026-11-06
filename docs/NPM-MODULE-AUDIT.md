@@ -348,15 +348,42 @@ valaria-code/
 | Package serveur | inchangé, séparé du package client |
 | Périmètre modèle | texte/code uniquement |
 
-### Question restante
+### Décision retenue
 
-Le seul choix produit à confirmer est l’interface par défaut :
+**A — TUI plein écran dans le terminal**, confirmée par l’utilisateur.
 
-- **A. TUI plein écran dans le terminal** (recommandé : rapide, portable,
-  cohérent avec la direction Signal Ledger) ;
-- **B. interface web locale lancée par `valaria ui`** (plus riche pour les
-  diffs, mais plus lourde à construire) ;
-- **C. les deux**, TUI en MVP puis UI web en phase 2.
+## 11. État d’implémentation (6 novembre 2026)
 
-Tant que ce choix n’est pas confirmé, le module reste en phase d’audit et
-aucune publication npm ne doit être effectuée.
+Implémenté :
+
+- tables `device_codes` et `cli_tokens` (SQLite + MongoDB) ;
+- endpoints `/portal/api/device/start`, `/token`, `/approve`, `/devices` et révocation ;
+- page `/device` avec connexion au portail et conservation du code ;
+- section **Appareils connectés** dans `/portal` ;
+- acceptation des jetons `vlt_…` par le proxy `/v1` et `/portal/api/me` ;
+- package `packages/valaria-code` version `0.1.0` :
+  - `valaria login` device flow ;
+  - TUI plein écran VALARIA ;
+  - client API SSE ;
+  - chat, `/files`, `/read`, `/edit`, `/run`, `/models`, `/usage` ;
+  - approbations avant écriture et commande ;
+  - config `~/.valaria/code.json` en 0600 ;
+  - SDK exporté.
+- tests : device flow, révocation, jeton CLI, package (config/API/auth/outils/TUI).
+
+Reste avant publication npm :
+
+1. alimenter les métadonnées finales du package (éventuelle capture TUI) ;
+2. publier `valaria-code@0.1.0` — **bloqué par la 2FA npm**, un code OTP est
+   nécessaire ;
+3. vérifier `npm install -g valaria-code` puis le parcours réel `valaria login`
+   depuis le registre.
+
+### Limite actuelle du MVP
+
+La TUI est un agent assisté : elle envoie le contexte, propose des fichiers
+complets et demande l’approbation avant écriture/commande. Une autonomie
+multi-étapes complète (le modèle enchaîne seul lecture → patch → test) reste la
+phase suivante ; elle ne prétend pas encore remplacer intégralement Claude Code
+ou Codex CLI sur les tâches agentiques longues.
+
