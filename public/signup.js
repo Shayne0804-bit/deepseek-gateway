@@ -28,12 +28,21 @@
   }
 
   async function api(path, options = {}) {
-    const res = await fetch(`/portal/api${path}`, {
-      method: options.method || 'GET',
-      headers: { [CSRF_HEADER]: CSRF_VALUE, ...(options.body ? { 'content-type': 'application/json' } : {}) },
-      body: options.body ? JSON.stringify(options.body) : undefined,
-      credentials: 'same-origin',
-    });
+    let res;
+    try {
+      res = await fetch(`/portal/api${path}`, {
+        method: options.method || 'GET',
+        signal: AbortSignal.timeout(25000),
+        headers: { [CSRF_HEADER]: CSRF_VALUE, ...(options.body ? { 'content-type': 'application/json' } : {}) },
+        body: options.body ? JSON.stringify(options.body) : undefined,
+        credentials: 'same-origin',
+      });
+    } catch (err) {
+      if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+        throw new Error('Délai dépassé : le serveur n’a pas répondu. Réessayez.');
+      }
+      throw err;
+    }
     const text = await res.text();
     let data = {};
     try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }

@@ -150,6 +150,7 @@ export function loadConfig(overrides = {}) {
     // Connexion portail par code recu par email (OTP).
     mailTransport: overrides.mailTransport ?? raw('MAIL_TRANSPORT') ?? '',
     mailFrom: overrides.mailFrom ?? raw('MAIL_FROM') ?? '',
+    mailTimeoutMs: overrides.mailTimeoutMs ?? intOr(raw('MAIL_TIMEOUT_MS'), 15000),
     mailFromName: overrides.mailFromName ?? raw('MAIL_FROM_NAME') ?? 'VALARIA Gateway API',
     smtpUrl: overrides.smtpUrl ?? raw('SMTP_URL') ?? '',
     resendApiKey: overrides.resendApiKey ?? raw('RESEND_API_KEY') ?? '',
