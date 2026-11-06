@@ -361,27 +361,27 @@ Implémenté :
 - page `/device` avec connexion au portail et conservation du code ;
 - section **Appareils connectés** dans `/portal` ;
 - acceptation des jetons `vlt_…` par le proxy `/v1` et `/portal/api/me` ;
-- package `packages/valaria-code` version `0.2.0` :
-  - `valaria login` device flow ;
-  - TUI plein écran VALARIA ;
+- package `packages/valaria-code` version `0.4.0` :
+  - `valaria login` device flow, puis choix **Claude / Codex** et du modèle ;
+  - agent par défaut : un message naturel lit, modifie et teste avec approbation ;
+  - TUI plein écran avec trois interfaces **Focus / Studio / Compact** ;
+  - compte, pass, quotas et crédit consultables via `/account` ou `Ctrl+O` ;
   - client API SSE ;
   - chat, `/files`, `/read`, `/edit`, `/run`, `/models`, `/usage` ;
   - `/agent <tâche>` : boucle agentique multi-étapes (lecture → patch → commande)
     avec approbation avant écriture et exécution ;
-  - approbations avant écriture et commande ;
   - config `~/.valaria/code.json` en 0600 ;
   - SDK exporté.
-- tests : device flow, révocation, jeton CLI, package (config/API/auth/outils/TUI/agent).
+- tests : device flow, révocation, jeton CLI, package (config/API/auth/outils/TUI/layouts/agent).
 
 Publication :
 
-- **`valaria-code@0.2.0` est publié sur npm** (dernière version : `latest`) ;
+- **`valaria-code@0.4.0` est publié sur npm** (dernière version : `latest`) ;
 - propriétaire : `ducky12` ;
-- tarball : `https://registry.npmjs.org/valaria-code/-/valaria-code-0.2.0.tgz` ;
-- installation depuis le registre vérifiée (`npm install valaria-code@0.2.0`) ;
-- binaire vérifié : `valaria --version` → `0.2.0` ;
+- installation depuis le registre vérifiée (`npm install valaria-code@0.4.0`) ;
+- binaire vérifié : `valaria --version` → `0.4.0` ;
 - npm a créé le placeholder temporaire `0.0.0-stage` pendant la publication
-  staged ; `latest` pointe bien sur `0.2.0`.
+  staged ; `latest` pointe bien sur `0.4.0`.
 
 Le parcours `valaria login` réel nécessite une approbation humaine sur `/device` ;
 le flux complet (démarrage → approbation → jeton → `/v1/models` → révocation) a
