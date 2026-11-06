@@ -367,7 +367,10 @@ async function main() {
   await screenshot('19c-public-portal-guide-desktop.png', 'Nouveau guide d integration : parcours en 3 etapes, endpoints OpenAI/Anthropic, exemples de code, modeles, parametres et erreurs.');
   await evaluate("document.getElementById('guide-examples').scrollIntoView({block:'start'})");
   await sleep(300);
-  await screenshot('19d-public-portal-guide-examples-desktop.png', 'Guide : onglets cURL, Node.js, Python et Anthropic avec bouton copier.', viewport.label, { keepScroll: true });
+  await screenshot('19d-public-portal-guide-examples-desktop.png', 'Guide : onglets cURL, Node.js, Python, Codex CLI et Anthropic avec bouton copier.', viewport.label, { keepScroll: true });
+  await evaluate("document.querySelector('[data-guide-tab=\\\"codex\\\"]').click()");
+  await sleep(250);
+  await screenshot('19f-public-portal-guide-codex-desktop.png', 'Guide : configuration Codex CLI (~/.codex/config.toml) avec alias gpt-5-codex et bouton copier.', viewport.label, { keepScroll: true });
   await evaluate("document.getElementById('guide-params').scrollIntoView({block:'start'})");
   await sleep(250);
   await screenshot('19e-public-portal-guide-params-desktop.png', 'Guide : parametres de requete et tableau des erreurs et quotas.', viewport.label, { keepScroll: true });

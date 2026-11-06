@@ -1432,3 +1432,19 @@ body.portal-authenticated #portal-app > main { position: relative; z-index: 1; }
   line-height: 1.5;
 }
 .guide-footnote .icon { width: 12px; height: 12px; color: var(--accent); flex: none; margin-top: 1px; }
+
+.guide-alias-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(125, 225, 166, 0.16);
+  border-radius: 8px;
+  background: rgba(62, 233, 127, 0.035);
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+.guide-alias-note .icon { width: 13px; height: 13px; color: var(--accent); flex: none; margin-top: 1px; }
+.guide-alias-note code { font-size: 9.5px; color: var(--text-2); }

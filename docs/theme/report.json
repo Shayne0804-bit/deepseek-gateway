@@ -95,7 +95,12 @@
     {
       "viewport": "1440x900",
       "artifact": "19d-public-portal-guide-examples-desktop.png",
-      "observation": "Guide : onglets cURL, Node.js, Python et Anthropic avec bouton copier."
+      "observation": "Guide : onglets cURL, Node.js, Python, Codex CLI et Anthropic avec bouton copier."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "19f-public-portal-guide-codex-desktop.png",
+      "observation": "Guide : configuration Codex CLI (~/.codex/config.toml) avec alias gpt-5-codex et bouton copier."
     },
     {
       "viewport": "1440x900",

@@ -663,7 +663,12 @@
     const base = me.baseUrl || '';
     const anthropic = me.anthropicBaseUrl || `${base.replace(/\/v1\/?$/, '')}/anthropic`;
     const models = (me.models ?? []).filter((name) => !/deepseek/i.test(name));
-    const model = models[0] || 'votre-modele';
+    const openaiModel = models.find((name) => /^gpt-5-codex/i.test(name))
+      || models.find((name) => /^(gpt|codex|o[34])/i.test(name))
+      || models[0]
+      || 'votre-modele';
+    const anthropicModel = models.find((name) => /^claude/i.test(name)) || openaiModel;
+    const codexModel = models.find((name) => /^gpt-5-codex/i.test(name)) || 'gpt-5-codex';
     const hasKey = Boolean(me.client?.hasKey);
     const keyHint = hasKey ? `${me.client.keyPrefix}…` : 'Aucune clé active';
     const keyState = hasKey
@@ -674,7 +679,7 @@
       `curl ${base}/chat/completions \\`,
       '  -H "Authorization: Bearer VOTRE_CLE_API" \\',
       '  -H "Content-Type: application/json" \\',
-      `  -d '{"model":"${model}","messages":[{"role":"user","content":"Bonjour"}]}'`,
+      `  -d '{"model":"${openaiModel}","messages":[{"role":"user","content":"Bonjour"}]}'`,
     ].join('\n');
 
     const nodeCode = [
@@ -686,7 +691,7 @@
       '});',
       '',
       'const completion = await client.chat.completions.create({',
-      `  model: '${model}',`,
+      `  model: '${openaiModel}',`,
       "  messages: [{ role: 'user', content: 'Bonjour' }],",
       '});',
       '',
@@ -702,7 +707,7 @@
       ')',
       '',
       'response = client.chat.completions.create(',
-      `    model="${model}",`,
+      `    model="${openaiModel}",`,
       '    messages=[{"role": "user", "content": "Bonjour"}],',
       ')',
       '',
@@ -714,7 +719,23 @@
       '  -H "x-api-key: VOTRE_CLE_API" \\',
       '  -H "anthropic-version: 2023-06-01" \\',
       '  -H "Content-Type: application/json" \\',
-      `  -d '{"model":"${model}","max_tokens":1024,"messages":[{"role":"user","content":"Bonjour"}]}'`,
+      `  -d '{"model":"${anthropicModel}","max_tokens":1024,"messages":[{"role":"user","content":"Bonjour"}]}'`,
+    ].join('\n');
+
+    const codexCode = [
+      '# ~/.codex/config.toml',
+      `model = "${codexModel}"`,
+      'model_provider = "valaria"',
+      '',
+      '[model_providers.valaria]',
+      'name = "VALARIA Gateway"',
+      `base_url = "${base}"`,
+      'env_key = "VALARIA_API_KEY"',
+      'wire_api = "responses"',
+      '',
+      '# Puis dans le terminal :',
+      '# export VALARIA_API_KEY="VOTRE_CLE_API"',
+      '# codex',
     ].join('\n');
 
     const codePanel = (id, label, code) => `
@@ -731,6 +752,9 @@
     const modelUsage = (name) => {
       if (/opus/i.test(name)) return 'Raisonnement et tâches complexes';
       if (/fable/i.test(name)) return 'Écriture longue et créative';
+      if (/codex|gpt-5/i.test(name)) return 'Codex / agents de code';
+      if (/^o[34]/i.test(name)) return 'Raisonnement rapide';
+      if (/gpt-4/i.test(name)) return 'Généraliste, code et analyse';
       if (/v4-pro/i.test(name)) return 'Généraliste, code et analyse';
       return 'Usage général';
     };
@@ -740,14 +764,15 @@
         <div class="guide-hero-copy">
           <p class="hero-kicker">Guide d'intégration</p>
           <h2>De la clé au premier appel,<br><span class="accent-word">en quelques minutes.</span></h2>
-          <p class="guide-lede">Une API compatible OpenAI, des exemples prêts à copier et un endpoint Anthropic pour Claude Code. Choisissez votre langage, collez votre clé, c'est parti.</p>
+          <p class="guide-lede">Une API compatible OpenAI, des alias pour Codex CLI et un endpoint Anthropic pour Claude Code. Choisissez votre client, collez votre clé, c'est parti.</p>
           <div class="guide-hero-actions">
             <button type="button" class="btn btn-primary" data-guide-copy-target="guide-base-url">${icon('copy')}Copier l'URL de base</button>
             <button type="button" class="btn btn-ghost" data-guide-view="keys">${icon('key')}${hasKey ? 'Gérer ma clé' : 'Créer ma clé'}</button>
           </div>
           <div class="guide-hero-meta">
             <span class="chip">${icon('check')}OpenAI SDK</span>
-            <span class="chip">${icon('terminal')}cURL</span>
+            <span class="chip">${icon('terminal')}Codex CLI</span>
+            <span class="chip">${icon('code')}cURL</span>
             <span class="chip">${icon('layers')}Streaming SSE</span>
             <span class="chip">${icon('shield')}Clé dérivée</span>
           </div>
@@ -759,7 +784,7 @@
             <span class="badge badge-ok">200</span>
           </div>
           <pre class="guide-terminal-code">{
-  "model": "${esc(model)}",
+  "model": "${esc(openaiModel)}",
   "messages": [
     { "role": "user", "content": "Bonjour" }
   ],
@@ -830,7 +855,7 @@
               <article class="guide-endpoint">
                 <div class="guide-endpoint-head">
                   <span class="guide-endpoint-icon">${icon('globe')}</span>
-                  <div><h3>OpenAI-compatible</h3><p>SDK OpenAI, LangChain, LlamaIndex, scripts HTTP.</p></div>
+                  <div><h3>OpenAI-compatible</h3><p>SDK OpenAI, Codex CLI, LangChain, LlamaIndex, scripts HTTP.</p></div>
                 </div>
                 <div class="guide-kv">
                   <span>Base URL</span>
@@ -865,18 +890,20 @@
                 <h2>Exemples prêts à copier</h2>
                 <span class="hint">Remplacez <code>VOTRE_CLE_API</code> par votre clé.</span>
               </div>
-              <span class="badge badge-muted">${esc(model)}</span>
+              <span class="badge badge-muted">${esc(openaiModel)}</span>
             </div>
             <div class="code-tabs" role="tablist" aria-label="Langage de l'exemple">
               <button type="button" class="code-tab active" role="tab" aria-selected="true" data-guide-tab="curl">${icon('terminal')}cURL</button>
               <button type="button" class="code-tab" role="tab" aria-selected="false" data-guide-tab="node">${icon('code')}Node.js</button>
               <button type="button" class="code-tab" role="tab" aria-selected="false" data-guide-tab="python">${icon('code')}Python</button>
+              <button type="button" class="code-tab" role="tab" aria-selected="false" data-guide-tab="codex">${icon('terminal')}Codex CLI</button>
               <button type="button" class="code-tab" role="tab" aria-selected="false" data-guide-tab="anthropic">${icon('terminal')}Anthropic</button>
             </div>
             <div class="guide-code-wrap">
               ${codePanel('curl', 'cURL', curlCode)}
               ${codePanel('node', 'Node.js — SDK OpenAI', nodeCode)}
               ${codePanel('python', 'Python — SDK OpenAI', pythonCode)}
+              ${codePanel('codex', 'Codex CLI — ~/.codex/config.toml', codexCode)}
               ${codePanel('anthropic', 'Claude Code / Anthropic', anthropicCode)}
             </div>
             <div class="guide-inline-links">
@@ -890,7 +917,7 @@
               <div>
                 <span class="guide-eyebrow">03 · Modèles</span>
                 <h2>Modèles disponibles</h2>
-                <span class="hint">Les alias autorisés pour votre compte.</span>
+                <span class="hint">Les alias autorisés pour votre compte, dont Codex / OpenAI.</span>
               </div>
             </div>
             ${models.length ? `<div class="table-wrap"><table class="guide-model-table">
@@ -901,7 +928,8 @@
                 <td class="right"><span class="badge badge-ok">disponible</span></td>
               </tr>`).join('')}</tbody>
             </table></div>` : '<div class="empty-state">Aucun modèle autorisé pour le moment.</div>'}
-            <p class="small muted" style="margin:14px 0 0">Utilisez l'identifiant exact comme valeur de <code>model</code>. Les modèles non listés peuvent être refusés par votre pass.</p>
+            <p class="guide-alias-note">${icon('code')}<span>Codex CLI accepte notamment <code>gpt-5-codex</code>, <code>gpt-5</code>, <code>codex</code>, <code>o4-mini</code> et <code>o3</code>. Ces alias sont routés par la passerelle ; utilisez celui attendu par votre client.</span></p>
+            <p class="small muted" style="margin:10px 0 0">Utilisez l'identifiant exact comme valeur de <code>model</code>. Les modèles non listés peuvent être refusés par votre pass.</p>
           </section>
 
           <section class="panel guide-section" id="guide-params">
@@ -913,7 +941,7 @@
               </div>
             </div>
             <div class="guide-param-grid">
-              <div class="guide-param"><code>model</code><p>Identifiant du modèle, par exemple <code>${esc(model)}</code>.</p></div>
+              <div class="guide-param"><code>model</code><p>Identifiant du modèle, par exemple <code>${esc(openaiModel)}</code>.</p></div>
               <div class="guide-param"><code>messages</code><p>Liste des tours de conversation ; le contenu peut être du texte ou des parties multimodales.</p></div>
               <div class="guide-param"><code>stream</code><p><code>true</code> pour recevoir la réponse en SSE, idéal pour un effet de frappe.</p></div>
               <div class="guide-param"><code>temperature</code><p>Entre 0 et 2. Plus bas = réponses déterministes, plus haut = plus créatives.</p></div>

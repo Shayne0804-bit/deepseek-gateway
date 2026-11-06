@@ -445,6 +445,10 @@ test('decouverte de modeles : /v1/models et /anthropic/v1/models servis localeme
   assert.ok(openaiIds.includes('claude-opus-5.5'), 'claude-opus-5.5 doit apparaitre dans la liste');
   assert.ok(openaiIds.includes('fable-5'), 'fable-5 doit apparaitre dans la liste');
   assert.ok(openaiIds.includes('fable-5.1'), 'fable-5.1 doit apparaitre dans la liste');
+  assert.ok(openaiIds.includes('gpt-5-codex'), 'gpt-5-codex (Codex) doit apparaitre dans la liste');
+  assert.ok(openaiIds.includes('gpt-5'), 'gpt-5 (Codex) doit apparaitre dans la liste');
+  assert.ok(openaiIds.includes('codex'), 'codex doit apparaitre dans la liste');
+  assert.ok(openaiIds.includes('o4-mini'), 'o4-mini doit apparaitre dans la liste');
 
   // Format Anthropic (utilise par Claude Desktop pour la decouverte).
   const anthropic = await fetch(`${base}/anthropic/v1/models`, {
@@ -564,7 +568,7 @@ test('alias de modele : claude-opus-5 est servi par deepseek-flash', async () =>
   assert.equal(mock.seen.at(-1).body.model, 'deepseek-flash');
 
   // fable-5, fable-5.1 et claude-opus-5.5 sont aussi des alias par defaut, servis par flash.
-  for (const alias of ['fable-5', 'fable-5.1', 'claude-opus-5.5']) {
+  for (const alias of ['fable-5', 'fable-5.1', 'claude-opus-5.5', 'gpt-5-codex', 'gpt-5', 'codex', 'o4-mini']) {
     const aliasRes = await proxyChat(key, { model: alias });
     assert.equal(aliasRes.status, 200, alias);
     assert.equal(aliasRes.headers.get('x-gateway-requested-model'), alias);
