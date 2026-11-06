@@ -14,8 +14,13 @@ valaria
 ```
 
 `valaria login` ouvre le portail VALARIA. Connectez-vous, vérifiez le code affiché
-dans le terminal, puis autorisez l'appareil. Le CLI reçoit ensuite un jeton
-révocable.
+dans le terminal, puis autorisez l'appareil. Après connexion, choisissez
+**Claude** ou **Codex** : le modèle retenu est enregistré sur l'appareil.
+Le CLI reçoit ensuite un jeton révocable.
+
+L’interface principale affiche en permanence le compte, le pass, les barres de
+quotas et le modèle. Un message naturel lance directement l’agent : il peut lire
+et modifier les fichiers, avec approbation avant écriture et avant commande.
 
 ## Commandes
 
@@ -31,10 +36,10 @@ valaria logout          # oublier cet appareil
 
 ## Dans la TUI
 
-- `Entrée` envoyer un message.
+- `Entrée` envoyer un message — il lance l’agent par défaut.
 - `/help` lister les commandes.
-- `/agent <tâche>` lancer l’agent autonome : il lit les fichiers, propose les
-  patchs et exécute les tests avec approbation.
+- `/chat <message>` conversation simple sans outils.
+- `/agent <tâche>` relancer explicitement l’agent.
 - `/files` explorer le projet.
 - `/read <fichier>` ajouter un fichier au contexte.
 - `/edit <fichier> <instruction>` préparer une modification, avec diff et

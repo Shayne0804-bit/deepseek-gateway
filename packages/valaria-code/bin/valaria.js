@@ -18,6 +18,7 @@ import {
   saveConfig,
 } from '../src/config.js';
 import { runTui, renderScreen } from '../src/tui.js';
+import { chooseModel } from '../src/onboarding.js';
 import { supportsColor } from '../src/theme.js';
 
 const PACKAGE_ROOT = path.resolve(import.meta.dirname, '..');
@@ -63,6 +64,7 @@ function help() {
     --model <nom>                modèle par défaut
     --device-name <nom>          nom affiché dans le portail
     --no-open                    ne pas ouvrir le navigateur automatiquement
+    --no-onboarding              ne pas demander Claude/Codex au premier login
     --home <dir>                 dossier de configuration
 
   VARIABLES
@@ -104,15 +106,26 @@ async function commandLogin(flags) {
         console.log('  En attente de l’approbation sur le site…\n');
       },
     });
+    let selectedModel = flags.model || null;
+    if (!selectedModel && !flags['no-onboarding']) {
+      try {
+        const models = await createClient({ url: result.url, token: result.token }).models();
+        selectedModel = await chooseModel({ models });
+      } catch {
+        selectedModel = null;
+      }
+    }
+    selectedModel = selectedModel || loadConfig()?.model || DEFAULT_MODEL;
     const file = saveConfig({
       url: result.url,
       token: result.token,
       tokenExpiresAt: result.tokenExpiresAt,
       deviceName: result.deviceName,
       clientName: loadConfig()?.clientName || null,
-      model: flags.model || loadConfig()?.model || DEFAULT_MODEL,
+      model: selectedModel,
     });
     console.log(`  ✔ appareil autorisé`);
+    console.log(`  Modèle : ${selectedModel}`);
     console.log(`  Configuration : ${file}`);
     console.log('  Lancez : valaria\n');
     return 0;
@@ -190,13 +203,20 @@ async function commandPreview() {
       { role: 'user', content: 'Ajoute un test pour la fonction de calcul.' },
       { role: 'assistant', content: 'Je lis le fichier de test, puis je propose un patch. Aucun fichier ne sera écrit sans votre approbation.' },
     ],
-    input: '/agent ajoute un test',
-    status: 'prêt',
+    input: 'ajoute un test pour la fonction de calcul',
+    status: 'prêt · mode agent',
     streaming: false,
     agentRunning: false,
+    mode: 'agent',
+    tick: 0,
+    version: PKG.version,
+    account: {
+      client: { name: 'Votre compte', expiresAt: new Date(Date.now() + 21 * 86400000).toISOString() },
+      plan: { name: 'Créateur' },
+      quota: { requests: { used: 47, limit: 4000 }, usd: { used: 3.25, limit: 8 } },
+    },
     approval: null,
     model: process.env.VALARIA_MODEL || DEFAULT_MODEL,
-    version: PKG.version,
   }, {
     client: { baseUrl: normalizeBaseUrl(process.env.VALARIA_GATEWAY_URL || DEFAULT_BASE_URL) },
     config: { url: normalizeBaseUrl(process.env.VALARIA_GATEWAY_URL || DEFAULT_BASE_URL) },
@@ -222,6 +242,7 @@ async function commandTui(flags) {
       config,
       model: auth.model,
       version: PKG.version,
+      account: me,
       onModelChange: (model) => {
         const current = loadConfig() || {};
         saveConfig({ ...current, url: auth.url, token: auth.token, model, deviceName: current.deviceName || 'VALARIA Code' });

@@ -9,6 +9,7 @@ import { loginWithDevice } from '../src/auth.js';
 import { createClient } from '../src/api.js';
 import { runAgent } from '../src/agent.js';
 import { clearConfig, loadConfig, saveConfig } from '../src/config.js';
+import { groupModels } from '../src/onboarding.js';
 import { renderScreen } from '../src/tui.js';
 import { diffText, listFiles, readFile, runCommand, writeFile } from '../src/tools.js';
 
@@ -122,6 +123,13 @@ test('TUI : en-tête de marque et composeur', () => {
       streaming: false,
       approval: null,
       model: 'gpt-5',
+      version: '0.3.0',
+      mode: 'agent',
+      account: {
+        client: { name: 'Léa', expiresAt: new Date(Date.now() + 12 * 86400000).toISOString() },
+        plan: { name: 'Créateur' },
+        quota: { requests: { used: 47, limit: 300 }, usd: { used: 4, limit: 8 } },
+      },
     }, { client: { baseUrl: 'https://api.valariamenu.com' }, config: { url: 'https://api.valariamenu.com' }, color: false });
   } finally {
     process.stdout.write = original;
@@ -129,7 +137,15 @@ test('TUI : en-tête de marque et composeur', () => {
   const output = chunks.join('');
   assert.match(output, /VALARIA/);
   assert.match(output, /CODE/);
+  assert.match(output, /REQUÊTES/);
+  assert.match(output, /Créateur/);
   assert.match(output, /const a = 1/);
+});
+
+test('onboarding : familles Claude et Codex', () => {
+  const families = groupModels(['claude-opus-5.5', 'fable-5', 'gpt-5-codex', 'gpt-5']);
+  assert.deepEqual(families.claude, ['claude-opus-5.5']);
+  assert.deepEqual(families.codex, ['gpt-5-codex', 'gpt-5']);
 });
 
 test('agent : lecture, proposition de patch, approbation et synthèse', async () => {

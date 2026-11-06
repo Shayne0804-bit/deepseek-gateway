@@ -14,4 +14,5 @@ export {
 } from './config.js';
 export { runTui } from './tui.js';
 export { runAgent } from './agent.js';
+export { chooseModel } from './onboarding.js';
 export { diffText, extractCode, listFiles, readFile, runCommand, writeFile } from './tools.js';

@@ -19,7 +19,7 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function createTui({ client, config, model, version = '0.2.0', color = supportsColor(), onModelChange = null } = {}) {
+export function createTui({ client, config, model, version = '0.3.0', color = supportsColor(), account = null, onModelChange = null } = {}) {
   const state = {
     messages: [],
     input: '',
@@ -29,11 +29,14 @@ export function createTui({ client, config, model, version = '0.2.0', color = su
     streaming: false,
     agentRunning: false,
     agentAbort: null,
+    mode: 'agent',
     approval: null,
     abort: null,
     closed: false,
     model,
     version,
+    account,
+    tick: 0,
     startedAt: Date.now(),
   };
   const root = process.cwd();
@@ -46,6 +49,15 @@ export function createTui({ client, config, model, version = '0.2.0', color = su
       if (!state.closed) draw();
     }, 40);
   };
+
+  async function refreshAccount() {
+    try {
+      state.account = await client.me();
+      scheduleRender();
+    } catch {
+      /* le statut visible reste utilisable hors ligne */
+    }
+  }
 
   function addMessage(role, content) {
     state.messages.push({ role, content: String(content), at: Date.now() });
@@ -99,6 +111,7 @@ export function createTui({ client, config, model, version = '0.2.0', color = su
     } finally {
       state.streaming = false;
       state.abort = null;
+      refreshAccount();
       draw();
     }
   }
@@ -133,16 +146,17 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
     draw();
   }
 
-  async function runAgentTask(task) {
+  async function runAgentTask(task, { explicit = false } = {}) {
     if (!task) {
       systemMessage('usage : /agent <tâche>');
       return;
     }
     state.agentRunning = true;
     state.streaming = true;
+    state.mode = 'agent';
     state.agentAbort = new AbortController();
     state.status = 'agent en cours…';
-    addMessage('user', `/agent ${task}`);
+    addMessage('user', task);
     draw();
     try {
       const result = await runAgent({
@@ -158,12 +172,14 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
         }),
         onEvent: (event) => {
           if (event.type === 'assistant' && event.content) addMessage('assistant', event.content);
-          else if (event.type === 'tool') systemMessage(`⚙ outil : ${event.name}`);
-          else if (event.type === 'error') systemMessage(`✎ ${event.name} : ${event.message}`);
-          scheduleRender();
+          else if (event.type === 'tool') {
+            const label = event.name === 'read_file' ? 'lecture' : event.name === 'write_file' ? 'préparation du patch' : event.name === 'run_command' ? 'commande' : event.name;
+            state.status = `agent · ${label}`;
+            scheduleRender();
+          } else if (event.type === 'error') systemMessage(`✎ ${event.name} : ${event.message}`);
         },
       });
-      addMessage('assistant', `⚙ Agent terminé — ${result.summary}`);
+      systemMessage(`⚙ Agent terminé · ${result.steps} étape(s)`);
       state.status = 'prêt';
     } catch (error) {
       systemMessage(`✎ Agent : ${error.message}`);
@@ -173,6 +189,7 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
       state.streaming = false;
       state.agentAbort = null;
       state.approval = null;
+      refreshAccount();
       draw();
     }
   }
@@ -182,11 +199,25 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
     const argument = rest.join(' ').trim();
     switch (command) {
       case 'help':
-        systemMessage('⚙ Commandes\n/help · /agent <tâche> · /files [dossier] · /read <fichier> · /edit <fichier> <instruction>\n/models · /model <nom> · /usage · /run <commande> · /clear · /quit\n\nEntrée : envoyer · Ctrl+C : annuler · Ctrl+L : redessiner');
+        systemMessage('⚙ Votre message est exécuté par l’agent (lecture/patch/tests, avec approbations).\n/chat <message> · /agent <tâche> · /files [dossier] · /read <fichier>\n/edit <fichier> <instruction> · /run <commande> · /models · /model <nom> · /usage · /clear · /quit\n\nEntrée : envoyer · Ctrl+C : annuler · Ctrl+L : redessiner');
         break;
       case 'agent': {
-        await runAgentTask(argument);
+        await runAgentTask(argument, { explicit: true });
         return;
+      }
+      case 'chat': {
+        if (!argument) {
+          state.mode = 'chat';
+          systemMessage('⚙ Mode conversation simple. /mode agent pour revenir à l’agent.');
+          break;
+        }
+        await sendChat(argument);
+        return;
+      }
+      case 'mode': {
+        state.mode = argument === 'chat' ? 'chat' : 'agent';
+        systemMessage(`⚙ Mode ${state.mode === 'agent' ? 'agent' : 'conversation'}.`);
+        break;
       }
       case 'files': {
         try {
@@ -280,7 +311,8 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
     }
     state.input = '';
     if (value.startsWith('/')) { executeCommand(value); return; }
-    sendChat(value);
+    if (state.mode === 'chat') sendChat(value);
+    else runAgentTask(value);
   }
 
   async function approvePending() {
@@ -380,12 +412,21 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
   process.stdout.on('resize', onResize);
   process.on('SIGINT', () => onKey('\u0003'));
 
-  systemMessage(`⚙ VALARIA Code prête. Projet : ${root}\n/help pour les commandes. /edit <fichier> <instruction> pour modifier un fichier.`);
+  refreshAccount();
+  const animation = setInterval(() => {
+    if (state.closed) return;
+    state.tick = (state.tick + 1) % 10;
+    // Animation active pendant le streaming/l'agent, pulse discret au repos.
+    if (state.streaming || state.agentRunning || state.approval || state.tick === 0) scheduleRender();
+  }, 140);
+
+  systemMessage(`⚙ VALARIA Code prête · projet ${root}\nDécrivez votre tâche : l’agent lit, propose et modifie avec votre approbation. /help pour les commandes.`);
   draw();
   return new Promise((resolve) => {
     const timer = setInterval(() => {
       if (state.closed) {
         clearInterval(timer);
+        clearInterval(animation);
         process.stdin.off('data', onKey);
         process.stdout.off('resize', onResize);
         resolve(0);
@@ -395,51 +436,109 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
 }
 
 export function renderScreen(state, { client, config, color = true, root = process.cwd() } = {}) {
-  const cols = Math.max(54, Math.min(Number(process.stdout.columns) || 90, 110));
-  const rows = Math.max(16, Number(process.stdout.rows) || 24);
+  const cols = Math.max(60, Math.min(Number(process.stdout.columns) || 96, 120));
+  const rows = Math.max(18, Number(process.stdout.rows) || 28);
   const lines = [];
   const add = (value = '') => lines.push(value);
   const c = (text, hex) => paint(text, hex, color);
   const b = (text) => bold(text, color);
   const d = (text) => dim(text, color);
+  const pad = (text, width) => `${text}${' '.repeat(Math.max(0, width - visibleLength(text)))}`;
+  const nf = new Intl.NumberFormat('fr-FR');
+  const usd = (value) => `${nf.format(Math.round((Number(value) || 0) * 100) / 100)} $`;
+  const active = Boolean(state.streaming || state.agentRunning || state.approval);
+  const spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  const pulse = active ? spinner[state.tick % spinner.length] : (state.tick % 2 ? '●' : '○');
+  const account = state.account || null;
+  const clientName = account?.client?.name || 'compte VALARIA';
+  const planName = account?.plan?.name || account?.client?.period || '—';
+  const quota = account?.quota || {};
+  const req = quota.requests || {};
+  const credit = quota.usd || {};
+  const model = state.model || account?.model || 'modèle';
+  const mode = state.mode === 'chat' ? 'conversation' : 'agent';
 
-  add(`  ${c('V', COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}  ${d('agent de code · terminal')}  ${d(`v${state.version || '0.1.0'}`)}`);
+  const pct = (used, limit) => (!limit ? 0 : Math.max(0, Math.min(100, Math.round((Number(used || 0) / Number(limit)) * 100))));
+  const bar = (used, limit, width = 10) => {
+    if (!limit) return c('∞', COLORS.dim);
+    const filled = Math.round((pct(used, limit) / 100) * width);
+    const tone = pct(used, limit) >= 90 ? COLORS.danger : pct(used, limit) >= 75 ? COLORS.amber : COLORS.accent;
+    return c('█'.repeat(filled), tone) + c('░'.repeat(Math.max(0, width - filled)), COLORS.border);
+  };
+  const expires = account?.client?.expiresAt ? new Date(account.client.expiresAt) : null;
+  const daysLeft = expires ? Math.max(0, Math.ceil((expires.getTime() - Date.now()) / 86_400_000)) : null;
+  const expiresLabel = expires ? expires.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '—';
+
+  add(`  ${c('V', COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${d('agent de code · terminal')}   ${c(pulse, active ? COLORS.amber : COLORS.accent)} ${d(account ? 'en ligne' : 'hors ligne')}   ${d(`v${state.version || '0.3.0'}`)}`);
   add(`  ${d('─'.repeat(Math.max(0, cols - 4)))}`);
-  add(`  ${c('●', COLORS.accent)} ${d('connecté')}  ${d('·')}  ${truncate(client?.baseUrl || config?.url || '', cols - 30)}  ${d('·')}  ${c(state.model || 'modèle', COLORS.amber)}`);
-  add('');
 
-  const bodyRows = Math.max(6, rows - 10);
-  const body = [];
+  const sidebar = cols >= 88 ? 25 : 0;
+  const mainWidth = cols - (sidebar ? sidebar + 4 : 2);
+  const bodyHeight = Math.max(8, rows - (sidebar ? 6 : 7));
+  const left = [];
+  if (sidebar) {
+    left.push(c('COMPTE', COLORS.muted));
+    left.push(` ${b(truncate(clientName, sidebar - 2))}`);
+    left.push(` ${d(truncate(`pass ${planName}`, sidebar - 2))}`);
+    left.push('');
+    left.push(c('REQUÊTES', COLORS.muted));
+    left.push(` ${bar(req.used, req.limit, 12)}`);
+    left.push(` ${d(`${nf.format(req.used || 0)} / ${req.limit ? nf.format(req.limit) : '∞'}`)}`);
+    left.push('');
+    left.push(c('CRÉDIT', COLORS.muted));
+    left.push(` ${bar(credit.used, credit.limit, 12)}`);
+    left.push(` ${d(`${usd(credit.used)} / ${credit.limit ? usd(credit.limit) : '∞'}`)}`);
+    left.push('');
+    left.push(c('PASS', COLORS.muted));
+    left.push(` ${daysLeft == null ? '—' : `${daysLeft} j`} ${d(`· ${expiresLabel}`)}`);
+    left.push('');
+    left.push(c('MODÈLE', COLORS.muted));
+    left.push(` ${c(truncate(model, sidebar - 2), COLORS.amber)}`);
+    left.push(c('MODE', COLORS.muted));
+    left.push(` ${d(mode)}`);
+  } else {
+    add(`  ${d(`${planName} · ${nf.format(req.used || 0)}/${req.limit ? nf.format(req.limit) : '∞'} req · ${usd(credit.used)}${credit.limit ? `/${usd(credit.limit)}` : ''} · ${mode} · ${truncate(model, 22)}`)}`);
+  }
+
+  const conversation = [];
   for (const message of state.messages) {
     const prefix = message.role === 'user' ? c('›', COLORS.accent) : message.role === 'assistant' ? c('▌', COLORS.accent2) : c('·', COLORS.dim);
     const label = message.role === 'user' ? c('vous', COLORS.muted) : message.role === 'assistant' ? b('VALARIA') : d('système');
-    body.push(`${prefix} ${label}`);
-    const wrapped = wrap(message.content || '', cols - 4);
-    for (const line of wrapped) body.push(`  ${line}`);
-    body.push('');
+    conversation.push(`${prefix} ${label}`);
+    for (const line of wrap(message.content || '', Math.max(20, mainWidth - 2))) conversation.push(`  ${line}`);
+    conversation.push('');
   }
-  const shownBody = body.slice(-bodyRows);
-  while (shownBody.length < bodyRows) shownBody.push('');
-  for (const line of shownBody) add(truncate(line, cols));
-
-  add(`  ${rule(Math.max(0, cols - 4), color)}`);
+  const approvalLines = [];
   if (state.approval) {
     const approval = state.approval;
-    add(`  ${c('⚠ APPROBATION REQUISE', COLORS.amber)}  ${d('y autoriser · n refuser')}`);
+    approvalLines.push('');
+    approvalLines.push(`${c('⚠ APPROBATION REQUISE', COLORS.amber)}  ${d('y autoriser · n refuser')}`);
     if (approval.type === 'write') {
-      add(`  ${b(approval.file)}`);
-      const diffLines = String(approval.diff).split('\n').slice(-Math.max(2, rows - 11));
-      for (const line of diffLines) {
+      approvalLines.push(`  ${b(truncate(approval.file || 'fichier', mainWidth - 2))}`);
+      const diff = String(approval.diff || '').split('\n').slice(0, 8);
+      for (const line of diff) {
         const hex = line.startsWith('+') ? COLORS.accent : line.startsWith('-') ? COLORS.danger : COLORS.dim;
-        add(`  ${c(truncate(line, cols - 4), hex)}`);
+        approvalLines.push(c(`  ${truncate(line, mainWidth - 2)}`, hex));
       }
     } else {
-      add(`  ${c('$', COLORS.amber)} ${truncate(approval.command, cols - 6)}`);
+      approvalLines.push(`  ${c('$', COLORS.amber)} ${truncate(approval.command || '', mainWidth - 4)}`);
+      approvalLines.push(`  ${d('commande proposée par l’agent')}`);
     }
-  } else {
-    add(`  ${c('>', COLORS.accent)} ${state.input}${state.streaming ? c('▌', COLORS.accent) : ''}`);
   }
-  add(`  ${d(state.status || 'prêt')}  ${d('· Entrée envoyer · / commandes · Ctrl+C annuler · Ctrl+D quitter')}`);
+  const main = conversation.slice(-Math.max(2, bodyHeight - approvalLines.length)).concat(approvalLines);
+  while (main.length < bodyHeight) main.unshift('');
+  if (!sidebar) add('');
+
+  for (let index = 0; index < bodyHeight; index += 1) {
+    const mainLine = truncate(main[index] || '', mainWidth);
+    if (sidebar) add(`  ${pad(truncate(left[index] || '', sidebar), sidebar)} ${d('│')} ${mainLine}`);
+    else add(`  ${mainLine}`);
+  }
+
+  add(`  ${d('─'.repeat(Math.max(0, cols - 4)))}`);
+  const prompt = state.approval ? `${c('y', COLORS.accent)}/${c('n', COLORS.danger)}` : `${c('>', COLORS.accent)} ${truncate(state.input || '', cols - 8)}${active ? c('▌', COLORS.accent) : ''}`;
+  add(`  ${prompt}`);
+  add(`  ${d(truncate(state.status || 'prêt', cols - 34))} ${d('· Entrée envoyer · / commandes · Ctrl+C annuler')}`);
   process.stdout.write(`\x1b[H\x1b[2J${lines.join('\n')}\x1b[?25l`);
 }
 
