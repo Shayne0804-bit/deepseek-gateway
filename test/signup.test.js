@@ -83,7 +83,7 @@ test('inscription autonome : code email, compte, clé API et double connexion', 
     const data = await me.json();
     assert.equal(data.client.email, 'nouveau@gmail.com');
     assert.equal(data.client.hasKey, false, 'aucune clé API au départ');
-    assert.equal(data.quota.requests.limit, 200, 'quota d’essai appliqué');
+    assert.equal(data.quota.requests.limit, null, 'pas de quota de requetes sur le pass essai');
     assert.ok(data.client.expiresAt, 'date de fin d’essai');
 
     // Le compte apparaît une seule fois (pas de doublon admin).
@@ -372,4 +372,5 @@ test('admin : test email visible et erreur Resend remontee', async () => {
     await failingStarted.close();
   }
 });
+
 

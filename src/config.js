@@ -170,7 +170,7 @@ export function loadConfig(overrides = {}) {
     trialQuotaLegacy: overrides.trialQuotaUsd === undefined
       && raw('TRIAL_CREDIT_SITE_USD') === undefined
       && raw('TRIAL_QUOTA_USD') !== undefined,
-    trialQuotaRequests: overrides.trialQuotaRequests ?? intOr(raw('TRIAL_QUOTA_REQUESTS'), 200),
+    trialQuotaRequests: overrides.trialQuotaRequests ?? 0,
     trialRpmLimit: overrides.trialRpmLimit ?? intOr(raw('TRIAL_RPM_LIMIT'), 20),
     trialConcurrencyLimit: overrides.trialConcurrencyLimit ?? intOr(raw('TRIAL_CONCURRENCY_LIMIT'), 2),
     trialMaxOutputTokens: overrides.trialMaxOutputTokens ?? intOr(raw('TRIAL_MAX_OUTPUT_TOKENS'), 4096),
@@ -334,7 +334,8 @@ export function loadConfig(overrides = {}) {
   // Valeurs d'essai coherentes (un pass d'essai ne doit jamais etre infini par accident).
   if (!Number.isFinite(config.trialDays) || config.trialDays < 1 || config.trialDays > 90) config.trialDays = 7;
   if (!Number.isFinite(config.trialQuotaUsd) || config.trialQuotaUsd < 0) config.trialQuotaUsd = 1.125;
-  if (!Number.isFinite(config.trialQuotaRequests) || config.trialQuotaRequests < 0) config.trialQuotaRequests = 200;
+  // Le pass d'essai n'a plus de quota de requetes : seul le credit site l'arrete.
+  config.trialQuotaRequests = null;
   if (!Number.isFinite(config.trialRpmLimit) || config.trialRpmLimit < 1) config.trialRpmLimit = 20;
   if (!Number.isFinite(config.trialConcurrencyLimit) || config.trialConcurrencyLimit < 1) config.trialConcurrencyLimit = 2;
   if (!Number.isFinite(config.trialMaxOutputTokens) || config.trialMaxOutputTokens < 1) config.trialMaxOutputTokens = 4096;
@@ -351,6 +352,7 @@ export function loadConfig(overrides = {}) {
   config.signupEnabled = Boolean(config.signupEnabled);
   return config;
 }
+
 
 
 

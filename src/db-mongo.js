@@ -912,3 +912,12 @@ export async function clientUsageSeriesSince(handle, clientId, sinceIso) {
   return seriesUsage(handle, { client_id: clientId, created_at: { $gte: sinceIso } }, true);
 }
 
+
+/** Supprime le plafond de requetes des pass d'essai (le credit site suffit). */
+export async function clearTrialRequestQuotas(handle) {
+  const result = await getCollection(handle, 'clients').updateMany(
+    { plan: 'essai', quota_requests: { $ne: null } },
+    { $set: { quota_requests: null } },
+  );
+  return result.modifiedCount ?? 0;
+}

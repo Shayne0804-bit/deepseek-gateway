@@ -334,7 +334,7 @@ SIGNUP_ENABLED=1            # 0 pour fermer les inscriptions
 TRIAL_DAYS=7                # durée du pass d'essai
 TRIAL_CREDIT_SITE_USD=1.125 # crédit site du pass gratuit (équivalent de 0,30 $ réel)
 # Ancienne TRIAL_QUOTA_USD (coût réel) : convertie automatiquement ×3,75.
-TRIAL_QUOTA_REQUESTS=200    # requêtes incluses
+# Le pass d'essai n'a plus de quota de requêtes : date ou crédit site.
 TRIAL_RPM_LIMIT=20
 TRIAL_CONCURRENCY_LIMIT=2
 TRIAL_MAX_OUTPUT_TOKENS=4096
@@ -1260,6 +1260,7 @@ et **Vue d'ensemble** (graphique 30 jours, top consommateurs).
 ---
 
 **Bonne discussion avec votre ami — et gardez votre clé originale pour vous.**
+
 
 
 

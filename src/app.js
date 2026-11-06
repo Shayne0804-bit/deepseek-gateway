@@ -9,6 +9,7 @@ import {
   cleanupAdminSessions,
   cleanupPortalEmailCodes,
   cleanupPortalSessions,
+  clearTrialRequestQuotas,
   closeDb,
   deleteUsageLogsBefore,
   getSetting,
@@ -192,6 +193,13 @@ export async function startGateway(overrides = {}) {
   // Tarification par defaut si premiere utilisation.
   if ((await getSetting(db, 'pricing', null)) == null) {
     await setSetting(db, 'pricing', DEFAULT_PRICING);
+  }
+
+  // Les pass d'essai se terminent par la date ou le credit site, plus par un
+  // nombre de requetes. Nettoie les anciens comptes d'essai.
+  const trialQuotaCleanup = await clearTrialRequestQuotas(db);
+  if (trialQuotaCleanup > 0) {
+    log.info(`Quota de requetes retire sur ${trialQuotaCleanup} pass(es) d'essai.`);
   }
 
   // Mot de passe administrateur (premiere utilisation).

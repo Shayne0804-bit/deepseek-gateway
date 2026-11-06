@@ -708,3 +708,8 @@ export function clientCreditWindowSince(db, clientId, sinceIso) {
     oldest: row?.oldest ?? null,
   };
 }
+
+/** Supprime le plafond de requetes des pass d'essai (le credit site suffit). */
+export function clearTrialRequestQuotas(db) {
+  return db.prepare("UPDATE clients SET quota_requests = NULL WHERE plan = 'essai'").run().changes;
+}
