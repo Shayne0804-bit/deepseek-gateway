@@ -573,8 +573,55 @@
     return `${formatted}\u00A0${label}`;
   }
 
-  function planCurrencyNote() {
+  /** Apercu PAYG : les montants de base sont en FCFA, convertis dans la devise detectee. */
+  const BILLING_BASE_FCFA = 655.957;
+
+  function billingCurrencyInfo() {
     const currency = state.currency;
+    const code = currency?.currency || 'XOF';
+    const rate = Number(currency?.rate);
+    const valid = Number.isFinite(rate) && rate > 0;
+    const label = ['XOF', 'XAF'].includes(code)
+      ? 'FCFA'
+      : (() => {
+        try {
+          return new Intl.DisplayNames(['fr'], { type: 'currency' }).of(code) || code;
+        } catch {
+          return code;
+        }
+      })();
+    const decimals = TWO_DECIMAL_CURRENCIES.has(code) ? 2 : 0;
+    return { code, rate: valid ? rate : 655.957, label, decimals };
+  }
+
+  function formatBillingAmount(baseFcfa) {
+    const { rate, label, decimals } = billingCurrencyInfo();
+    const amount = (Number(baseFcfa) / BILLING_BASE_FCFA) * rate;
+    const value = new Intl.NumberFormat('fr-FR', {
+      maximumFractionDigits: decimals,
+      minimumFractionDigits: decimals,
+    }).format(amount);
+    return `${value}\u00A0${label}`;
+  }
+
+  function renderBillingPreview() {
+    const info = billingCurrencyInfo();
+    document.querySelectorAll('[data-billing-base]').forEach((button) => {
+      button.textContent = formatBillingAmount(button.dataset.billingBase);
+    });
+    const label = $('#billing-custom-label');
+    if (label) label.textContent = `Montant personnalisé (${info.label})`;
+    const input = $('#billing-custom-input');
+    if (input) {
+      const min = (1000 / BILLING_BASE_FCFA) * info.rate;
+      input.min = info.decimals === 0 ? String(Math.round(min)) : min.toFixed(2);
+      input.placeholder = `ex : ${formatBillingAmount(10000)}`;
+    }
+    const note = $('#billing-currency-note');
+    if (note) note.textContent = `Montants affichés en ${info.label} selon votre localisation.`;
+  }
+
+  function planCurrencyNote() {    const currency = state.currency;
     if (!currency || currency.currency === 'EUR') return 'Prix affichés en euros (EUR).';
     const country = currency.country
       ? new Intl.DisplayNames(['fr'], { type: 'region' }).of(currency.country)
@@ -1449,6 +1496,8 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
       state.currency = await api(`/currency?${params.toString()}`);
     } catch {
       state.currency = null;
+    } finally {
+      renderBillingPreview();
     }
   }
 

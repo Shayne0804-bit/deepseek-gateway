@@ -292,18 +292,19 @@
                 Cette page est une prévisualisation : aucun paiement ne peut être effectué.
               </div>
               <p class="small muted">Choisissez un montant prédéfini ou saisissez un montant personnalisé.</p>
-              <div class="billing-amounts" aria-label="Montants prédéfinis">
-                <button type="button" class="billing-amount" disabled>1 000 FCFA</button>
-                <button type="button" class="billing-amount" disabled>3 000 FCFA</button>
-                <button type="button" class="billing-amount" disabled>6 000 FCFA</button>
-                <button type="button" class="billing-amount" disabled>15 000 FCFA</button>
-                <button type="button" class="billing-amount" disabled>50 000 FCFA</button>
+              <div class="billing-amounts" id="billing-amounts" aria-label="Montants prédéfinis">
+                <button type="button" class="billing-amount" data-billing-base="1000" disabled>1 000 FCFA</button>
+                <button type="button" class="billing-amount" data-billing-base="3000" disabled>3 000 FCFA</button>
+                <button type="button" class="billing-amount" data-billing-base="6000" disabled>6 000 FCFA</button>
+                <button type="button" class="billing-amount" data-billing-base="15000" disabled>15 000 FCFA</button>
+                <button type="button" class="billing-amount" data-billing-base="50000" disabled>50 000 FCFA</button>
               </div>
               <label class="field full billing-custom">
-                <span>Montant personnalisé (FCFA)</span>
-                <input type="number" min="1000" step="500" placeholder="ex : 10 000" disabled>
+                <span id="billing-custom-label">Montant personnalisé (FCFA)</span>
+                <input type="number" id="billing-custom-input" min="1000" step="500" placeholder="ex : 10 000" disabled>
                 <small>Minimum 1 000 FCFA — le crédit site sera ajouté à votre solde.</small>
               </label>
+              <p class="small muted" id="billing-currency-note"></p>
               <button type="button" class="btn btn-primary btn-block" disabled>Recharger — bientôt disponible</button>
               <p class="small muted" style="margin-top:14px">
                 Une fois disponible, le crédit acheté n’expirera pas et sera consommé au taux du crédit site.
