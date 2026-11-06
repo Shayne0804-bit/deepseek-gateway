@@ -150,7 +150,13 @@
   async function requestCode() {
     if (state.busy) return;
     const email = $('#signup-email').value.trim();
+    const username = $('#signup-username').value.trim();
     showError('');
+    if (!username || username.length < 2) {
+      showError("Entrez un nom d'utilisateur (2 caractères minimum).");
+      $('#signup-username').focus();
+      return;
+    }
     if (!email) {
       showError('Entrez votre adresse email.');
       $('#signup-email').focus();
@@ -161,7 +167,7 @@
     try {
       const data = await api('/signup/request', {
         method: 'POST',
-        body: { email, ...deviceFields(), captchaToken: captcha.token ?? null },
+        body: { email, username, ...deviceFields(), captchaToken: captcha.token ?? null },
       });
       $('#signup-sent-note').textContent = `Code envoyé à ${email} (valable ${data.expiresMinutes ?? 10} minutes). Vérifiez aussi les spams.`;
       $('#signup-request-form').classList.add('hidden');
@@ -195,7 +201,8 @@
     const button = $('#signup-verify-btn');
     setBusy(true, button, 'Créer mon compte');
     try {
-      await api('/signup/verify', { method: 'POST', body: { email, code, ...deviceFields() } });
+      const username = $('#signup-username').value.trim();
+      await api('/signup/verify', { method: 'POST', body: { email, username, code, ...deviceFields() } });
       window.location.assign('/portal');
     } catch (err) {
       showError(err.message);
@@ -255,6 +262,7 @@
   $('#signup-back').addEventListener('click', resetFlow);
   init();
 })();
+
 
 
 

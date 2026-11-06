@@ -55,6 +55,11 @@
 
         <form id="signup-request-form" novalidate>
           <label class="field full">
+            <span>Nom d'utilisateur</span>
+            <input type="text" id="signup-username" name="username" placeholder="votre nom" autocomplete="username" minlength="2" maxlength="40" required>
+            <small>Ce nom sera affiché dans votre espace et sur votre clé API.</small>
+          </label>
+          <label class="field full">
             <span>Adresse email</span>
             <input type="email" id="signup-email" name="email" placeholder="vous@gmail.com" autocomplete="email" maxlength="254" required>
             <small>Un pass d'essai est créé après validation. Utilisez une adresse que vous consultez.</small>

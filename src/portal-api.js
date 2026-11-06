@@ -194,6 +194,19 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     return String(value ?? '').trim().toLowerCase();
   }
 
+  /** Nom d'utilisateur choisi a l'inscription (fallback email pour les anciens flux). */
+  function normalizeUsername(value) {
+    if (value == null || String(value).trim() === '') return null;
+    const username = String(value).trim().replace(/\s+/g, ' ');
+    if (username.length < 2 || username.length > 40) {
+      throw new HttpError(400, "Le nom d'utilisateur doit contenir entre 2 et 40 caractères.", 'invalid_username');
+    }
+    if (!/^[\p{L}\p{N}][\p{L}\p{N} ._-]*$/u.test(username)) {
+      throw new HttpError(400, "Le nom d'utilisateur contient des caractères non autorisés.", 'invalid_username');
+    }
+    return username;
+  }
+
   function otpHash(email, code) {
     return crypto
       .createHmac('sha256', getMasterKey(config))
@@ -372,13 +385,13 @@ export function createPortalApi({ config, db, log, mailer = null }) {
   }
 
   /** Cree un compte d'essai (inscription autonome ou connexion email inconnue). */
-  async function createTrialClient(email, identity = null) {
+  async function createTrialClient(email, identity = null, username = null) {
     const now = new Date();
     const trialExpiry = new Date(now.getTime() + config.trialDays * 86_400_000).toISOString();
     const localPart = email.split('@')[0].replace(/[._-]+/g, ' ').trim();
     const client = {
       id: crypto.randomUUID(),
-      name: (localPart || 'Nouveau compte').slice(0, 80),
+      name: (username || localPart || 'Nouveau compte').slice(0, 80),
       email,
       plan: 'essai',
       keyHash: sha256(`pending:${crypto.randomUUID()}`),
@@ -887,6 +900,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           return;
         }
         assertEmailNotDisposable(email);
+        normalizeUsername(body.username);
         // Captcha obligatoire aussi pour la connexion par email.
         await assertTurnstile(req, body.captchaToken ?? body.turnstileToken);
         const client = await findClientByEmail(db, email);
@@ -967,6 +981,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         const body = await readJsonBody(req, 4 * 1024);
         const email = normalizeEmail(body.email);
         const code = String(body.code ?? '').replace(/\D/g, '');
+        const username = normalizeUsername(body.username);
         if (!EMAIL_RE.test(email) || !/^\d{6}$/.test(code)) {
           portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
           return;
@@ -1035,6 +1050,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           return;
         }
         assertEmailNotDisposable(email);
+        normalizeUsername(body.username);
         // Captcha avant de reveler si le compte existe (anti-enumeration).
         await assertTurnstile(req, body.captchaToken ?? body.turnstileToken);
         const existing = await findClientByEmail(db, email);
@@ -1108,6 +1124,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         const body = await readJsonBody(req, 4 * 1024);
         const email = normalizeEmail(body.email);
         const code = String(body.code ?? '').replace(/\D/g, '');
+        const username = normalizeUsername(body.username);
         if (!EMAIL_RE.test(email) || !/^\d{6}$/.test(code)) {
           portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
           return;
@@ -1139,7 +1156,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           return;
         }
 
-        const client = await createTrialClient(email, await enforceSignupPolicy(req, email, body.deviceId));
+        const client = await createTrialClient(email, await enforceSignupPolicy(req, email, body.deviceId), username);
         audit(req, 'portal.signup', client.name);
         log.info(`[${req.requestId ?? '-'}] Nouveau compte email : ${client.name} (essai ${config.trialDays} j)`);
         await createSession(req, res, client, 'signup');
@@ -1285,6 +1302,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
 
   return { handle };
 }
+
 
 
 
