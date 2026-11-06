@@ -299,6 +299,9 @@ async function main() {
     return { liWidth: Math.round(first.getBoundingClientRect().width), pWidth: Math.round(p.getBoundingClientRect().width), preWidth: Math.round(pre.getBoundingClientRect().width), h3Width: Math.round(h3.getBoundingClientRect().width) };
   })()`) };
   await screenshot('22-public-steps-desktop.png', 'Etapes de branchement en 1440x900 : numero a gauche, texte et bloc de code sur toute la largeur disponible (aucune colonne de texte etroite).', viewport.label, { keepScroll: true });
+  await evaluate("document.querySelector('.site-cta').scrollIntoView({ block: 'start' })");
+  await sleep(350);
+  await screenshot('26-public-cta-desktop.png', 'CTA finale en 1440x900 : copie a gauche, commande de demarrage a droite, aucun cadre geant vide.', viewport.label, { keepScroll: true });
 
   await navigate(`${URL_A}/signup`);
   await waitFor("document.querySelector('.signup-card') !== null");
