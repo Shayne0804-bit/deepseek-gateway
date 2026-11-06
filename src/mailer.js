@@ -241,6 +241,7 @@ export function createMailer(config, log) {
           authorization: `Bearer ${config.resendApiKey}`,
           'content-type': 'application/json',
         },
+        signal: AbortSignal.timeout(Math.max(3000, Number(config.mailTimeoutMs) || 15000)),
         body: JSON.stringify({
           from: fromName ? `${fromName} <${from}>` : from,
           to: [to],
