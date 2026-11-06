@@ -91,8 +91,8 @@ test('email OTP : demande générique, vérification, session et audit', async (
 
     // Adresse inconnue : refus explicite, aucun envoi.
     const unknown = await portalPost(started.url, '/email/request', { email: 'inconnu@example.com' });
-    assert.equal(unknown.status, 404);
-    assert.equal((await unknown.json()).error.code, 'account_not_found');
+    assert.equal(unknown.status, 200);
+    assert.match((await unknown.json()).message, /compte existe|peut être utilisée/i);
     assert.equal(mailer.sent.length, 0);
 
     // Adresse connue : même réponse, un code envoyé.
@@ -251,4 +251,6 @@ test('mailer : URL SMTP et mode console', async () => {
   assert.equal(logs.length, 1);
   assert.match(logs[0], /654321/);
 });
+
+
 

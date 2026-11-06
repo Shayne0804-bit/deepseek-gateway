@@ -890,19 +890,17 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         // Captcha obligatoire aussi pour la connexion par email.
         await assertTurnstile(req, body.captchaToken ?? body.turnstileToken);
         const client = await findClientByEmail(db, email);
-        if (!client) {
-          audit(req, 'portal.email.unknown');
-          portalError(
-            res,
-            404,
-            'Aucun compte n’existe pour cette adresse. Créez un compte avant de vous connecter.',
-            'account_not_found',
-          );
+        if (!client && !config.signupEnabled) {
+          audit(req, 'portal.email.generic');
+          sendJson(res, 200, emailCodeMessage());
           return;
+        }
+        if (!client) {
+          await enforceSignupPolicy(req, email, body.deviceId);
         }
         const send = reserveEmailSend(email);
         if (!send.ok) {
-          audit(req, 'portal.email.request.rate_limited', client.name);
+          audit(req, 'portal.email.request.rate_limited', client?.name ?? null);
           sendRateLimited(
             res,
             `Un code a déjà été demandé. Patientez ${send.retryAfterSeconds} s avant de renvoyer.`,
@@ -923,13 +921,13 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           createdAt: now.toISOString(),
           expiresAt,
         });
-        audit(req, 'portal.email.requested', client.name);
+        audit(req, 'portal.email.requested', client?.name ?? null);
         try {
           await mailer.sendPortalCode({ to: email, code, minutes: config.otpExpiresMinutes });
         } catch (err) {
           releaseEmailSend(email);
           await deletePortalEmailCodes(db, email);
-          audit(req, 'portal.email.send_failed', client.name);
+          audit(req, 'portal.email.send_failed', client?.name ?? null);
           log.error(`[${req.requestId ?? '-'}] Envoi email impossible : ${err.message}`);
           sendJson(res, 502, {
             error: {
@@ -941,11 +939,11 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           });
           return;
         }
-        log.info(`[${req.requestId ?? '-'}] Code de connexion email envoyé (${client.name}).`);
+        log.info(`[${req.requestId ?? '-'}] Code email envoyé (${client?.name ?? 'compte ou inscription'}).`);
         sendJson(res, 200, {
           ok: true,
           sent: true,
-          message: 'Code de connexion envoyé. Vérifiez votre boîte email.',
+          message: 'Si cette adresse peut être utilisée, un code vient d’être envoyé. Vérifiez votre email.',
           expiresMinutes: config.otpExpiresMinutes,
           resend_in_seconds: send.retryAfterSeconds,
           sends_in_window: send.count,
@@ -979,17 +977,9 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 401, 'Code expiré ou déjà utilisé. Demandez un nouveau code.', 'expired_code');
           return;
         }
-        // Connexion email reservee aux comptes existants.
+        // Reponse identique que le compte existe ou non : le code est verifie
+        // avant toute creation de compte.
         const client = await findClientByEmail(db, email);
-        if (!client) {
-          portalError(
-            res,
-            409,
-            'Aucun compte n’existe encore pour cette adresse. Créez un compte pour continuer.',
-            'account_not_found',
-          );
-          return;
-        }
         await incrementPortalEmailCodeAttempts(db, record.id);
         if (Number(record.attempts) + 1 > MAX_CODE_ATTEMPTS) {
           await deletePortalEmailCode(db, record.id);
@@ -1004,6 +994,17 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           return;
         }
         await deletePortalEmailCode(db, record.id);
+        if (!client) {
+          if (!config.signupEnabled) {
+            portalError(res, 401, 'Code invalide ou expiré.', 'invalid_code');
+            return;
+          }
+          const created = await createTrialClient(email, await enforceSignupPolicy(req, email, body.deviceId));
+          audit(req, 'portal.signup', created.name);
+          log.info(`[${req.requestId ?? '-'}] Nouveau compte email : ${created.name} (essai ${config.trialDays} j)`);
+          await createSession(req, res, created, 'signup');
+          return;
+        }
         await createSession(req, res, client, 'email');
         return;
       }
@@ -1037,16 +1038,9 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         // Captcha avant de reveler si le compte existe (anti-enumeration).
         await assertTurnstile(req, body.captchaToken ?? body.turnstileToken);
         const existing = await findClientByEmail(db, email);
-        if (existing) {
-          portalError(
-            res,
-            409,
-            'Un compte existe déjà pour cette adresse. Connectez-vous depuis la page de connexion.',
-            'account_exists',
-          );
-          return;
-        }
-        await enforceSignupPolicy(req, email, body.deviceId);
+        // Compte existant : le meme parcours envoie un code de connexion.
+        // Aucun message ne revele l'existence du compte.
+        if (!existing) await enforceSignupPolicy(req, email, body.deviceId);
         const send = reserveEmailSend(email);
         if (!send.ok) {
           audit(req, 'portal.signup.rate_limited');
@@ -1137,15 +1131,11 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         }
         await deletePortalEmailCode(db, record.id);
 
-        // Un compte existant ne doit jamais etre cree a nouveau depuis l'inscription.
+        // Un code valide sur un compte existant ouvre une session (connexion).
         const existing = await findClientByEmail(db, email);
         if (existing) {
-          portalError(
-            res,
-            409,
-            'Un compte existe déjà pour cette adresse. Connectez-vous depuis la page de connexion.',
-            'account_exists',
-          );
+          audit(req, 'portal.email.requested', existing.name);
+          await createSession(req, res, existing, 'email');
           return;
         }
 
@@ -1295,6 +1285,8 @@ export function createPortalApi({ config, db, log, mailer = null }) {
 
   return { handle };
 }
+
+
 
 
 

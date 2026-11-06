@@ -117,3 +117,10 @@ compromis.
 
 Le mode PAYG reste en `Release soon` jusque-là : aucun endpoint de paiement,
 aucun crédit créé, aucun webhook actif.
+
+## Mise a jour du 2026-11-06
+
+- Point 3 (enumeration) : implemente (reponses generiques + code envoye dans les deux cas + creation/connexion a la verification).
+- Point 1 : reservations et conversions micro-USD en place ; migration complete des colonnes historiques encore a faire.
+- Point 4 : rotation hCaptcha a executer cote operateur.
+

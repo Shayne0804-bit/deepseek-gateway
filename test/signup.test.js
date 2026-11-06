@@ -106,8 +106,8 @@ test('inscription autonome : code email, compte, clé API et double connexion', 
 
     // Un compte existant ne peut pas repasser par l'inscription.
     const existingSignup = await portalPost(started.url, '/signup/request', { email: 'nouveau@gmail.com' });
-    assert.equal(existingSignup.status, 409);
-    assert.equal((await existingSignup.json()).error.code, 'account_exists');
+    assert.equal(existingSignup.status, 200);
+    assert.match((await existingSignup.json()).message, /code envoyé/i);
 
     // Connexion par email (code) même compte.
     const request2 = await portalPost(started.url, '/email/request', { email: 'nouveau@gmail.com' });
@@ -182,32 +182,28 @@ test('pas de plafond d envois par email (cooldown court en test)', async () => {
   }
 });
 
-test('code inscription saisi en connexion : refuse sans consommer le code', async () => {
+test('code inscription saisi en connexion : cree le compte sans fuite', async () => {
   const { started, mailer } = await startServer();
   try {
     await portalPost(started.url, '/signup/request', { email: 'mauvais-onglet@gmail.com' });
     const code = mailer.sent.at(-1).code;
-
     const login = await portalPost(started.url, '/email/verify', { email: 'mauvais-onglet@gmail.com', code });
-    assert.equal(login.status, 409);
-    assert.equal((await login.json()).error.code, 'account_not_found');
-
-    // Le code n'a pas ete consomme : l'inscription reste possible.
-    const signup = await portalPost(started.url, '/signup/verify', { email: 'mauvais-onglet@gmail.com', code });
-    assert.equal(signup.status, 200);
-    assert.equal((await signup.json()).method, 'signup');
+    assert.equal(login.status, 200);
+    assert.equal((await login.json()).method, 'signup');
   } finally {
     await started.close();
   }
 });
 
-test('connexion email inconnue : refusee sans envoi', async () => {
+test('connexion email inconnue : reponse generique et creation apres verification', async () => {
   const { started, mailer } = await startServer();
   try {
     const request = await portalPost(started.url, '/email/request', { email: 'inconnu@gmail.com' });
-    assert.equal(request.status, 404);
-    assert.equal((await request.json()).error.code, 'account_not_found');
-    assert.equal(mailer.sent.length, 0);
+    assert.equal(request.status, 200);
+    assert.equal(mailer.sent.length, 1);
+    const verify = await portalPost(started.url, '/email/verify', { email: 'inconnu@gmail.com', code: mailer.sent[0].code });
+    assert.equal(verify.status, 200);
+    assert.equal((await verify.json()).method, 'signup');
   } finally {
     await started.close();
   }
@@ -372,5 +368,7 @@ test('admin : test email visible et erreur Resend remontee', async () => {
     await failingStarted.close();
   }
 });
+
+
 
 
