@@ -379,10 +379,11 @@ Implémenté :
 
 Publication :
 
-- **`valaria-code@0.4.0` est publié sur npm** (dernière version : `latest`) ;
-- `0.6.0` est prête et testée, mais sa publication interactive attend la validation 2FA ;
+- **`valaria-code@0.6.0` est publié sur npm** (dernière version : `latest`) ;
+- `0.6.1` ajoute le plein largeur, l'accueil de marque et le splash prolongé ;
+  sa publication interactive attend la validation 2FA ;
 - propriétaire : `ducky12` ;
-- installation de la 0.4.0 depuis le registre vérifiée.
+- installation de la 0.6.0 depuis le registre vérifiée.
 
 Le parcours `valaria login` réel nécessite une approbation humaine sur `/device` ;
 le flux complet (démarrage → approbation → jeton → `/v1/models` → révocation) a
