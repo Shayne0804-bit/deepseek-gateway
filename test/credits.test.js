@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { PASS_PLANS, getPassPlan, passPlanFields } from '../src/plans.js';
 import { openDb, closeDb, insertUsageLog, clientCreditWindowSince } from '../src/db.js';
+import { CreditReservationBook } from '../src/limits.js';
 
 test('plans : durees, credit site et plafond 5 h', () => {
   const byId = Object.fromEntries(PASS_PLANS.map((plan) => [plan.id, plan]));
@@ -63,3 +64,13 @@ test('credit site : fenetre glissante de 5 h', async () => {
   }
 });
 
+
+test('reservations de credit : empeche le depassement concurrent', () => {
+  const book = new CreditReservationBook();
+  assert.equal(book.tryReserve('c1', 0.4, 0.5), true);
+  assert.equal(book.tryReserve('c1', 0.2, 0.5), false, 'la deuxieme requete ne doit pas passer');
+  book.release('c1', 0.4);
+  assert.equal(book.tryReserve('c1', 0.2, 0.5), true);
+  book.release('c1', 0.2);
+  assert.equal(book.heldFor('c1'), 0);
+});

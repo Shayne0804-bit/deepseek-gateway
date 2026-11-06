@@ -158,7 +158,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
   }
 
   function audit(req, action, target = null) {
-    recordAdminAudit(db, { ip: clientIp(req, config.trustProxy), action, target })
+    recordAdminAudit(db, { ip: clientIp(req, config.trustProxy, config.trustCloudflare), action, target })
       .catch((err) => log.error(`Audit portail impossible : ${err.message}`));
   }
 
@@ -209,7 +209,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     const expiresAt = new Date(now.getTime() + SESSION_TTL_MS).toISOString();
     await insertPortalSession(db, sha256(token), client.id, now.toISOString(), expiresAt);
     setPortalCookie(req, res, token, Math.floor(SESSION_TTL_MS / 1000));
-    loginAttempts.delete(clientIp(req, config.trustProxy));
+    loginAttempts.delete(clientIp(req, config.trustProxy, config.trustCloudflare));
     const loginAction = method === 'signup' ? 'portal.signup' : method === 'email' ? 'portal.login.email' : 'portal.login';
     audit(req, loginAction, client.name);
     log.info(`[${req.requestId ?? '-'}] Connexion portail (${method}) : ${client.name}`);
@@ -230,7 +230,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
   function requestIp(req) {
     const cloudflareIp = String(req.headers['cf-connecting-ip'] ?? '').trim();
     if (config.trustCloudflare && cloudflareIp) return cloudflareIp;
-    return clientIp(req, config.trustProxy);
+    return clientIp(req, config.trustProxy, config.trustCloudflare);
   }
 
   /** Verification captcha (Turnstile ou hCaptcha), fail-closed si erreur. */
@@ -622,7 +622,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
 
     try {
       if (route === '/login' && method === 'POST') {
-        const ip = clientIp(req, config.trustProxy);
+        const ip = clientIp(req, config.trustProxy, config.trustCloudflare);
         if (loginRateLimited(ip)) {
           audit(req, 'portal.login.rate_limited');
           portalError(res, 429, 'Trop de tentatives. Réessayez dans quelques minutes.', 'too_many_attempts');
@@ -675,7 +675,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       }
 
       if (route === '/email/request' && method === 'POST') {
-        const ip = clientIp(req, config.trustProxy);
+        const ip = clientIp(req, config.trustProxy, config.trustCloudflare);
         if (!mailer?.enabled) {
           portalError(res, 503, 'La connexion par email n’est pas configurée sur cette passerelle.', 'email_not_configured');
           return;
@@ -768,7 +768,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       }
 
       if (route === '/email/verify' && method === 'POST') {
-        const ip = clientIp(req, config.trustProxy);
+        const ip = clientIp(req, config.trustProxy, config.trustCloudflare);
         if (!mailer?.enabled) {
           portalError(res, 503, 'La connexion par email n’est pas configurée sur cette passerelle.', 'email_not_configured');
           return;
@@ -822,7 +822,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       }
 
       if (route === '/signup/request' && method === 'POST') {
-        const ip = clientIp(req, config.trustProxy);
+        const ip = clientIp(req, config.trustProxy, config.trustCloudflare);
         if (!config.signupEnabled || !mailer?.enabled) {
           portalError(res, 403, 'L’inscription par email est désactivée sur cette passerelle.', 'signup_disabled');
           return;
@@ -914,7 +914,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       }
 
       if (route === '/signup/verify' && method === 'POST') {
-        const ip = clientIp(req, config.trustProxy);
+        const ip = clientIp(req, config.trustProxy, config.trustCloudflare);
         if (!config.signupEnabled || !mailer?.enabled) {
           portalError(res, 403, 'L’inscription par email est désactivée sur cette passerelle.', 'signup_disabled');
           return;
@@ -1108,6 +1108,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
 
   return { handle };
 }
+
 
 
 

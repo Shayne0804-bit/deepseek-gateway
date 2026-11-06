@@ -294,9 +294,9 @@ export async function startGateway(overrides = {}) {
     const isAdminApi = pathname.startsWith('/admin/api');
     const isPortalApi = pathname.startsWith('/portal/api');
     if (isApi || isAdminApi || isPortalApi) {
-      const limited = ipLimiter.hit(clientIp(req, config.trustProxy), config.ipRateLimitPerMin);
+      const limited = ipLimiter.hit(clientIp(req, config.trustProxy, config.trustCloudflare), config.ipRateLimitPerMin);
       if (!limited.ok) {
-        log.warn(`[${requestId}] Limite IP atteinte (${clientIp(req, config.trustProxy)})`);
+        log.warn(`[${requestId}] Limite IP atteinte (${clientIp(req, config.trustProxy, config.trustCloudflare)})`);
         sendJson(
           res,
           429,
@@ -527,5 +527,6 @@ export function printStartupBanner(started, log = console.log) {
   log('   Ctrl+C pour arreter.');
   log('');
 }
+
 
 

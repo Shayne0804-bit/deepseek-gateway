@@ -14,7 +14,7 @@ import {
 } from './quota.js';
 import { getSetting, clientCreditWindowSince } from './db.js';
 import { globalBudgetStatus } from './settings.js';
-import { Semaphore } from './limits.js';
+import { CreditReservationBook, Semaphore } from './limits.js';
 import { getPassPlan } from './plans.js';
 import {
   bearerToken,
@@ -169,6 +169,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
   const limiter = new RateLimiter();
   const concurrency = new ConcurrencyTracker();
   const globalConcurrency = new Semaphore(config.maxConcurrentRequests);
+  const creditReservations = new CreditReservationBook();
 
   function accessLog(req, client, status, tokens, cost, ms, pathname, modelLabel = null) {
     const modele = modelLabel ? ` | ${modelLabel}` : '';
@@ -265,11 +266,14 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
 
     // ---- 3 bis. Plafond glissant de credit site (5 h par defaut) -------
     const plan = getPassPlan(client.plan);
+    let credit5hUsed = 0;
+    let creditWeekUsed = 0;
     const windowLimit = Number(plan?.credit5hLimit ?? 0);
     if (windowLimit > 0) {
       const windowHours = config.siteCreditWindowHours || 5;
       const sinceIso = new Date(Date.now() - windowHours * 3_600_000).toISOString();
       const win = await clientCreditWindowSince(db, client.id, sinceIso);
+      credit5hUsed = win.total;
       if (win.total >= windowLimit) {
         const oldestMs = win.oldest ? Date.parse(win.oldest) : NaN;
         const retryAfter = Number.isFinite(oldestMs)
@@ -296,6 +300,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
     if (weeklyLimit > 0) {
       const sinceIso = new Date(Date.now() - 7 * 86_400_000).toISOString();
       const win = await clientCreditWindowSince(db, client.id, sinceIso);
+      creditWeekUsed = win.total;
       if (win.total >= weeklyLimit) {
         const oldestMs = win.oldest ? Date.parse(win.oldest) : NaN;
         const retryAfter = Number.isFinite(oldestMs)
@@ -319,6 +324,13 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
     const modelAliases = loadModelAliases(() => aliasesValue);
 
     let recorded = false;
+    let reservedCredit = 0;
+    const releaseReserved = () => {
+      if (reservedCredit > 0) {
+        creditReservations.release(client.id, reservedCredit);
+        reservedCredit = 0;
+      }
+    };
     // Nom de modele demande par le client quand il differe du modele facture
     // (ex. fable-5.1 -> deepseek-flash), pour un journal de facturation reel.
     let logRequestedModel = null;
@@ -341,6 +353,8 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
         });
       } catch (err) {
         log.error(`[${req.requestId ?? '-'}] Ecriture du journal impossible : ${err.message}`);
+      } finally {
+        releaseReserved();
       }
     };
 
@@ -454,6 +468,53 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
       }
 
       // ---- 5. Cle originale cote fournisseur --------------------------
+      // Reservation de credit avant l'appel : empeche deux requetes
+      // concurrentes de franchir le meme plafond avant l'enregistrement.
+      if (req.method === 'POST' && body) {
+        const explicitMax = Number(body.max_tokens ?? body.max_completion_tokens ?? body.max_output_tokens ?? 0);
+        const maxOut = Math.max(1, Number.isFinite(explicitMax) && explicitMax > 0
+          ? Math.floor(explicitMax)
+          : Math.floor(client.maxOutputTokens ?? 4096));
+        const promptEstimate = estimateUsage(rawBody ?? '', 0).prompt;
+        const maxUsage = { prompt: promptEstimate, completion: maxOut, total: promptEstimate + maxOut, cacheHit: 0, cacheMiss: promptEstimate };
+        const realEstimate = computeCost(maxUsage, body.model ?? null, pricing);
+        const creditEstimate = Math.round(realEstimate * config.siteCreditRate * 1e6) / 1e6;
+        const totalRoom = client.quotaUsd == null ? Infinity : Math.max(0, client.quotaUsd - client.usedUsd);
+        const fiveRoom = plan?.credit5hLimit == null ? Infinity : Math.max(0, plan.credit5hLimit - credit5hUsed);
+        const weekRoom = plan?.creditWeeklyLimit == null ? Infinity : Math.max(0, plan.creditWeeklyLimit - creditWeekUsed);
+        const room = Math.min(totalRoom, fiveRoom, weekRoom);
+        if (creditEstimate > room + 1e-9) {
+          const code = fiveRoom <= totalRoom && fiveRoom <= weekRoom
+            ? 'credit_window_exceeded'
+            : weekRoom <= totalRoom
+              ? 'credit_week_exceeded'
+              : 'insufficient_quota';
+          release();
+          sendApiError(
+            res,
+            429,
+            `Credit insuffisant pour cette requete (estimation ${creditEstimate.toFixed(4)} $, disponible ${Math.max(0, room).toFixed(4)} $).`,
+            code === 'insufficient_quota' ? 'insufficient_quota' : 'rate_limit_error',
+            code,
+            { ...responseHeaders, 'retry-after': '60' },
+          );
+          return;
+        }
+        if (!creditReservations.tryReserve(client.id, creditEstimate, room)) {
+          release();
+          sendApiError(
+            res,
+            429,
+            'Trop de requetes simultanees pour votre credit restant. Reessayez dans un instant.',
+            'rate_limit_error',
+            'credit_reservation_conflict',
+            { ...responseHeaders, 'retry-after': '2' },
+          );
+          return;
+        }
+        reservedCredit = creditEstimate;
+      }
+
       const provider = await resolveProvider(db, config);
       if (!provider.apiKey) {
         log.error("Cle API DeepSeek originale non configuree.");
@@ -727,6 +788,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
         responseHeaders,
       );
     } finally {
+      releaseReserved();
       releaseAll();
     }
   }

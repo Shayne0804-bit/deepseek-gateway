@@ -147,7 +147,12 @@ export function isHttpsRequest(req, trustProxy = false) {
   return Boolean(req.socket?.encrypted);
 }
 
-export function clientIp(req, trustProxy = false) {
+export function clientIp(req, trustProxy = false, trustCloudflare = false) {
+  // Derriere Cloudflare, CF-Connecting-IP est la seule source fiable.
+  if (trustCloudflare) {
+    const cloudflareIp = String(req.headers['cf-connecting-ip'] ?? '').trim();
+    if (cloudflareIp) return cloudflareIp;
+  }
   if (trustProxy) {
     const forwarded = String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim();
     if (forwarded) return forwarded;
@@ -205,3 +210,4 @@ export function applySecurityHeaders(res, { https = false } = {}) {
       .join('; '),
   );
 }
+

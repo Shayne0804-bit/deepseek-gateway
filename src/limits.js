@@ -56,3 +56,34 @@ export class Semaphore {
     if (this.active > 0) this.active -= 1;
   }
 }
+
+/**
+ * Reservations de credit en cours de requete.
+ * Empeche deux requetes concurrentes de passer le meme plafond avant que
+ * l'usage reel soit enregistre. Portee processus : suffisant en mono-instance.
+ */
+export class CreditReservationBook {
+  constructor() {
+    this.held = new Map();
+  }
+
+  heldFor(clientId) {
+    return this.held.get(clientId) ?? 0;
+  }
+
+  tryReserve(clientId, amount, remaining) {
+    const value = Math.max(0, Number(amount) || 0);
+    if (value === 0) return true;
+    const currentlyHeld = this.heldFor(clientId);
+    if (currentlyHeld + value > Math.max(0, Number(remaining) || 0) + 1e-9) return false;
+    this.held.set(clientId, currentlyHeld + value);
+    return true;
+  }
+
+  release(clientId, amount) {
+    const value = Math.max(0, Number(amount) || 0);
+    const next = this.heldFor(clientId) - value;
+    if (next > 1e-9) this.held.set(clientId, next);
+    else this.held.delete(clientId);
+  }
+}

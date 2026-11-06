@@ -321,7 +321,7 @@ export function createAdminApi({ config, db, log, mailer }) {
   /** Journal d'audit des actions d'administration (production). */
   function audit(req, action, target = null, details = null) {
     recordAdminAudit(db, {
-      ip: clientIp(req, config.trustProxy),
+      ip: clientIp(req, config.trustProxy, config.trustCloudflare),
       action,
       target,
       details,
@@ -408,7 +408,7 @@ export function createAdminApi({ config, db, log, mailer }) {
     try {
       // ------------------------------ public ------------------------------
       if (route === '/login' && method === 'POST') {
-        const ip = clientIp(req, config.trustProxy);
+        const ip = clientIp(req, config.trustProxy, config.trustCloudflare);
         if (loginRateLimited(ip)) {
           audit(req, 'admin.login.rate_limited', 'admin');
           adminError(res, 429, 'Trop de tentatives. Reessayez dans quelques minutes.', 'too_many_attempts');
@@ -903,6 +903,7 @@ export function createAdminApi({ config, db, log, mailer }) {
 
   return { handle, readSettingsView };
 }
+
 
 
 
