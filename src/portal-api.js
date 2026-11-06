@@ -49,7 +49,7 @@ import {
 import { loadPricing } from './pricing.js';
 import { loadModelAliases } from './model-aliases.js';
 import { deviceHashFor, isDisposableEmail } from './abuse.js';
-import { lookupIpqsEmail, lookupIpqsIp, verifyTurnstile } from './fraud.js';
+import { lookupIpqsEmail, lookupIpqsIp, verifyHcaptcha, verifyTurnstile } from './fraud.js';
 import {
   bearerToken,
   clientIp,
@@ -230,26 +230,40 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     return clientIp(req, config.trustProxy);
   }
 
-  /** Verification anti-bot Turnstile, fail-closed si le service est en erreur. */
+  /** Verification captcha (Turnstile ou hCaptcha), fail-closed si erreur. */
   async function assertTurnstile(req, token) {
     if (!config.turnstileRequired) return;
     try {
-      const result = await verifyTurnstile(token, requestIp(req), config);
+      const ip = requestIp(req);
+      const result = config.captchaProvider === 'hcaptcha'
+        ? await verifyHcaptcha(token, ip, config)
+        : await verifyTurnstile(token, ip, config);
       if (!result.ok) {
-        audit(req, 'portal.signup.blocked', 'turnstile_failed');
+        audit(req, 'portal.signup.blocked', 'captcha_failed');
         throw new HttpError(
           403,
-          'Vérification anti-bot échouée. Rechargez la page, attendez la validation du captcha puis réessayez.',
-          'turnstile_failed',
+          'Vérification anti-bot échouée. Rechargez la page, validez le captcha puis réessayez.',
+          'captcha_failed',
         );
       }
     } catch (err) {
       if (err instanceof HttpError) throw err;
-      log.error(`[${req.requestId ?? '-'}] Verification Turnstile impossible : ${err.message}`);
+      log.error(`[${req.requestId ?? '-'}] Verification captcha impossible : ${err.message}`);
       throw new HttpError(
         503,
         'La vérification anti-bot est momentanément indisponible. Réessayez dans quelques instants.',
-        'turnstile_unavailable',
+        'captcha_unavailable',
+      );
+    }
+  }
+
+  /** Refus immediat d'une adresse temporaire / jetable. */
+  function assertEmailNotDisposable(email) {
+    if (config.blockTempMail && isDisposableEmail(email, config.blockedEmailDomains)) {
+      throw new HttpError(
+        400,
+        'Adresse email temporaire (temp mail) invalide. Utilisez une adresse email personnelle.',
+        'email_disposable',
       );
     }
   }
@@ -259,14 +273,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
    * par appareil sur la fenetre configuree, VPN/proxy optionnel.
    */
   async function enforceSignupPolicy(req, email, deviceId) {
-    if (config.blockTempMail && isDisposableEmail(email, config.blockedEmailDomains)) {
-      audit(req, 'portal.signup.blocked', 'email_disposable');
-      throw new HttpError(
-        400,
-        'Les adresses email jetables (temp mail) ne sont pas acceptées. Utilisez une adresse personnelle.',
-        'email_disposable',
-      );
-    }
+    assertEmailNotDisposable(email);
     const ip = requestIp(req);
     const deviceHash = deviceHashFor(deviceId, req);
     const now = Date.now();
@@ -606,6 +613,9 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         sendJson(res, 200, {
           emailLoginEnabled: Boolean(mailer?.enabled),
           signupEnabled: Boolean(config.signupEnabled) && Boolean(mailer?.enabled),
+          captchaProvider: config.captchaProvider,
+          captchaSiteKey: config.captchaSiteKey || null,
+          captchaRequired: Boolean(config.turnstileRequired),
           turnstileSiteKey: config.turnstileSiteKey || null,
           turnstileRequired: Boolean(config.turnstileRequired),
           method: mailer?.enabled ? 'email' : null,
@@ -638,8 +648,9 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 400, 'Adresse email invalide.', 'invalid_email');
           return;
         }
+        assertEmailNotDisposable(email);
         // Captcha obligatoire aussi pour la connexion par email.
-        await assertTurnstile(req, body.turnstileToken);
+        await assertTurnstile(req, body.captchaToken ?? body.turnstileToken);
         const client = await findClientByEmail(db, email);
         if (!client) {
           audit(req, 'portal.email.unknown');
@@ -784,8 +795,9 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 400, 'Adresse email invalide.', 'invalid_email');
           return;
         }
+        assertEmailNotDisposable(email);
         // Captcha avant de reveler si le compte existe (anti-enumeration).
-        await assertTurnstile(req, body.turnstileToken);
+        await assertTurnstile(req, body.captchaToken ?? body.turnstileToken);
         const existing = await findClientByEmail(db, email);
         if (existing) {
           portalError(

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '3.2.0';
+export const APP_VERSION = '3.3.0';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -183,6 +183,18 @@ export function loadConfig(overrides = {}) {
       ?? 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
     turnstileRequired: overrides.turnstileRequired ?? boolOr(raw('TURNSTILE_REQUIRED'), true),
     turnstileTimeoutMs: overrides.turnstileTimeoutMs ?? intOr(raw('TURNSTILE_TIMEOUT_MS'), 5000),
+    // Captcha : turnstile (passif) ou hcaptcha (checkbox visible).
+    captchaProvider: String(overrides.captchaProvider ?? raw('CAPTCHA_PROVIDER') ?? 'turnstile').trim().toLowerCase(),
+    captchaRequired: overrides.captchaRequired
+      ?? (raw('CAPTCHA_REQUIRED') !== undefined
+        ? boolOr(raw('CAPTCHA_REQUIRED'), true)
+        : (raw('TURNSTILE_REQUIRED') !== undefined ? boolOr(raw('TURNSTILE_REQUIRED'), true) : true)),
+    hcaptchaSiteKey: overrides.hcaptchaSiteKey ?? raw('HCAPTCHA_SITE_KEY') ?? '',
+    hcaptchaSecretKey: overrides.hcaptchaSecretKey ?? raw('HCAPTCHA_SECRET_KEY') ?? '',
+    hcaptchaVerifyUrl: overrides.hcaptchaVerifyUrl
+      ?? raw('HCAPTCHA_VERIFY_URL')
+      ?? 'https://api.hcaptcha.com/siteverify',
+    captchaTimeoutMs: overrides.captchaTimeoutMs ?? intOr(raw('CAPTCHA_TIMEOUT_MS'), 5000),
     // Intelligence IP + email (IPQualityScore) pour VPN et emails jetables.
     ipqsApiKey: overrides.ipqsApiKey ?? raw('IPQS_API_KEY') ?? '',
     ipqsApiBase: stripTrailingSlash(overrides.ipqsApiBase ?? raw('IPQS_API_BASE') ?? 'https://ipqualityscore.com/api/json'),
@@ -266,7 +278,25 @@ export function loadConfig(overrides = {}) {
     config.fraudTimeoutMs = 5000;
   }
   config.turnstileConfigured = Boolean(config.turnstileSiteKey && config.turnstileSecretKey);
-  config.turnstileRequired = Boolean(config.turnstileRequired) && config.turnstileConfigured;
+  if (!['turnstile', 'hcaptcha', 'none'].includes(config.captchaProvider)) {
+    config.captchaProvider = 'turnstile';
+  }
+  if (config.captchaProvider === 'turnstile') {
+    config.captchaConfigured = config.turnstileConfigured;
+    config.captchaSiteKey = config.turnstileSiteKey;
+  } else if (config.captchaProvider === 'hcaptcha') {
+    config.captchaConfigured = Boolean(config.hcaptchaSiteKey && config.hcaptchaSecretKey);
+    config.captchaSiteKey = config.hcaptchaSiteKey;
+  } else {
+    config.captchaConfigured = false;
+    config.captchaSiteKey = '';
+  }
+  // Compatibilite : le reste du code utilise encore turnstileRequired comme
+  // « captcha obligatoire » quel que soit le fournisseur.
+  config.turnstileRequired = Boolean(config.captchaRequired) && config.captchaConfigured;
+  if (!Number.isFinite(config.captchaTimeoutMs) || config.captchaTimeoutMs < 500 || config.captchaTimeoutMs > 15_000) {
+    config.captchaTimeoutMs = 5000;
+  }
   config.fraudCheckEnabled = Boolean(config.fraudCheckEnabled) && Boolean(config.ipqsApiKey);
   config.ipqsBlockVpn = Boolean(config.ipqsBlockVpn);
   config.ipqsBlockHosting = Boolean(config.ipqsBlockHosting);
@@ -301,6 +331,7 @@ export function loadConfig(overrides = {}) {
   config.signupEnabled = Boolean(config.signupEnabled);
   return config;
 }
+
 
 
 

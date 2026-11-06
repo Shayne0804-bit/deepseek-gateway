@@ -354,11 +354,14 @@ Pour fermer complètement le parcours : `SIGNUP_ENABLED=0` (les comptes existant
 Une liste locale de domaines et un cookie d'appareil ne suffisent pas : ils se contournent.
 En production, activez la couche externe :
 
-1. **Cloudflare Turnstile** (gratuit) : créez un widget dans Cloudflare → Turnstile, puis
-   `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY`. Le captcha s'affiche automatiquement dans les
-   onglets **Code email** et **Créer un compte** ; le serveur vérifie le token pour **toute demande
-   de code email (connexion ou inscription)**. En cas d'échec du service, la demande est **refusée**
-   (fail-closed). La connexion par clé API n'est pas concernée.
+1. **Captcha** — deux fournisseurs au choix :
+   - **Cloudflare Turnstile** (`CAPTCHA_PROVIDER=turnstile`) : gratuit, invisible/passif par
+     conception ; Cloudflare peut valider sans clic.
+   - **hCaptcha** (`CAPTCHA_PROVIDER=hcaptcha`) : case « Je suis humain » visible, l'utilisateur
+     doit interagir. Clés `HCAPTCHA_SITE_KEY` + `HCAPTCHA_SECRET_KEY`.
+   Le token est exigé pour **toute demande de code email (connexion ou inscription)** et vérifié
+   côté serveur ; en cas d'échec du service, la demande est refusée (fail-closed). La connexion
+   par clé API n'est pas concernée.
 2. **IPQualityScore** (offre gratuite limitée) : `IPQS_API_KEY`. Détecte VPN/proxy/Tor,
    hébergement/datacenter, score de fraude, et (selon le plan) les emails jetables/invalides.
    Activez `EMAIL_VALIDATION_ENABLED=1` si votre plan inclut la validation email.
@@ -367,6 +370,11 @@ En production, activez la couche externe :
 4. **Limites locales** : 1 compte par IP et 1 par appareil sur 30 jours, blocage local des
    domaines jetables connus, vérification d'appareil persistante.
 
+Les erreurs sont explicites dans le formulaire :
+- adresse jetable → **400 `email_disposable`** « Adresse email temporaire (temp mail) invalide » ;
+- inscription avec un email déjà inscrit → **409 `account_exists`** « Connectez-vous… » ;
+- connexion avec un email sans compte → **404 `account_not_found`** « Créez un compte… ».
+
 ```env
 TRUST_CLOUDFLARE=1
 SIGNUP_MAX_PER_IP=1
@@ -374,9 +382,14 @@ SIGNUP_IP_WINDOW_DAYS=30
 SIGNUP_MAX_PER_DEVICE=1
 SIGNUP_DEVICE_WINDOW_DAYS=30
 BLOCK_TEMP_MAIL=1
-TURNSTILE_SITE_KEY=0x4AAAA...
-TURNSTILE_SECRET_KEY=0x4AAAA...
-TURNSTILE_REQUIRED=1
+# turnstile (passif) ou hcaptcha (case visible)
+CAPTCHA_PROVIDER=hcaptcha
+CAPTCHA_REQUIRED=1
+HCAPTCHA_SITE_KEY=...
+HCAPTCHA_SECRET_KEY=...
+# ou, pour Turnstile :
+# TURNSTILE_SITE_KEY=0x4AAAA...
+# TURNSTILE_SECRET_KEY=0x4AAAA...
 IPQS_API_KEY=...
 IPQS_MIN_FRAUD_SCORE=85
 IPQS_BLOCK_VPN=1
@@ -1078,7 +1091,7 @@ Serveur arrêté, copiez le dossier `data/` (ou au minimum `gateway.db`). À cha
 node --test test
 ```
 
-La suite (96 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
+La suite (98 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
 normalisation `usage` OpenAI/Anthropic, quotas (tokens, requêtes, coût, reset de période),
 limites de débit et de concurrence, authentification admin (hash scrypt, sessions),
 chiffrement/hachage des clés dérivées, proxy JSON et **streaming SSE** avec comptage,
@@ -1227,6 +1240,7 @@ et **Vue d'ensemble** (graphique 30 jours, top consommateurs).
 ---
 
 **Bonne discussion avec votre ami — et gardez votre clé originale pour vous.**
+
 
 
 

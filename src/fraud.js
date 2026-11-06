@@ -10,6 +10,7 @@
  */
 
 const DEFAULT_TURNSTILE_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+const DEFAULT_HCAPTCHA_URL = 'https://api.hcaptcha.com/siteverify';
 const DEFAULT_IPQS_BASE = 'https://ipqualityscore.com/api/json';
 
 function timeoutSignal(ms) {
@@ -32,6 +33,32 @@ export async function verifyTurnstile(token, ip, config, fetchImpl = fetch) {
     signal: timeoutSignal(config.turnstileTimeoutMs || 5000),
   });
   if (!response.ok) throw new Error(`Turnstile HTTP ${response.status}`);
+  const data = await response.json();
+  return {
+    ok: Boolean(data.success),
+    configured: true,
+    errors: Array.isArray(data['error-codes']) ? data['error-codes'] : [],
+    data,
+  };
+}
+
+/** Verifie un token hCaptcha. Meme contrat que verifyTurnstile. */
+export async function verifyHcaptcha(token, ip, config, fetchImpl = fetch) {
+  if (!config?.hcaptchaSecretKey) return { ok: true, configured: false, errors: [] };
+  if (!token) return { ok: false, configured: true, errors: ['missing-token'] };
+  const body = new URLSearchParams({
+    secret: config.hcaptchaSecretKey,
+    response: String(token),
+  });
+  if (config.hcaptchaSiteKey) body.set('sitekey', config.hcaptchaSiteKey);
+  if (ip) body.set('remoteip', String(ip));
+  const response = await fetchImpl(config.hcaptchaVerifyUrl || DEFAULT_HCAPTCHA_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body,
+    signal: timeoutSignal(config.captchaTimeoutMs || 5000),
+  });
+  if (!response.ok) throw new Error(`hCaptcha HTTP ${response.status}`);
   const data = await response.json();
   return {
     ok: Boolean(data.success),

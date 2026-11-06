@@ -69,16 +69,16 @@
     return DEVICE_ID ? { deviceId: DEVICE_ID } : {};
   }
 
-  /* ---------------- Cloudflare Turnstile (anti-bot) ---------------- */
-  const turnstile = { siteKey: null, widgets: {}, tokens: {}, loading: null };
+  /* ---------------- Captcha anti-bot (Turnstile ou hCaptcha) ---------------- */
+  const captcha = { provider: null, siteKey: null, widgets: {}, tokens: {}, loading: null };
 
-  function ensureTurnstileSlot(kind) {
+  function ensureCaptchaSlot(kind) {
     const panel = $(kind === 'email' ? '#panel-email' : '#panel-signup');
     if (!panel) return null;
-    let slot = panel.querySelector(`#${kind}-turnstile`);
+    let slot = panel.querySelector(`#${kind}-captcha`);
     if (!slot) {
       slot = document.createElement('div');
-      slot.id = `${kind}-turnstile`;
+      slot.id = `${kind}-captcha`;
       slot.className = 'turnstile-slot';
       const error = panel.querySelector('.login-error');
       if (error) error.after(slot);
@@ -87,53 +87,64 @@
     return slot;
   }
 
-  function loadTurnstileScript() {
-    if (window.turnstile) return Promise.resolve(window.turnstile);
-    if (turnstile.loading) return turnstile.loading;
-    turnstile.loading = new Promise((resolve, reject) => {
+  function loadCaptchaScript(provider) {
+    const globalObject = provider === 'hcaptcha' ? window.hcaptcha : window.turnstile;
+    if (globalObject) return Promise.resolve(globalObject);
+    if (captcha.loading) return captcha.loading;
+    captcha.loading = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.src = provider === 'hcaptcha'
+        ? 'https://js.hcaptcha.com/1/api.js?render=explicit'
+        : 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
       script.async = true;
       script.defer = true;
-      script.onload = () => resolve(window.turnstile);
+      script.onload = () => resolve(provider === 'hcaptcha' ? window.hcaptcha : window.turnstile);
       script.onerror = () => reject(new Error('Impossible de charger la vérification anti-bot.'));
       document.head.appendChild(script);
     });
-    return turnstile.loading;
+    return captcha.loading;
   }
 
-  async function initTurnstile(siteKey) {
-    turnstile.siteKey = siteKey || null;
-    if (!siteKey) return;
+  async function initCaptcha(publicConfig) {
+    const provider = publicConfig?.captchaProvider || 'turnstile';
+    const siteKey = publicConfig?.captchaSiteKey || publicConfig?.turnstileSiteKey || null;
+    captcha.provider = provider;
+    captcha.siteKey = siteKey;
+    if (!siteKey || provider === 'none') return;
     try {
-      await loadTurnstileScript();
-      for (const kind of ['email']) {
-        const slot = ensureTurnstileSlot(kind);
+      await loadCaptchaScript(provider);
+      for (const kind of ['email', 'signup']) {
+        const slot = ensureCaptchaSlot(kind);
         slot.classList.remove('hidden');
         slot.innerHTML = '';
-        if (window.turnstile) {
-          turnstile.widgets[kind] = window.turnstile.render(slot, {
-            sitekey: siteKey,
-            callback: (token) => { turnstile.tokens[kind] = token; },
-            'expired-callback': () => { turnstile.tokens[kind] = null; },
-            'error-callback': () => { turnstile.tokens[kind] = null; },
-          });
+        const callbacks = {
+          sitekey: siteKey,
+          callback: (token) => { captcha.tokens[kind] = token; },
+          'expired-callback': () => { captcha.tokens[kind] = null; },
+          'error-callback': () => { captcha.tokens[kind] = null; },
+        };
+        if (provider === 'hcaptcha' && window.hcaptcha) {
+          captcha.widgets[kind] = window.hcaptcha.render(slot, callbacks);
+        } else if (window.turnstile) {
+          captcha.widgets[kind] = window.turnstile.render(slot, callbacks);
         }
       }
     } catch (err) {
-      turnstile.tokens.email = null;
-      turnstile.tokens.signup = null;
+      captcha.tokens.email = null;
+      captcha.tokens.signup = null;
       const message = err?.message || 'Vérification anti-bot indisponible.';
       showEmailError(message);
       showSignupError(message);
     }
   }
 
-  function resetTurnstile(kind) {
-    turnstile.tokens[kind] = null;
+  function resetCaptcha(kind) {
+    captcha.tokens[kind] = null;
     try {
-      if (window.turnstile && turnstile.widgets[kind] != null) {
-        window.turnstile.reset(turnstile.widgets[kind]);
+      if (captcha.provider === 'hcaptcha' && window.hcaptcha && captcha.widgets[kind] != null) {
+        window.hcaptcha.reset(captcha.widgets[kind]);
+      } else if (window.turnstile && captcha.widgets[kind] != null) {
+        window.turnstile.reset(captcha.widgets[kind]);
       }
     } catch {
       /* ignore */
@@ -249,7 +260,7 @@
     try {
       const data = await api('/email/request', {
         method: 'POST',
-        body: { email, ...deviceFields(), turnstileToken: turnstile.tokens.email ?? null },
+        body: { email, ...deviceFields(), captchaToken: captcha.tokens.email ?? null },
       });
       $('#email-sent-note').textContent = `Code envoyé à ${email} (valable ${data.expiresMinutes ?? 10} minutes). Vérifiez aussi les spams.`;
       $('#email-request-form').classList.add('hidden');
@@ -272,7 +283,7 @@
       state.emailBusy = false;
       button.disabled = false;
       button.textContent = 'Recevoir un code';
-      resetTurnstile('email');
+      resetCaptcha('email');
     }
   }
 
@@ -335,7 +346,7 @@
     try {
       const data = await api('/signup/request', {
         method: 'POST',
-        body: { email, ...deviceFields(), turnstileToken: turnstile.tokens.signup ?? null },
+        body: { email, ...deviceFields(), captchaToken: captcha.tokens.signup ?? null },
       });
       $('#signup-sent-note').textContent = `Un code vient d’être envoyé à ${email} (valable ${data.expiresMinutes ?? 10} minutes). Utilisez le dernier code reçu : demander un nouveau code annule le précédent.`;
       $('#signup-request-form').classList.add('hidden');
@@ -358,7 +369,7 @@
       state.emailBusy = false;
       button.disabled = false;
       button.textContent = 'Créer mon compte';
-      resetTurnstile('signup');
+      resetCaptcha('signup');
     }
   }
 
@@ -894,7 +905,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
       } else {
         document.querySelector('.auth-tabs').classList.add('hidden');
       }
-      await initTurnstile(config.turnstileSiteKey);
+      await initCaptcha(config);
     } catch {
       /* pas bloquant : la connexion par clé reste disponible */
       document.querySelector('.auth-tabs').classList.add('hidden');
@@ -937,4 +948,5 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
 
   init();
 })();
+
 

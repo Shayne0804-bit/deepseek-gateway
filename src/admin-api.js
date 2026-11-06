@@ -372,6 +372,8 @@ export function createAdminApi({ config, db, log, mailer }) {
           blockTempMail: config.blockTempMail,
           turnstileConfigured: config.turnstileConfigured,
           turnstileRequired: config.turnstileRequired,
+          captchaProvider: config.captchaProvider,
+          captchaConfigured: config.captchaConfigured,
           fraudCheckEnabled: config.fraudCheckEnabled,
           emailValidationEnabled: config.emailValidationEnabled,
           blockVpn: config.ipqsBlockVpn,

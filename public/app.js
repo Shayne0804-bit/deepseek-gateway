@@ -1051,7 +1051,7 @@
           ${fmtInt(s.signup?.security?.maxPerIp || 0)} compte(s)/IP sur ${fmtInt(s.signup?.security?.ipWindowDays || 0)} j ·
           ${fmtInt(s.signup?.security?.maxPerDevice || 0)} compte(s)/appareil ·
           temp mail ${s.signup?.security?.blockTempMail ? 'bloqué' : 'autorisé'} ·
-          Turnstile ${s.signup?.security?.turnstileRequired ? 'actif' : 'non configuré'} ·
+          Captcha ${s.signup?.security?.turnstileRequired ? `actif (${esc(s.signup?.security?.captchaProvider || 'turnstile')})` : 'non configuré'} ·
           contrôle IP ${s.signup?.security?.fraudCheckEnabled ? 'actif' : 'non configuré'}
           ${s.signup?.security?.blockVpn ? '· VPN bloqué' : ''}.
           ${s.signup?.security?.turnstileRequired || s.signup?.security?.fraudCheckEnabled

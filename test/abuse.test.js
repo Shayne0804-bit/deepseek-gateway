@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { deviceHashFor, isDisposableEmail } from '../src/abuse.js';
-import { lookupIpqsEmail, lookupIpqsIp, verifyTurnstile } from '../src/fraud.js';
+import { lookupIpqsEmail, lookupIpqsIp, verifyHcaptcha, verifyTurnstile } from '../src/fraud.js';
 
 function fakeResponse(data, ok = true) {
   return {
@@ -44,6 +44,17 @@ test('Turnstile : token manquant, succes et echec', async () => {
   assert.equal(ok.ok, true);
 
   const failed = await verifyTurnstile('token', '1.2.3.4', config, async () => fakeResponse({ success: false, 'error-codes': ['invalid-input-response'] }));
+  assert.equal(failed.ok, false);
+  assert.deepEqual(failed.errors, ['invalid-input-response']);
+});
+
+test('hCaptcha : verifie le token serveur', async () => {
+  const config = { hcaptchaSecretKey: 'secret', hcaptchaSiteKey: 'site', hcaptchaVerifyUrl: 'https://hcaptcha.test/verify', captchaTimeoutMs: 1000 };
+  const missing = await verifyHcaptcha('', '1.2.3.4', config);
+  assert.equal(missing.ok, false);
+  const ok = await verifyHcaptcha('token', '1.2.3.4', config, async () => fakeResponse({ success: true }));
+  assert.equal(ok.ok, true);
+  const failed = await verifyHcaptcha('token', '1.2.3.4', config, async () => fakeResponse({ success: false, 'error-codes': ['invalid-input-response'] }));
   assert.equal(failed.ok, false);
   assert.deepEqual(failed.errors, ['invalid-input-response']);
 });

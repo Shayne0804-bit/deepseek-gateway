@@ -241,7 +241,7 @@ test('captcha requis aussi pour la connexion email', async () => {
 
     const noToken = await portalPost(started.url, '/email/request', { email: 'captcha-login@gmail.com' });
     assert.equal(noToken.status, 403);
-    assert.equal((await noToken.json()).error.code, 'turnstile_failed');
+    assert.equal((await noToken.json()).error.code, 'captcha_failed');
 
     const withToken = await portalPost(started.url, '/email/request', {
       email: 'captcha-login@gmail.com',
@@ -261,6 +261,20 @@ test('inscription : email jetable refuse', async () => {
     const res = await portalPost(started.url, '/signup/request', { email: 'test@mailinator.com' });
     assert.equal(res.status, 400);
     assert.equal((await res.json()).error.code, 'email_disposable');
+    assert.equal(mailer.sent.length, 0);
+  } finally {
+    await started.close();
+  }
+});
+
+test('connexion email : temp mail refuse avec message explicite', async () => {
+  const { started, mailer } = await startServer();
+  try {
+    const res = await portalPost(started.url, '/email/request', { email: 'test@yopmail.com' });
+    assert.equal(res.status, 400);
+    const body = await res.json();
+    assert.equal(body.error.code, 'email_disposable');
+    assert.match(body.error.message, /temp mail/i);
     assert.equal(mailer.sent.length, 0);
   } finally {
     await started.close();
@@ -308,7 +322,7 @@ test('inscription : Turnstile exige un token valide', async () => {
   try {
     const withoutToken = await portalPost(started.url, '/signup/request', { email: 'sans-token@gmail.com' });
     assert.equal(withoutToken.status, 403);
-    assert.equal((await withoutToken.json()).error.code, 'turnstile_failed');
+    assert.equal((await withoutToken.json()).error.code, 'captcha_failed');
     assert.equal(mailer.sent.length, 0);
 
     const withToken = await portalPost(started.url, '/signup/request', {
@@ -358,3 +372,4 @@ test('admin : test email visible et erreur Resend remontee', async () => {
     await failingStarted.close();
   }
 });
+
