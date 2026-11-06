@@ -22,9 +22,14 @@
 // Noms de modeles ou de fonctions qui ne correspondent pas a la capacite
 // texte/code servie par la passerelle. Ils ne doivent jamais etre acceptes.
 const NON_TEXT_MODEL_ALIAS_PATTERN = /(dall[\s._-]?e|gpt-image|image[\s._-]?gen|imagegen|imagen|flux|stable[\s._-]?diffusion|midjourney|text[\s._-]?to[\s._-]?image|sora|veo|text[\s._-]?to[\s._-]?video|whisper|tts|text[\s._-]?to[\s._-]?speech|audio|video)/i;
+const RETIRED_MODEL_ALIAS_PATTERN = /^(codex|o3|o4-mini)(?:$|[\s._-])/i;
 
 export function isTextCompatibleAlias(name) {
   return !NON_TEXT_MODEL_ALIAS_PATTERN.test(String(name ?? ''));
+}
+
+export function isRetiredModelAlias(name) {
+  return RETIRED_MODEL_ALIAS_PATTERN.test(String(name ?? ''));
 }
 
 export const DEFAULT_MODEL_ALIASES = Object.freeze({
@@ -38,9 +43,6 @@ export const DEFAULT_MODEL_ALIASES = Object.freeze({
   'gpt-5-codex*': 'deepseek-flash',
   'gpt-5.1-codex*': 'deepseek-flash',
   'gpt-5*': 'deepseek-flash',
-  'codex*': 'deepseek-flash',
-  'o4-mini*': 'deepseek-flash',
-  'o3*': 'deepseek-flash',
   // Le nom v4-pro reste expose commercialement, mais il est reellement servi par flash.
   'deepseek-v4-pro': 'deepseek-flash',
 });
@@ -58,7 +60,10 @@ export function normalizeModelAliases(input) {
     if (!key) continue;
     if (key.length > 120) throw new Error(`alias trop long : ${key.slice(0, 40)}...`);
     if (!isTextCompatibleAlias(key)) {
-      throw new Error(`alias "${key}" refuse : la passerelle sert uniquement un modele texte/code, pas un modele d'image, d'audio ou de video`);
+      throw new Error(`modele "${key}" refuse : la passerelle sert uniquement un modele texte/code, pas un modele d'image, d'audio ou de video`);
+    }
+    if (isRetiredModelAlias(key)) {
+      throw new Error(`modele "${key}" non disponible sur cette passerelle`);
     }
     if (!target) throw new Error(`alias "${key}" : modele cible manquant`);
     if (target.length > 120) throw new Error(`alias "${key}" : modele cible trop long`);

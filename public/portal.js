@@ -765,7 +765,7 @@
         <div class="guide-hero-copy">
           <p class="hero-kicker">Guide d'intégration</p>
           <h2>De la clé au premier appel,<br><span class="accent-word">en quelques minutes.</span></h2>
-          <p class="guide-lede">Une API compatible OpenAI, des alias pour Codex CLI et un endpoint Anthropic pour Claude Code. Choisissez votre client, collez votre clé, c'est parti.</p>
+          <p class="guide-lede">Une API compatible OpenAI, des modèles pour Codex CLI et un endpoint Anthropic pour Claude Code. Choisissez votre client, collez votre clé, c'est parti.</p>
           <div class="guide-hero-actions">
             <button type="button" class="btn btn-primary" data-guide-copy-target="guide-base-url">${icon('copy')}Copier l'URL de base</button>
             <button type="button" class="btn btn-ghost" data-guide-view="keys">${icon('key')}${hasKey ? 'Gérer ma clé' : 'Créer ma clé'}</button>
@@ -830,7 +830,7 @@
           <div>
             <span class="guide-eyebrow">01 · Cas d'usage</span>
             <h2>Quel guide pour votre usage ?</h2>
-            <span class="hint">Le bon endpoint et le bon alias, sans mauvaise surprise.</span>
+            <span class="hint">Le bon endpoint et le bon modèle, sans mauvaise surprise.</span>
           </div>
         </div>
         <div class="guide-use-grid">
@@ -838,30 +838,23 @@
             <span class="guide-use-icon">${icon('spark')}</span>
             <h3>Chat & assistants</h3>
             <p>Réponses texte, résumés, rédaction, support conversationnel.</p>
-            <div class="guide-use-meta"><code>${esc(chatModel)}</code><span class="badge badge-muted">texte</span></div>
+            <div class="guide-use-meta"><code>${esc(chatModel)}</code></div>
             <button type="button" class="btn btn-ghost btn-sm" data-guide-usecase="node">${icon('arrow')}Voir le guide</button>
           </article>
           <article class="guide-use-card">
             <span class="guide-use-icon">${icon('terminal')}</span>
             <h3>Code & agents Codex</h3>
             <p>Génération et refactorisation de code via Codex CLI.</p>
-            <div class="guide-use-meta"><code>${esc(codexModel)}</code><span class="badge badge-muted">texte + code</span></div>
+            <div class="guide-use-meta"><code>${esc(codexModel)}</code></div>
             <button type="button" class="btn btn-ghost btn-sm" data-guide-usecase="codex">${icon('arrow')}Voir le guide</button>
           </article>
           <article class="guide-use-card">
             <span class="guide-use-icon">${icon('book')}</span>
             <h3>Claude Code</h3>
             <p>Clients qui utilisent le protocole Anthropic Messages.</p>
-            <div class="guide-use-meta"><code>${esc(anthropicModel)}</code><span class="badge badge-muted">texte + code</span></div>
+            <div class="guide-use-meta"><code>${esc(anthropicModel)}</code></div>
             <button type="button" class="btn btn-ghost btn-sm" data-guide-usecase="anthropic">${icon('arrow')}Voir le guide</button>
           </article>
-        </div>
-        <div class="guide-capability-note">
-          ${icon('shield')}
-          <div>
-            <strong>Une seule capacité réelle : le texte et le code.</strong>
-            <p>Les alias OpenAI/Codex sont des noms d'accès au même modèle texte. Ils ne génèrent ni image, ni audio, ni vidéo et ne transforment pas la passerelle en modèle multimodal.</p>
-          </div>
         </div>
       </section>
 
@@ -922,7 +915,7 @@
                 <p class="guide-footnote">${icon('help')}<span>« 2023-06-01 » est l'identifiant de version du protocole Messages, pas une date d'expiration. Les SDK Anthropic et Claude Code l'ajoutent automatiquement.</span></p>
               </article>
             </div>
-            <div class="guide-note">${icon('lock')}<span>Votre clé est personnelle et n'expose jamais le fournisseur. Ne la partagez pas et stockez-la dans un gestionnaire de secrets.</span></div>
+            <div class="guide-note">${icon('lock')}<span>Votre clé est personnelle. Ne la partagez pas et stockez-la dans un gestionnaire de secrets.</span></div>
           </section>
 
           <section class="panel guide-section" id="guide-examples">
@@ -959,19 +952,17 @@
               <div>
                 <span class="guide-eyebrow">04 · Modèles</span>
                 <h2>Modèles disponibles</h2>
-                <span class="hint">Les alias autorisés pour votre compte, dont Codex / OpenAI.</span>
+                <span class="hint">Les modèles disponibles pour votre compte.</span>
               </div>
             </div>
             ${models.length ? `<div class="table-wrap"><table class="guide-model-table">
-              <thead><tr><th>Modèle</th><th>Idéal pour</th><th>Capacité</th><th class="right">Statut</th></tr></thead>
+              <thead><tr><th>Modèle</th><th>Idéal pour</th><th class="right">Statut</th></tr></thead>
               <tbody>${models.map((name) => `<tr>
                 <td><code>${esc(name)}</code></td>
                 <td class="muted">${esc(modelUsage(name))}</td>
-                <td><span class="badge badge-muted">texte / code</span></td>
                 <td class="right"><span class="badge badge-ok">disponible</span></td>
               </tr>`).join('')}</tbody>
             </table></div>` : '<div class="empty-state">Aucun modèle autorisé pour le moment.</div>'}
-            <p class="guide-alias-note">${icon('shield')}<span><strong>Texte et code uniquement.</strong> Les alias Codex/OpenAI ne sont pas des modèles d'image ou multimodaux : ils produisent du texte et du code avec le modèle de la passerelle.</span></p>
             <p class="small muted" style="margin:10px 0 0">Utilisez l'identifiant exact comme valeur de <code>model</code>. Les modèles non listés peuvent être refusés par votre pass.</p>
           </section>
 
@@ -985,7 +976,7 @@
             </div>
             <div class="guide-param-grid">
               <div class="guide-param"><code>model</code><p>Identifiant du modèle, par exemple <code>${esc(openaiModel)}</code>.</p></div>
-              <div class="guide-param"><code>messages</code><p>Liste des tours de conversation. Le contenu est du texte uniquement : la passerelle ne traite pas les images.</p></div>
+              <div class="guide-param"><code>messages</code><p>Liste des tours de conversation. Le contenu est du texte.</p></div>
               <div class="guide-param"><code>stream</code><p><code>true</code> pour recevoir la réponse en SSE, idéal pour un effet de frappe.</p></div>
               <div class="guide-param"><code>temperature</code><p>Entre 0 et 2. Plus bas = réponses déterministes, plus haut = plus créatives.</p></div>
               <div class="guide-param"><code>max_tokens</code><p>Plafonné par votre pass. Laissez vide pour utiliser la limite du modèle.</p></div>

@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DEFAULT_MODEL_ALIASES,
+  isRetiredModelAlias,
   isTextCompatibleAlias,
   normalizeModelAliases,
 } from '../src/model-aliases.js';
@@ -20,9 +21,17 @@ test('les alias Codex/OpenAI texte sont acceptes', () => {
   const aliases = normalizeModelAliases({
     'gpt-5-codex': 'deepseek-flash',
     'gpt-5': 'deepseek-flash',
-    'codex-mini-latest': 'deepseek-flash',
   });
-  assert.deepEqual(Object.keys(aliases), ['gpt-5-codex', 'gpt-5', 'codex-mini-latest']);
+  assert.deepEqual(Object.keys(aliases), ['gpt-5-codex', 'gpt-5']);
+});
+
+test('codex, o4-mini et o3 ne sont plus exposes', () => {
+  const names = Object.keys(DEFAULT_MODEL_ALIASES).map((alias) => alias.replace(/\*$/, ''));
+  for (const name of ['codex', 'o4-mini', 'o3']) {
+    assert.ok(!names.includes(name), `${name} ne doit plus etre un modele par defaut`);
+    assert.equal(isRetiredModelAlias(name), true, name);
+    assert.throws(() => normalizeModelAliases({ [name]: 'deepseek-flash' }), /non disponible/, name);
+  }
 });
 
 test('un alias de modele image/audio/video est refuse', () => {
