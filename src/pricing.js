@@ -130,11 +130,11 @@ export function normalizePricing(input) {
 
 export function loadPricing(getSetting) {
   const stored = getSetting();
-  if (!stored) return DEFAULT_PRICING;
+  if (!stored) return withAliasPricing(DEFAULT_PRICING);
   try {
-    return normalizePricing(stored);
+    return withAliasPricing(normalizePricing(stored));
   } catch {
-    return DEFAULT_PRICING;
+    return withAliasPricing(DEFAULT_PRICING);
   }
 }
 
@@ -231,11 +231,55 @@ export function computeCost(usage, model, pricing = DEFAULT_PRICING, now = new D
  * Les alias "gros modeles" sont servis par flash mais consomment le credit
  * au tarif premium : le service commercial et le cout technique restent separes.
  */
-const PREMIUM_ALIAS_PATTERN = /^(claude-opus|fable-|gpt-5|deepseek-v4-pro)/i;
+const ALIAS_MODEL_PRICING = Object.freeze({
+  'alias:claude-opus-5.5': {
+    cacheHit: { peak: 0.15, offpeak: 0.15 },
+    cacheMiss: { peak: 3, offpeak: 3 },
+    output: { peak: 15, offpeak: 15 },
+  },
+  'alias:claude-opus-5': {
+    cacheHit: { peak: 0.375, offpeak: 0.375 },
+    cacheMiss: { peak: 3.75, offpeak: 3.75 },
+    output: { peak: 18.75, offpeak: 18.75 },
+  },
+  'alias:fable-5.1': {
+    cacheHit: { peak: 0.1875, offpeak: 0.1875 },
+    cacheMiss: { peak: 7.5, offpeak: 7.5 },
+    output: { peak: 37.5, offpeak: 37.5 },
+  },
+  'alias:fable-5': {
+    cacheHit: { peak: 0.75, offpeak: 0.75 },
+    cacheMiss: { peak: 7.5, offpeak: 7.5 },
+    output: { peak: 37.5, offpeak: 37.5 },
+  },
+  'alias:gpt-5': {
+    cacheHit: { peak: 0.09375, offpeak: 0.09375 },
+    cacheMiss: { peak: 0.9375, offpeak: 0.9375 },
+    output: { peak: 7.5, offpeak: 7.5 },
+  },
+  'alias:deepseek-v4-pro': {
+    cacheHit: { peak: 0.033, offpeak: 0.0165 },
+    cacheMiss: { peak: 0.99, offpeak: 0.495 },
+    output: { peak: 2.97, offpeak: 1.485 },
+  },
+});
 
+/** Modele de tarification premium (tarif reel -25 %). */
 export function creditPricingModelFor(requestedModel, servedModel, enabled = true) {
-  if (enabled && typeof requestedModel === 'string' && PREMIUM_ALIAS_PATTERN.test(requestedModel.trim())) {
-    return 'deepseek-v4-pro';
-  }
+  if (!enabled || typeof requestedModel !== 'string') return servedModel;
+  const name = requestedModel.trim().toLowerCase();
+  if (/^claude-opus-5\.5/.test(name)) return 'alias:claude-opus-5.5';
+  if (/^claude-opus-5/.test(name)) return 'alias:claude-opus-5';
+  if (/^fable-5\.1/.test(name)) return 'alias:fable-5.1';
+  if (/^fable-5/.test(name)) return 'alias:fable-5';
+  if (/^gpt-5/.test(name)) return 'alias:gpt-5';
+  if (/^deepseek-v4-pro/.test(name)) return 'alias:deepseek-v4-pro';
   return servedModel;
 }
+
+function withAliasPricing(pricing) {
+  const base = pricing?.models ? { ...pricing, models: { ...pricing.models } } : { ...DEFAULT_PRICING, models: { ...DEFAULT_PRICING.models } };
+  Object.assign(base.models, ALIAS_MODEL_PRICING);
+  return base;
+}
+

@@ -1283,3 +1283,4 @@ La connexion admin demandera alors le mot de passe + les 6 chiffres. Sans cette 
 Les reservations de credit sont persistees en base (table/collection `credit_reservations`) en micro-USD entiers. En MongoDB Atlas, la reservation utilise une transaction : plusieurs instances ne peuvent pas franchir le meme plafond simultanement. Les reservations expirent automatiquement si un processus s'arrete.
 
 
+

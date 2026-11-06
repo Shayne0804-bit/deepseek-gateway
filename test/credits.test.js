@@ -7,7 +7,7 @@ import { PASS_PLANS, getPassPlan, passPlanFields } from '../src/plans.js';
 import { openDb, closeDb, insertUsageLog, clientCreditWindowSince } from '../src/db.js';
 import { reserveCreditSlot, releaseCreditSlot } from '../src/db.js';
 import { toMicroUsd, fromMicroUsd } from '../src/money.js';
-import { creditPricingModelFor } from '../src/pricing.js';
+import { creditPricingModelFor, computeCost, loadPricing } from '../src/pricing.js';
 
 test('plans : durees, credit site et plafond 5 h', () => {
   const byId = Object.fromEntries(PASS_PLANS.map((plan) => [plan.id, plan]));
@@ -91,8 +91,17 @@ test('money : conversion micro-USD sans perte', () => {
 });
 
 test('alias premium : consomme le credit au tarif gros modele', () => {
-  assert.equal(creditPricingModelFor('claude-opus-5', 'deepseek-flash'), 'deepseek-v4-pro');
-  assert.equal(creditPricingModelFor('fable-5.1', 'deepseek-flash'), 'deepseek-v4-pro');
+  assert.equal(creditPricingModelFor('claude-opus-5', 'deepseek-flash'), 'alias:claude-opus-5');
+  assert.equal(creditPricingModelFor('fable-5.1', 'deepseek-flash'), 'alias:fable-5.1');
   assert.equal(creditPricingModelFor('deepseek-flash', 'deepseek-flash'), 'deepseek-flash');
   assert.equal(creditPricingModelFor('claude-opus-5', 'deepseek-flash', false), 'deepseek-flash');
+});
+
+
+test('fable-5.1 : tarif reel -25 % avant credit site', () => {
+  const pricing = loadPricing(() => null);
+  const usage = { prompt: 1000, completion: 500, total: 1500, cacheHit: 0, cacheMiss: 1000 };
+  const real = computeCost(usage, 'alias:fable-5.1', pricing);
+  assert.equal(real, 0.02625);
+  assert.equal(Math.round(real * 3.75 * 1e6) / 1e6, 0.098438);
 });
