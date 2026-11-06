@@ -1713,3 +1713,11 @@ textarea { min-height: 120px; resize: vertical; font-family: var(--mono); font-s
 .credit-limit-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .credit-limit-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; min-width: 0; }
 @media (max-width: 760px) { .credit-limit-row { grid-template-columns: 1fr; } .credit-limit-bars { grid-template-columns: 1fr; } }
+
+/* Pay as you go (apercu, release soon). */
+.nav-badge { margin-left: auto; font-size: 9px; line-height: 1; padding: 4px 6px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.billing-amounts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+.billing-amount { padding: 14px 8px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel-2, rgba(255,255,255,0.03)); color: var(--text); font-weight: 650; opacity: 0.55; cursor: not-allowed; }
+.billing-custom { margin-top: 8px; }
+.billing-panel .alert { margin-bottom: 16px; }
+@media (max-width: 900px) { .billing-amounts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

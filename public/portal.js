@@ -522,6 +522,7 @@
     pass: 'Mon pass',
     keys: 'Mes clés API',
     usage: 'Consommation',
+    billing: 'Recharger',
     requests: 'Requêtes',
     settings: 'Réglages',
     guide: 'Guide d’intégration',
@@ -739,6 +740,26 @@
       '# codex',
     ].join('\n');
 
+    const claudeSettings = JSON.stringify({
+      env: {
+        ANTHROPIC_BASE_URL: anthropic,
+        ANTHROPIC_AUTH_TOKEN: 'VOTRE_CLE_API',
+        ANTHROPIC_MODEL: anthropicModel,
+      },
+    }, null, 2);
+
+    const codexConfig = [
+      '# ~/.codex/config.toml',
+      `model = "${codexModel}"`,
+      'model_provider = "valaria"',
+      '',
+      '[model_providers.valaria]',
+      'name = "VALARIA Gateway"',
+      `base_url = "${base}"`,
+      'env_key = "VALARIA_API_KEY"',
+      'wire_api = "responses"',
+    ].join('\n');
+
     const codePanel = (id, label, code) => `
       <div class="guide-code-panel${id === 'curl' ? '' : ' hidden'}" data-code-panel="${id}">
         <div class="guide-code-top">
@@ -765,7 +786,7 @@
         <div class="guide-hero-copy">
           <p class="hero-kicker">Guide d'intégration</p>
           <h2>De la clé au premier appel,<br><span class="accent-word">en quelques minutes.</span></h2>
-          <p class="guide-lede">Une API compatible OpenAI, des modèles pour Codex CLI et un endpoint Anthropic pour Claude Code. Choisissez votre client, collez votre clé, c'est parti.</p>
+          <p class="guide-lede">Une API compatible OpenAI, des guides d'installation pour Codex CLI et Claude Code, et un endpoint Anthropic. Choisissez votre client, collez votre clé, c'est parti.</p>
           <div class="guide-hero-actions">
             <button type="button" class="btn btn-primary" data-guide-copy-target="guide-base-url">${icon('copy')}Copier l'URL de base</button>
             <button type="button" class="btn btn-ghost" data-guide-view="keys">${icon('key')}${hasKey ? 'Gérer ma clé' : 'Créer ma clé'}</button>
@@ -858,11 +879,99 @@
         </div>
       </section>
 
+      <section class="panel guide-section guide-install" id="guide-install">
+        <div class="panel-head">
+          <div>
+            <span class="guide-eyebrow">02 · Installation</span>
+            <h2>Installer et lancer un client CLI</h2>
+            <span class="hint">Du <code>npm install</code> au premier prompt, pour Claude Code et Codex CLI.</span>
+          </div>
+        </div>
+        <div class="guide-client-grid">
+          <article class="guide-client-card">
+            <div class="guide-client-head">
+              <span class="guide-client-icon">${icon('book')}</span>
+              <div><h3>Claude Code CLI</h3><p>Client officiel Anthropic, installé via npm.</p></div>
+              <span class="badge badge-muted">JSON</span>
+            </div>
+            <div class="guide-client-step">
+              <span class="guide-client-num">1</span>
+              <div>
+                <h4>Installer le CLI</h4>
+                <div class="guide-command-row">
+                  <code id="guide-claude-install">npm install -g @anthropic-ai/claude-code</code>
+                  <button type="button" class="icon-btn" data-guide-copy-target="guide-claude-install" aria-label="Copier la commande d'installation Claude Code">${icon('copy')}</button>
+                </div>
+              </div>
+            </div>
+            <div class="guide-client-step">
+              <span class="guide-client-num">2</span>
+              <div>
+                <h4>Configurer <code>~/.claude/settings.json</code></h4>
+                <p class="guide-client-hint">Créez le dossier <code>.claude</code> s'il n'existe pas, puis ajoutez ce JSON. Sous Windows : <code>%USERPROFILE%\\.claude\\settings.json</code>.</p>
+                <div class="guide-config-head"><span>settings.json</span><button type="button" class="btn btn-ghost btn-sm" data-guide-copy-target="guide-claude-settings">${icon('copy')}Copier</button></div>
+                <pre class="guide-config" id="guide-claude-settings"><code>${esc(claudeSettings)}</code></pre>
+              </div>
+            </div>
+            <div class="guide-client-step">
+              <span class="guide-client-num">3</span>
+              <div>
+                <h4>Lancer Claude Code</h4>
+                <div class="guide-command-row">
+                  <code id="guide-claude-launch">claude</code>
+                  <button type="button" class="icon-btn" data-guide-copy-target="guide-claude-launch" aria-label="Copier la commande de lancement Claude Code">${icon('copy')}</button>
+                </div>
+                <p class="guide-client-hint">Lancez la commande dans le dossier de votre projet. Claude Code lit le modèle et la clé depuis <code>settings.json</code>.</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="guide-client-card">
+            <div class="guide-client-head">
+              <span class="guide-client-icon">${icon('terminal')}</span>
+              <div><h3>Codex CLI</h3><p>Client officiel OpenAI, installé via npm.</p></div>
+              <span class="badge badge-muted">TOML</span>
+            </div>
+            <div class="guide-client-step">
+              <span class="guide-client-num">1</span>
+              <div>
+                <h4>Installer le CLI</h4>
+                <div class="guide-command-row">
+                  <code id="guide-codex-install">npm install -g @openai/codex</code>
+                  <button type="button" class="icon-btn" data-guide-copy-target="guide-codex-install" aria-label="Copier la commande d'installation Codex">${icon('copy')}</button>
+                </div>
+              </div>
+            </div>
+            <div class="guide-client-step">
+              <span class="guide-client-num">2</span>
+              <div>
+                <h4>Configurer <code>~/.codex/config.toml</code></h4>
+                <p class="guide-client-hint">Créez le dossier <code>.codex</code> s'il n'existe pas. Codex utilise un fichier TOML, pas un JSON. Sous Windows : <code>%USERPROFILE%\\.codex\\config.toml</code>.</p>
+                <div class="guide-config-head"><span>config.toml</span><button type="button" class="btn btn-ghost btn-sm" data-guide-copy-target="guide-codex-config">${icon('copy')}Copier</button></div>
+                <pre class="guide-config" id="guide-codex-config"><code>${esc(codexConfig)}</code></pre>
+              </div>
+            </div>
+            <div class="guide-client-step">
+              <span class="guide-client-num">3</span>
+              <div>
+                <h4>Définir la clé et lancer</h4>
+                <div class="guide-config-head"><span>Terminal</span><button type="button" class="btn btn-ghost btn-sm" data-guide-copy-target="guide-codex-launch">${icon('copy')}Copier</button></div>
+                <pre class="guide-config" id="guide-codex-launch"><code>export VALARIA_API_KEY="VOTRE_CLE_API"
+codex</code></pre>
+                <p class="guide-client-hint">Windows PowerShell : <code>$env:VALARIA_API_KEY="VOTRE_CLE_API"</code>, puis <code>codex</code>. Lancez la commande dans le dossier de votre projet.</p>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div class="guide-prereq">${icon('help')}<span><strong>Prérequis :</strong> Node.js 20+ et npm. Vérifiez avec <code>node --version</code> et <code>npm --version</code>. Les fichiers de configuration sont propres à chaque client : JSON pour Claude Code, TOML pour Codex CLI.</span></div>
+      </section>
+
       <div class="guide-layout">
         <aside class="panel guide-toc-panel">
           <p class="guide-toc-title">Sommaire</p>
           <nav class="guide-toc" aria-label="Sommaire du guide">
             <a href="#guide-cases">${icon('spark')}Cas d'usage</a>
+            <a href="#guide-install">${icon('terminal')}Installer un client</a>
             <a href="#guide-endpoints">${icon('globe')}Points d'accès</a>
             <a href="#guide-examples">${icon('code')}Premiers exemples</a>
             <a href="#guide-models">${icon('layers')}Modèles</a>
@@ -880,7 +989,7 @@
           <section class="panel guide-section" id="guide-endpoints">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">02 · Connexion</span>
+                <span class="guide-eyebrow">03 · Connexion</span>
                 <h2>Points d'accès</h2>
                 <span class="hint">Deux formats compatibles, une seule clé.</span>
               </div>
@@ -921,7 +1030,7 @@
           <section class="panel guide-section" id="guide-examples">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">03 · Premier appel</span>
+                <span class="guide-eyebrow">04 · Premier appel</span>
                 <h2>Exemples prêts à copier</h2>
                 <span class="hint">Remplacez <code>VOTRE_CLE_API</code> par votre clé.</span>
               </div>
@@ -950,7 +1059,7 @@
           <section class="panel guide-section" id="guide-models">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">04 · Modèles</span>
+                <span class="guide-eyebrow">05 · Modèles</span>
                 <h2>Modèles disponibles</h2>
                 <span class="hint">Les modèles disponibles pour votre compte.</span>
               </div>
@@ -969,7 +1078,7 @@
           <section class="panel guide-section" id="guide-params">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">05 · Requête</span>
+                <span class="guide-eyebrow">06 · Requête</span>
                 <h2>Paramètres utiles</h2>
                 <span class="hint">Les clés que vous utiliserez le plus souvent.</span>
               </div>
@@ -987,7 +1096,7 @@
           <section class="panel guide-section" id="guide-errors">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">06 · Diagnostic</span>
+                <span class="guide-eyebrow">07 · Diagnostic</span>
                 <h2>Erreurs & quotas</h2>
                 <span class="hint">Les réponses à connaître avant de déboguer.</span>
               </div>
@@ -1007,7 +1116,7 @@
           <section class="panel guide-section" id="guide-faq">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">07 · Aide</span>
+                <span class="guide-eyebrow">08 · Aide</span>
                 <h2>Questions fréquentes</h2>
                 <span class="hint">Les réponses aux blocages les plus courants.</span>
               </div>
@@ -1567,6 +1676,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
 
   init();
 })();
+
 
 
 

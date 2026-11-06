@@ -116,6 +116,7 @@
           <button class="nav-item" data-user-view="pass"><span class="btn-icon" data-icon="pass" aria-hidden="true"></span>Mon pass</button>
           <button class="nav-item" data-user-view="keys"><span class="btn-icon" data-icon="key" aria-hidden="true"></span>Mes clés API</button>
           <button class="nav-item" data-user-view="usage"><span class="btn-icon" data-icon="chart" aria-hidden="true"></span>Consommation</button>
+          <button class="nav-item" data-user-view="billing"><span class="btn-icon" data-icon="pass" aria-hidden="true"></span>Recharger<span class="nav-badge">bientôt</span></button>
           <button class="nav-item" data-user-view="requests"><span class="btn-icon" data-icon="list" aria-hidden="true"></span>Requêtes</button>
           <button class="nav-item" data-user-view="settings"><span class="btn-icon" data-icon="settings" aria-hidden="true"></span>Réglages</button>
           <button class="nav-item" data-user-view="guide"><span class="btn-icon" data-icon="book" aria-hidden="true"></span>Guide d'intégration</button>
@@ -274,6 +275,40 @@
 
           <section class="user-panel hidden" data-user-panel="guide">
             <div id="portal-guide"></div>
+          </section>
+
+          <section class="user-panel hidden" data-user-panel="billing">
+            <section class="panel billing-panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Recharger mon crédit</h2>
+                  <span class="hint">Pay as you go — recharge libre, sans engagement.</span>
+                </div>
+                <span class="badge badge-warn">Release soon</span>
+              </div>
+              <div class="alert warn">
+                <strong>Bientôt disponible.</strong>
+                Le paiement en ligne et le crédit à la demande ne sont pas encore activés.
+                Cette page est une prévisualisation : aucun paiement ne peut être effectué.
+              </div>
+              <p class="small muted">Choisissez un montant prédéfini ou saisissez un montant personnalisé.</p>
+              <div class="billing-amounts" aria-label="Montants prédéfinis">
+                <button type="button" class="billing-amount" disabled>1 000 FCFA</button>
+                <button type="button" class="billing-amount" disabled>3 000 FCFA</button>
+                <button type="button" class="billing-amount" disabled>6 000 FCFA</button>
+                <button type="button" class="billing-amount" disabled>15 000 FCFA</button>
+                <button type="button" class="billing-amount" disabled>50 000 FCFA</button>
+              </div>
+              <label class="field full billing-custom">
+                <span>Montant personnalisé (FCFA)</span>
+                <input type="number" min="1000" step="500" placeholder="ex : 10 000" disabled>
+                <small>Minimum 1 000 FCFA — le crédit site sera ajouté à votre solde.</small>
+              </label>
+              <button type="button" class="btn btn-primary btn-block" disabled>Recharger — bientôt disponible</button>
+              <p class="small muted" style="margin-top:14px">
+                Une fois disponible, le crédit acheté n’expirera pas et sera consommé au taux du crédit site.
+              </p>
+            </section>
           </section>
         </div>
       </main>
