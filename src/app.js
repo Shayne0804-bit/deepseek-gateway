@@ -87,6 +87,11 @@ const ASSETS = {
   '/assets/fonts/jetbrains-mono-latin.woff2': { file: 'fonts/jetbrains-mono-latin.woff2', type: 'font/woff2' },
   '/assets/logo-mark.svg': { file: 'logo-mark.svg', type: 'image/svg+xml' },
   '/assets/valaria-code.png': { file: 'valaria-code.png', type: 'image/png' },
+  '/assets/valaria-code-focus.png': { file: 'valaria-code-focus.png', type: 'image/png' },
+  '/assets/valaria-code-studio.png': { file: 'valaria-code-studio.png', type: 'image/png' },
+  '/assets/valaria-code-diff.png': { file: 'valaria-code-diff.png', type: 'image/png' },
+  '/assets/valaria-code-approval.png': { file: 'valaria-code-approval.png', type: 'image/png' },
+  '/assets/valaria-code-splash.png': { file: 'valaria-code-splash.png', type: 'image/png' },
   '/favicon.svg': { file: 'favicon.svg', type: 'image/svg+xml' },
 };
 

@@ -982,10 +982,24 @@
               </div>
             </div>
           </div>
-          <figure class="guide-cli-shot">
-            <img src="/assets/valaria-code.png" alt="Interface VALARIA Code avec conversation, liste des fichiers modifiés et diff." loading="lazy">
-            <figcaption>Focus : conversation et diff permanent. Les messages restent visibles pendant les approbations.</figcaption>
-          </figure>
+          <div class="guide-cli-gallery">
+            <figure class="guide-cli-shot">
+              <img src="/assets/valaria-code-focus.png" alt="VALARIA Code en mode Focus avec conversation et diff permanent." loading="lazy">
+              <figcaption><strong>Focus</strong> · conversation et diff permanent</figcaption>
+            </figure>
+            <figure class="guide-cli-shot">
+              <img src="/assets/valaria-code-studio.png" alt="VALARIA Code en mode Studio avec compte et quotas." loading="lazy">
+              <figcaption><strong>Studio</strong> · compte, quotas et revue</figcaption>
+            </figure>
+            <figure class="guide-cli-shot">
+              <img src="/assets/valaria-code-diff.png" alt="Revue de diff de VALARIA Code avec fichiers et lignes modifiées." loading="lazy">
+              <figcaption><strong>Diff</strong> · fichiers en haut, lignes en bas</figcaption>
+            </figure>
+            <figure class="guide-cli-shot">
+              <img src="/assets/valaria-code-approval.png" alt="Approbation d’un patch dans VALARIA Code." loading="lazy">
+              <figcaption><strong>Approbation</strong> · décision avant écriture</figcaption>
+            </figure>
+          </div>
         </div>
         <div class="guide-cli-modes">
           <div class="guide-cli-mode"><strong>Strict</strong><span>Chaque écriture et commande demandent une approbation.</span></div>

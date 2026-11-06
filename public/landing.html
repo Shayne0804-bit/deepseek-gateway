@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#0a0e0c">
+  <meta name="theme-color" content="#eef3ed">
   <meta name="app-version" content="{{APP_VERSION}}">
   <meta name="description" content="VALARIA Gateway : API compatible OpenAI/Anthropic et VALARIA Code, l’agent de code dans le terminal. Clés individuelles, quotas, crédit et suivi des requêtes.">
   <title>VALARIA Gateway — API et agent de code dans le terminal</title>
@@ -12,19 +12,20 @@
   <link rel="stylesheet" href="/assets/styles.css?v={{APP_VERSION}}">
   <link rel="stylesheet" href="/assets/theme.css?v={{APP_VERSION}}">
 </head>
-<body class="public-page">
-  <div class="site-bg" aria-hidden="true"></div>
+<body class="public-page landing-v2">
+  <div class="site-bg landing-bg" aria-hidden="true"></div>
   <a class="skip-link" href="#main">Aller au contenu</a>
 
-  <header class="site-header">
+  <header class="site-header landing-header">
     <a class="site-brand" href="/">
       <img class="brand-logo" src="/assets/logo-mark.svg?v={{APP_VERSION}}" alt="" aria-hidden="true" width="34" height="34">
       <span class="brand-name">VALARIA Gateway</span>
     </a>
     <nav class="site-nav" aria-label="Navigation principale">
+      <a href="#surfaces">Produit</a>
       <a href="#capacites">Fonctionnalités</a>
       <a href="#cli">VALARIA Code</a>
-      <a href="#brancher">Intégration</a>
+      <a href="#brancher">Démarrer</a>
       <a href="/portal">Mon espace</a>
     </nav>
     <div class="site-status" id="site-status" aria-live="polite">
@@ -34,179 +35,259 @@
   </header>
 
   <main id="main">
-    <section class="hero">
-      <div class="hero-copy">
-        <p class="hero-kicker">Passerelle API · accès privé</p>
-        <h1>La puissance des meilleurs modèles, sans partager votre clé.</h1>
+    <section class="hero hero-v2">
+      <div class="hero-v2-copy">
+        <p class="hero-kicker">API gateway + agent de code</p>
+        <h1>Une clé.<br>Tous vos modèles.<br><span>Un agent dans le terminal.</span></h1>
         <p class="hero-lede">
-          Une seule clé fournisseur reste côté serveur. Chaque personne reçoit son propre accès,
-          avec un quota, un crédit et un suivi de consommation.
+          VALARIA Gateway relie vos outils à une clé fournisseur unique.
+          Pour vos scripts, une API compatible OpenAI et Anthropic. Pour votre code,
+          VALARIA Code lit, modifie et teste votre projet depuis le terminal.
         </p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="/signup">Créer mon compte</a>
-          <a class="btn btn-ghost" href="#brancher">Voir l'intégration</a>
+          <a class="btn btn-ghost" href="#cli">Installer VALARIA Code</a>
+        </div>
+        <div class="install-inline">
+          <span class="install-label">npm</span>
+          <code id="hero-install-command">npm install -g valaria-code</code>
+          <button type="button" class="icon-btn" data-copy="npm install -g valaria-code" aria-label="Copier la commande d’installation">Copier</button>
         </div>
         <dl class="hero-facts">
-          <div><dt>Accès</dt><dd>Clés individuelles</dd></div>
+          <div><dt>API</dt><dd>OpenAI + Anthropic</dd></div>
+          <div><dt>CLI</dt><dd>Claude · Codex · DeepSeek</dd></div>
           <div><dt>Contrôle</dt><dd>Quotas &amp; crédit</dd></div>
-          <div><dt>Suivi</dt><dd>Requêtes &amp; coûts</dd></div>
+          <div><dt>Sécurité</dt><dd>Jeton appareil révocable</dd></div>
         </dl>
       </div>
 
-      <figure class="transcript" aria-label="Exemple de requête API">
-        <figcaption class="transcript-head">
-          <span>Exemple de requête</span>
-          <span class="transcript-dots" aria-hidden="true">● ● ●</span>
-        </figcaption>
-        <pre class="transcript-body"><span class="t-prompt">$</span> curl https://api.votre-domaine.fr/v1/chat/completions \
+      <div class="hero-v2-visual" data-reveal>
+        <article class="console-card console-api">
+          <div class="console-head">
+            <span class="console-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span>requête API</span>
+            <span class="console-method">POST</span>
+          </div>
+          <pre class="transcript-body">curl https://api.valariamenu.com/v1/chat/completions \
   -H "Authorization: Bearer sk-dsk-…" \
-  -d '{"model":"claude-opus-5.5","messages":[…]}'
+  -d '{"model":"claude-opus-5.5","messages":[{"role":"user","content":"Bonjour"}]}'
 
 <span class="t-http">HTTP/1.1 200 OK</span>
 <span class="t-h">x-quota-tokens-remaining: <b>1 987 412</b></span>
 
 {"id":"chatcmpl-…","usage":{"total_tokens":118}}</pre>
-        <figcaption class="transcript-foot">La clé fournisseur ne quitte jamais le serveur.</figcaption>
-      </figure>
+          <div class="console-foot"><span class="console-proof">La clé fournisseur reste côté serveur.</span><span class="console-latency">312 ms</span></div>
+        </article>
+
+        <article class="console-card console-cli">
+          <div class="console-head">
+            <span class="console-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span>valaria-code — terminal</span>
+            <span class="console-method console-method--live">en ligne</span>
+          </div>
+          <pre class="cli-code"><span class="cli-prompt">❯</span> corrige le test de connexion qui échoue une fois sur cinq
+
+<span class="cli-agent">▌ VALARIA</span>
+Je lis le fichier, puis je prépare un patch.
+<span class="cli-action">› Lecture tests/login.test.js</span>
+<span class="cli-action">› Écriture proposée · tests/login.test.js</span>
+
+<span class="cli-diff-add">+ await page.waitForCookie("session")</span>
+<span class="cli-diff-del">− await page.waitForTimeout(250)</span>
+<span class="cli-caret">▌</span></pre>
+          <div class="console-foot"><span class="console-proof">Diff permanent · approbation avant écriture</span><span class="console-badge">Ctrl+G</span></div>
+        </article>
+        <span class="floating-tag">appareil approuvé · sans clé API dans le terminal</span>
+      </div>
     </section>
 
-    <section class="site-section cli-section" id="cli" aria-labelledby="cli-title">
-      <div class="cli-grid">
-        <div class="cli-copy">
-          <p class="eyebrow">Nouveau · VALARIA Code</p>
-          <h2 id="cli-title">Votre agent de code,<br><span class="accent-word">dans le terminal.</span></h2>
-          <p class="section-lede">
-            Une connexion par appareil, sans coller de clé API dans le terminal.
-            Choisissez Claude, Codex ou DeepSeek, puis laissez l’agent lire, modifier
-            et tester votre projet avec votre validation.
-          </p>
-          <ul class="cli-points">
-            <li>
-              <span>01</span>
-              <div><strong>Connexion appareil</strong><p>Le navigateur approuve le terminal. Jeton révocable, stocké localement.</p></div>
-            </li>
-            <li>
-              <span>02</span>
-              <div><strong>Diff permanent</strong><p>Les fichiers modifiés restent visibles à droite, avec les lignes ajoutées et supprimées.</p></div>
-            </li>
-            <li>
-              <span>03</span>
-              <div><strong>Trois niveaux de contrôle</strong><p>Strict, Sécurisé ou Accès total, changement immédiat avec <kbd>Ctrl+G</kbd>.</p></div>
-            </li>
-            <li>
-              <span>04</span>
-              <div><strong>Focus, Studio, Compact</strong><p>Une interface qui s’adapte à votre façon de travailler, sans dashboard imposé.</p></div>
-            </li>
+    <div class="signal-strip" aria-label="Compatibilités">
+      <span class="signal-label">Conçu pour</span>
+      <span>SDK OpenAI</span><span>Anthropic Messages</span><span>Codex CLI</span><span>Claude Code</span><span>cURL</span><span>agents de code</span>
+    </div>
+
+    <section class="section section-surfaces" id="surfaces">
+      <div class="section-head section-head--split" data-reveal>
+        <div>
+          <p class="eyebrow">Deux surfaces, un même contrôle</p>
+          <h2>Une API pour vos scripts.<br>Un agent pour votre code.</h2>
+        </div>
+        <p class="section-lede">Vous pouvez brancher vos outils existants sans changer de SDK, ou confier une tâche complète à VALARIA Code dans le terminal. Les quotas et la sécurité restent au même endroit.</p>
+      </div>
+      <div class="surface-grid">
+        <article class="surface-card surface-api" data-reveal>
+          <div class="surface-card-top"><span class="surface-icon">API</span><span class="badge-soft">OpenAI · Anthropic</span></div>
+          <h3>La passerelle</h3>
+          <p>Une seule clé fournisseur côté serveur. Chaque personne reçoit une clé dérivée, avec ses quotas, son crédit et son historique.</p>
+          <ul class="surface-list">
+            <li>Compatible SDK OpenAI et protocole Anthropic Messages</li>
+            <li>Streaming SSE, modèles texte et code</li>
+            <li>Quotas par requête, tokens et crédit</li>
           </ul>
-          <div class="cli-install">
-            <code id="cli-install-command">npm install -g valaria-code</code>
-            <button type="button" class="icon-btn" data-copy="npm install -g valaria-code" aria-label="Copier la commande d’installation">Copier</button>
+          <div class="mini-command"><code>OPENAI_BASE_URL=https://api.valariamenu.com/v1</code><button type="button" class="icon-btn" data-copy="https://api.valariamenu.com/v1" aria-label="Copier l’URL de base">Copier</button></div>
+        </article>
+        <article class="surface-card surface-cli" data-reveal>
+          <div class="surface-card-top"><span class="surface-icon surface-icon--dark">CLI</span><span class="badge-soft badge-soft--dark">Focus · Studio · Compact</span></div>
+          <h3>VALARIA Code</h3>
+          <p>Un agent de code complet, connecté par appareil. Il lit, propose un diff, demande votre validation et exécute les tests dans le dossier du projet.</p>
+          <ul class="surface-list">
+            <li>Claude, Codex et DeepSeek après connexion</li>
+            <li>Diff permanent et trois modes d’approbation</li>
+            <li>Contexte de projet, commandes et tests</li>
+          </ul>
+          <div class="inline-actions"><a class="btn btn-primary" href="#cli">Voir le terminal</a><a class="text-link" href="#brancher">Guide de démarrage</a></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section section-capabilities" id="capacites">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">Sous le capot</p>
+        <h2>Les détails qui évitent les mauvaises surprises.</h2>
+        <p class="section-lede">Chaque accès est mesuré, limité et révocable. Le produit est pensé pour partager une capacité API sans donner la clé maîtresse.</p>
+      </div>
+      <div class="capability-grid">
+        <article class="capability" data-reveal>
+          <span class="capability-index">01</span>
+          <h3>Clés dérivées</h3>
+          <p>Une clé par personne ou par projet. Régénérez-la ou révoquez-la sans toucher à la clé fournisseur.</p>
+          <span class="capability-tag">sk-dsk-…</span>
+        </article>
+        <article class="capability" data-reveal>
+          <span class="capability-index">02</span>
+          <h3>Quotas lisibles</h3>
+          <p>Requêtes, tokens et crédit sont suivis pour chaque clé, avec débit et concurrence limités.</p>
+          <span class="capability-tag">quota header</span>
+        </article>
+        <article class="capability" data-reveal>
+          <span class="capability-index">03</span>
+          <h3>Coûts réels</h3>
+          <p>Chaque requête alimente un ledger. Vous savez ce qui a été consommé, quand et sur quel modèle.</p>
+          <span class="capability-tag">ledger</span>
+        </article>
+        <article class="capability" data-reveal>
+          <span class="capability-index">04</span>
+          <h3>Auth appareil</h3>
+          <p>VALARIA Code ne demande pas votre clé API dans le terminal. Le navigateur approuve un jeton révocable.</p>
+          <span class="capability-tag">vlt_…</span>
+        </article>
+        <article class="capability" data-reveal>
+          <span class="capability-index">05</span>
+          <h3>Contrôle progressif</h3>
+          <p>Strict, Sécurisé ou Accès total. L’agent s’adapte à votre niveau de confiance et à la tâche.</p>
+          <span class="capability-tag">Ctrl+G</span>
+        </article>
+        <article class="capability" data-reveal>
+          <span class="capability-index">06</span>
+          <h3>Reprise possible</h3>
+          <p>Les appareils sont listés dans votre espace. Un terminal perdu ou oublié se révoque en un clic.</p>
+          <span class="capability-tag">révocable</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="cli-band" id="cli">
+      <div class="cli-band-inner">
+        <div class="cli-band-copy" data-reveal>
+          <p class="eyebrow eyebrow--light">VALARIA Code · terminal</p>
+          <h2>Le terminal, sans les mauvaises surprises.</h2>
+          <p class="cli-band-lede">Une interface plein écran, une conversation lisible et une revue de diff qui reste visible. Vous gardez la main sur chaque écriture et chaque commande.</p>
+          <ul class="cli-feature-list">
+            <li><span>01</span><div><strong>Voit le projet</strong><p>Lit les fichiers utiles avant de proposer une modification.</p></div></li>
+            <li><span>02</span><div><strong>Montre le diff</strong><p>Fichiers modifiés en haut, lignes ajoutées et supprimées en bas.</p></div></li>
+            <li><span>03</span><div><strong>Attend votre décision</strong><p>Strict, Sécurisé ou Accès total — au clavier.</p></div></li>
+          </ul>
+          <div class="cli-band-actions"><a class="btn btn-primary" href="/portal">Ouvrir mon espace</a><a class="btn btn-ghost btn-ghost--dark" href="#brancher">Guide de démarrage</a></div>
+        </div>
+        <div class="terminal-gallery" data-gallery data-reveal>
+          <div class="terminal-gallery-frame">
+            <div class="terminal-gallery-bar">
+              <span class="console-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span data-gallery-title>VALARIA Code — Focus</span>
+              <span class="terminal-gallery-counter"><span data-gallery-index>01</span> / 05</span>
+            </div>
+            <div class="terminal-gallery-slides">
+              <figure class="terminal-slide is-active" data-gallery-slide data-title="VALARIA Code — Focus" data-caption="Focus : conversation et diff permanent, sans panneau compte.">
+                <img src="/assets/valaria-code-focus.png?v={{APP_VERSION}}" alt="VALARIA Code en mode Focus avec la conversation et le diff permanent." loading="lazy">
+              </figure>
+              <figure class="terminal-slide" data-gallery-slide data-title="VALARIA Code — Studio" data-caption="Studio : compte, pass et quotas à gauche, conversation au centre, diff à droite.">
+                <img src="/assets/valaria-code-studio.png?v={{APP_VERSION}}" alt="VALARIA Code en mode Studio avec compte et diff permanent." loading="lazy">
+              </figure>
+              <figure class="terminal-slide" data-gallery-slide data-title="VALARIA Code — Diff" data-caption="Revue de diff : fichiers en haut, lignes ajoutées et supprimées en dessous.">
+                <img src="/assets/valaria-code-diff.png?v={{APP_VERSION}}" alt="Revue de diff de VALARIA Code avec fichiers et lignes modifiées." loading="lazy">
+              </figure>
+              <figure class="terminal-slide" data-gallery-slide data-title="VALARIA Code — Approbation" data-caption="Avant d’écrire, l’agent affiche le patch et attend votre décision.">
+                <img src="/assets/valaria-code-approval.png?v={{APP_VERSION}}" alt="Approbation d’un patch dans VALARIA Code." loading="lazy">
+              </figure>
+              <figure class="terminal-slide" data-gallery-slide data-title="VALARIA Code — Démarrage" data-caption="Le splash VALARIA : logo, dégradé et scanline au lancement.">
+                <img src="/assets/valaria-code-splash.png?v={{APP_VERSION}}" alt="Animation de démarrage de VALARIA Code." loading="lazy">
+              </figure>
+            </div>
+            <div class="terminal-gallery-caption"><span class="live-dot"></span><span data-gallery-caption>Focus : conversation et diff permanent, sans panneau compte.</span></div>
           </div>
-          <div class="hero-actions">
-            <a class="btn btn-primary" href="/portal">Ouvrir mon espace</a>
-            <a class="btn btn-ghost" href="#brancher">Voir l’intégration API</a>
+          <div class="terminal-gallery-thumbs" role="tablist" aria-label="Captures de VALARIA Code">
+            <button type="button" class="terminal-thumb is-active" role="tab" aria-selected="true" data-gallery-thumb="0">Focus</button>
+            <button type="button" class="terminal-thumb" role="tab" aria-selected="false" data-gallery-thumb="1">Studio</button>
+            <button type="button" class="terminal-thumb" role="tab" aria-selected="false" data-gallery-thumb="2">Diff</button>
+            <button type="button" class="terminal-thumb" role="tab" aria-selected="false" data-gallery-thumb="3">Approbation</button>
+            <button type="button" class="terminal-thumb" role="tab" aria-selected="false" data-gallery-thumb="4">Splash</button>
           </div>
         </div>
-        <figure class="cli-shot">
-          <div class="cli-shot-bar">
-            <span class="terminal-dots"><i></i><i></i><i></i></span>
-            <span>valaria-code — terminal</span>
-            <span class="cli-shot-status">en ligne</span>
-          </div>
-          <img src="/assets/valaria-code.png?v={{APP_VERSION}}" alt="Interface VALARIA Code : conversation de l’agent à gauche, fichiers modifiés et diff à droite." loading="lazy">
-          <figcaption>Conversation, fichiers modifiés et diff réunis dans une seule vue.</figcaption>
-        </figure>
       </div>
     </section>
 
-    <section class="site-section" id="capacites" aria-labelledby="capacites-title">
-      <div class="section-head">
-        <p class="eyebrow">Fonctionnalités</p>
-        <h2 id="capacites-title">Tout le nécessaire pour partager une API.</h2>
-        <p class="section-lede">Accès, limites, facturation et sécurité réunis dans une console claire.</p>
-      </div>
-      <div class="feature-grid">
-        <article class="feature-card">
-          <span class="feature-icon">01</span>
-          <h3>Clés dérivées</h3>
-          <p>Un accès par personne ou par projet, révocable et régénérable en un clic.</p>
-        </article>
-        <article class="feature-card">
-          <span class="feature-icon">02</span>
-          <h3>Quotas maîtrisés</h3>
-          <p>Tokens, requêtes et crédit, avec débit et concurrence limités par clé.</p>
-        </article>
-        <article class="feature-card">
-          <span class="feature-icon">03</span>
-          <h3>Coûts suivis</h3>
-          <p>Chaque requête est mesurée et débitée de votre crédit, sans surprise.</p>
-        </article>
-        <article class="feature-card">
-          <span class="feature-icon">04</span>
-          <h3>Compatible SDK</h3>
-          <p>OpenAI et Anthropic : changez l'URL de base et la clé, rien d'autre.</p>
-        </article>
-        <article class="feature-card">
-          <span class="feature-icon">05</span>
-          <h3>Sécurité intégrée</h3>
-          <p>Rate limiting, HTTPS, audit et chiffrement de la clé fournisseur au repos.</p>
-        </article>
-        <article class="feature-card">
-          <span class="feature-icon">06</span>
-          <h3>Pass sans surprise</h3>
-          <p>Un accès de 7, 14 ou 30 jours selon le pass, renouvelable manuellement, arrêté à la date ou au crédit site.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="site-section" id="brancher" aria-labelledby="brancher-title">
-      <div class="section-head">
-        <p class="eyebrow">Intégration</p>
-        <h2 id="brancher-title">Trois étapes, aucun changement de SDK.</h2>
+    <section class="section section-steps" id="brancher">
+      <div class="section-head section-head--split" data-reveal>
+        <div><p class="eyebrow">Démarrer</p><h2>Trois étapes, deux chemins.</h2></div>
+        <p class="section-lede">Créez votre espace, puis choisissez l’API pour vos outils ou le CLI pour votre terminal.</p>
       </div>
       <ol class="site-steps">
-        <li>
-          <h3>Créez votre compte</h3>
-          <p>Un code de vérification par email, puis votre clé API dans l'espace.</p>
+        <li data-reveal>
+          <span class="step-number">01</span>
+          <div><h3>Créez votre espace</h3><p>Vérification email, clé personnelle et pass actif. Une seule clé fournisseur reste côté serveur.</p><a class="text-link" href="/signup">Créer mon compte</a></div>
         </li>
-        <li>
-          <h3>Pointez votre client</h3>
-          <p>Remplacez l'URL de base et la clé dans votre SDK ou votre outil.</p>
-          <pre class="mini-code">OPENAI_BASE_URL=https://api.votre-domaine.fr/v1
-OPENAI_API_KEY=sk-dsk-…
-
-ANTHROPIC_BASE_URL=https://api.votre-domaine.fr/anthropic
-ANTHROPIC_AUTH_TOKEN=sk-dsk-…</pre>
+        <li data-reveal>
+          <span class="step-number">02</span>
+          <div><h3>Branchez l’API ou le CLI</h3><p>Pour l’API : URL de base et clé. Pour le CLI : <code>npm install -g valaria-code</code>, puis <code>valaria login</code>.</p><pre class="mini-code">npm install -g valaria-code
+valaria login
+valaria</pre></div>
         </li>
-        <li>
-          <h3>Suivez votre consommation</h3>
-          <p>Quotas, crédit et dernières requêtes sont disponibles dans votre espace.</p>
+        <li data-reveal>
+          <span class="step-number">03</span>
+          <div><h3>Travaillez avec vos limites</h3><p>Quotas, crédit et appareils restent visibles dans votre espace. Vous pouvez révoquer un accès à tout moment.</p><a class="text-link" href="/portal">Ouvrir mon espace</a></div>
         </li>
       </ol>
     </section>
 
-    <section class="site-section site-cta" aria-labelledby="cta-title">
+    <section class="control-band">
+      <div class="control-band-inner" data-reveal>
+        <div><p class="eyebrow eyebrow--light">Contrôle</p><h2>Votre clé. Vos limites. Votre trace.</h2></div>
+        <div class="control-points">
+          <div><strong>Par personne</strong><span>Clé dérivée, quota et crédit indépendants.</span></div>
+          <div><strong>Par action</strong><span>Approbation avant écriture et commande dans VALARIA Code.</span></div>
+          <div><strong>Par appareil</strong><span>Jeton révocable depuis le portail, sans partager la clé maîtresse.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="site-cta site-cta-v2" aria-labelledby="cta-title" data-reveal>
       <p class="eyebrow">Commencer</p>
-      <h2 id="cta-title">Votre espace est prêt.</h2>
-      <p>Créez un compte, générez votre clé et branchez votre client en quelques minutes.</p>
-      <a class="btn btn-primary" href="/signup">Créer mon compte</a>
+      <h2 id="cta-title">Votre prochain projet<br>commence dans le terminal.</h2>
+      <p>Installez VALARIA Code ou passez par l’API. Le même espace garde vos accès, vos quotas et votre historique.</p>
+      <div class="hero-actions"><a class="btn btn-primary" href="/signup">Créer mon compte</a><a class="btn btn-ghost" href="/portal">Ouvrir mon espace</a></div>
     </section>
   </main>
 
-  <footer class="site-footer">
+  <footer class="site-footer landing-footer">
     <span>VALARIA Gateway API</span>
     <span class="site-footer-links">
-      <a href="/portal">Mon espace</a>
+      <a href="#surfaces">Produit</a>
       <a href="#cli">VALARIA Code</a>
-      <a href="#brancher">Intégration</a>
+      <a href="#brancher">Démarrer</a>
+      <a href="/portal">Mon espace</a>
     </span>
   </footer>
 
   <script src="/assets/landing.js?v={{APP_VERSION}}" defer></script>
 </body>
 </html>
-
-
-
-
-
