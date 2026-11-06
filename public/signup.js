@@ -7,7 +7,7 @@
   const $ = (selector) => document.querySelector(selector);
   const NF = new Intl.NumberFormat('fr-FR');
   const state = { busy: false, timers: {} };
-  const turnstile = { siteKey: null, token: null, loading: null };
+  const captcha = { provider: null, siteKey: null, token: null, widget: null, loading: null };
 
   const DEVICE_ID = (() => {
     try {
@@ -80,41 +80,57 @@
     }, 1000);
   }
 
-  function loadTurnstileScript() {
-    if (window.turnstile) return Promise.resolve(window.turnstile);
-    if (turnstile.loading) return turnstile.loading;
-    turnstile.loading = new Promise((resolve, reject) => {
+  function loadCaptchaScript(provider) {
+    const api = provider === 'hcaptcha' ? window.hcaptcha : window.turnstile;
+    if (api) return Promise.resolve(api);
+    if (captcha.loading) return captcha.loading;
+    captcha.loading = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.src = provider === 'hcaptcha'
+        ? 'https://js.hcaptcha.com/1/api.js?render=explicit'
+        : 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
       script.async = true;
       script.defer = true;
-      script.onload = () => resolve(window.turnstile);
+      script.onload = () => resolve(provider === 'hcaptcha' ? window.hcaptcha : window.turnstile);
       script.onerror = () => reject(new Error('Impossible de charger la vérification anti-bot.'));
       document.head.appendChild(script);
     });
-    return turnstile.loading;
+    return captcha.loading;
   }
 
-  async function initTurnstile(siteKey) {
-    if (!siteKey) return;
-    turnstile.siteKey = siteKey;
+  async function initCaptcha(config) {
+    const provider = config?.captchaProvider || 'turnstile';
+    const siteKey = config?.captchaSiteKey || config?.turnstileSiteKey || null;
+    captcha.provider = provider;
+    captcha.siteKey = siteKey;
+    if (!siteKey || provider === 'none') return;
     try {
-      await loadTurnstileScript();
+      await loadCaptchaScript(provider);
       const slot = $('#signup-turnstile');
-      if (slot) {
-        slot.classList.remove('hidden');
-        slot.innerHTML = '';
-        if (window.turnstile) {
-          window.turnstile.render(slot, {
-            sitekey: siteKey,
-            callback: (token) => { turnstile.token = token; },
-            'expired-callback': () => { turnstile.token = null; },
-            'error-callback': () => { turnstile.token = null; },
-          });
-        }
-      }
+      if (!slot) return;
+      slot.classList.remove('hidden');
+      slot.innerHTML = '';
+      const callbacks = {
+        sitekey: siteKey,
+        theme: 'dark',
+        callback: (token) => { captcha.token = token; },
+        'expired-callback': () => { captcha.token = null; },
+        'error-callback': () => { captcha.token = null; },
+      };
+      if (provider === 'hcaptcha' && window.hcaptcha) captcha.widget = window.hcaptcha.render(slot, callbacks);
+      else if (window.turnstile) captcha.widget = window.turnstile.render(slot, callbacks);
     } catch (err) {
       showError(err.message);
+    }
+  }
+
+  function resetCaptcha() {
+    captcha.token = null;
+    try {
+      if (captcha.provider === 'hcaptcha' && window.hcaptcha && captcha.widget != null) window.hcaptcha.reset(captcha.widget);
+      else if (window.turnstile && captcha.widget != null) window.turnstile.reset(captcha.widget);
+    } catch {
+      /* ignore */
     }
   }
 
@@ -132,7 +148,7 @@
     try {
       const data = await api('/signup/request', {
         method: 'POST',
-        body: { email, ...deviceFields(), turnstileToken: turnstile.token ?? null },
+        body: { email, ...deviceFields(), captchaToken: captcha.token ?? null },
       });
       $('#signup-sent-note').textContent = `Code envoyé à ${email} (valable ${data.expiresMinutes ?? 10} minutes). Vérifiez aussi les spams.`;
       $('#signup-request-form').classList.add('hidden');
@@ -149,6 +165,7 @@
       if (err.retryAfterSeconds) startCountdown(err.retryAfterSeconds);
     } finally {
       setBusy(false, button, 'Recevoir mon code');
+      resetCaptcha();
     }
   }
 
@@ -207,7 +224,7 @@
         $('#signup-request-btn').disabled = true;
         return;
       }
-      await initTurnstile(config.turnstileSiteKey || null);
+      await initCaptcha(config);
     } catch {
       showError('Impossible de vérifier la configuration de l’inscription.');
     }
@@ -225,3 +242,4 @@
   $('#signup-back').addEventListener('click', resetFlow);
   init();
 })();
+

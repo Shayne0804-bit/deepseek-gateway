@@ -51,6 +51,7 @@
         <h2>Créer un compte</h2>
         <p class="small muted">Un code à usage unique sera envoyé à votre adresse email.</p>
         <div id="signup-error" class="login-error" role="alert" aria-live="assertive"></div>
+        <div id="signup-turnstile" class="turnstile-slot hidden"></div>
 
         <form id="signup-request-form" novalidate>
           <label class="field full">
@@ -58,7 +59,6 @@
             <input type="email" id="signup-email" name="email" placeholder="vous@gmail.com" autocomplete="email" maxlength="254" required>
             <small>Un pass d'essai est créé après validation. Utilisez une adresse que vous consultez.</small>
           </label>
-          <div id="signup-turnstile" class="turnstile-slot hidden"></div>
           <button type="submit" class="btn btn-primary btn-block" id="signup-request-btn">Recevoir mon code</button>
         </form>
 
