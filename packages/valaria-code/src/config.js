@@ -9,6 +9,8 @@ import path from 'node:path';
 
 export const DEFAULT_BASE_URL = process.env.VALARIA_GATEWAY_URL || 'https://api.valariamenu.com';
 export const DEFAULT_MODEL = 'gpt-5';
+export const DEFAULT_LAYOUT = 'focus';
+export const LAYOUTS = ['focus', 'studio', 'compact'];
 
 export function homeDir() {
   return path.resolve(process.env.VALARIA_HOME || path.join(os.homedir(), '.valaria'));
@@ -37,6 +39,7 @@ export function loadConfig() {
       deviceName: data.deviceName || 'VALARIA Code',
       clientName: data.clientName || null,
       model: data.model || DEFAULT_MODEL,
+      layout: LAYOUTS.includes(data.layout) ? data.layout : DEFAULT_LAYOUT,
     };
   } catch {
     return null;
@@ -54,6 +57,7 @@ export function saveConfig(config) {
     deviceName: config.deviceName || 'VALARIA Code',
     clientName: config.clientName || null,
     model: config.model || DEFAULT_MODEL,
+    layout: LAYOUTS.includes(config.layout) ? config.layout : DEFAULT_LAYOUT,
     savedAt: new Date().toISOString(),
   };
   fs.writeFileSync(file, `${JSON.stringify(payload, null, 2)}\n`, { mode: 0o600 });
@@ -76,5 +80,6 @@ export function resolveAuthConfig(options = {}) {
     tokenSource: options.token ? 'option' : envToken ? 'env' : stored?.token ? 'config' : null,
     config: stored,
     model: options.model || stored?.model || DEFAULT_MODEL,
+    layout: LAYOUTS.includes(options.layout) ? options.layout : (stored?.layout || DEFAULT_LAYOUT),
   };
 }

@@ -56,7 +56,7 @@ function help() {
     valaria status               quotas, pass et compte
     valaria models               lister les modèles autorisés
     valaria chat "..."           envoyer un message sans TUI
-    valaria preview              aperçu statique de l'interface VALARIA
+    valaria preview              aperçu statique de l'interface
     valaria --version | --help
 
   OPTIONS
@@ -65,6 +65,7 @@ function help() {
     --device-name <nom>          nom affiché dans le portail
     --no-open                    ne pas ouvrir le navigateur automatiquement
     --no-onboarding              ne pas demander Claude/Codex au premier login
+    --layout <focus|studio|compact>  interface au démarrage
     --home <dir>                 dossier de configuration
 
   VARIABLES
@@ -197,7 +198,7 @@ async function commandChat(flags) {
   }
 }
 
-async function commandPreview() {
+async function commandPreview(flags = {}) {
   renderScreen({
     messages: [
       { role: 'user', content: 'Ajoute un test pour la fonction de calcul.' },
@@ -208,6 +209,8 @@ async function commandPreview() {
     streaming: false,
     agentRunning: false,
     mode: 'agent',
+    layout: ['focus', 'studio', 'compact'].includes(flags.layout) ? flags.layout : 'focus',
+    overlay: null,
     tick: 0,
     version: PKG.version,
     account: {
@@ -241,11 +244,16 @@ async function commandTui(flags) {
       client,
       config,
       model: auth.model,
+      layout: auth.layout,
       version: PKG.version,
       account: me,
       onModelChange: (model) => {
         const current = loadConfig() || {};
-        saveConfig({ ...current, url: auth.url, token: auth.token, model, deviceName: current.deviceName || 'VALARIA Code' });
+        saveConfig({ ...current, url: auth.url, token: auth.token, model, layout: current.layout || auth.layout, deviceName: current.deviceName || 'VALARIA Code' });
+      },
+      onPreferencesChange: ({ layout }) => {
+        const current = loadConfig() || {};
+        saveConfig({ ...current, url: auth.url, token: auth.token, model: auth.model, layout, deviceName: current.deviceName || 'VALARIA Code' });
       },
     });
     return 0;
@@ -280,7 +288,7 @@ async function main() {
     case 'ask':
       return commandChat(flags);
     case 'preview':
-      return commandPreview();
+      return commandPreview(flags);
     case '':
       return commandTui(flags);
     default:

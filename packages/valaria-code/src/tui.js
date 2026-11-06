@@ -15,11 +15,17 @@ Tu travailles uniquement avec du texte et du code : tu ne génères pas d'images
 Quand on te demande un fichier complet, retourne uniquement son contenu dans un bloc de code.
 Ne prétends jamais avoir exécuté une commande ou modifié un fichier avant l'approbation de l'utilisateur.`;
 
+export const LAYOUT_LABELS = {
+  focus: 'Focus',
+  studio: 'Studio',
+  compact: 'Compact',
+};
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function createTui({ client, config, model, version = '0.3.0', color = supportsColor(), account = null, onModelChange = null } = {}) {
+export function createTui({ client, config, model, layout = 'focus', version = '0.4.0', color = supportsColor(), account = null, onModelChange = null, onPreferencesChange = null } = {}) {
   const state = {
     messages: [],
     input: '',
@@ -30,6 +36,8 @@ export function createTui({ client, config, model, version = '0.3.0', color = su
     agentRunning: false,
     agentAbort: null,
     mode: 'agent',
+    layout: ['focus', 'studio', 'compact'].includes(layout) ? layout : 'focus',
+    overlay: null,
     approval: null,
     abort: null,
     closed: false,
@@ -199,7 +207,7 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
     const argument = rest.join(' ').trim();
     switch (command) {
       case 'help':
-        systemMessage('⚙ Votre message est exécuté par l’agent (lecture/patch/tests, avec approbations).\n/chat <message> · /agent <tâche> · /files [dossier] · /read <fichier>\n/edit <fichier> <instruction> · /run <commande> · /models · /model <nom> · /usage · /clear · /quit\n\nEntrée : envoyer · Ctrl+C : annuler · Ctrl+L : redessiner');
+        systemMessage('⚙ Votre message est exécuté par l’agent (lecture/patch/tests, avec approbations).\n/chat <message> · /agent <tâche> · /files [dossier] · /read <fichier>\n/edit <fichier> <instruction> · /run <commande> · /models · /model <nom> · /account\n/layout focus|studio|compact · /mode agent|chat · /usage · /clear · /quit\n\nCtrl+O : compte · Ctrl+P : interface · Ctrl+C : annuler');
         break;
       case 'agent': {
         await runAgentTask(argument, { explicit: true });
@@ -219,6 +227,19 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
         systemMessage(`⚙ Mode ${state.mode === 'agent' ? 'agent' : 'conversation'}.`);
         break;
       }
+      case 'layout': {
+        const next = ['focus', 'studio', 'compact'].includes(argument)
+          ? argument
+          : state.layout === 'focus' ? 'studio' : state.layout === 'studio' ? 'compact' : 'focus';
+        state.layout = next;
+        if (onPreferencesChange) onPreferencesChange({ layout: next });
+        systemMessage(`⚙ Interface : ${LAYOUT_LABELS[next]}. /layout focus|studio|compact pour changer.`);
+        break;
+      }
+      case 'account':
+      case 'compte':
+        state.overlay = 'account';
+        break;
       case 'files': {
         try {
           const files = listFiles(root, argument || '.', 160);
@@ -350,6 +371,26 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
 
   function onKey(key) {
     if (state.closed) return;
+    if (state.overlay) {
+      if (key === '\u0003' || key === '\u001b' || key === '\r' || key === '\n' || key === 'q') {
+        state.overlay = null;
+        draw();
+      }
+      return;
+    }
+    if (key === '\u000f') { // Ctrl+O : compte
+      state.overlay = 'account';
+      draw();
+      return;
+    }
+    if (key === '\u0010') { // Ctrl+P : changer d'interface
+      const order = ['focus', 'studio', 'compact'];
+      const next = order[(order.indexOf(state.layout) + 1) % order.length];
+      state.layout = next;
+      if (onPreferencesChange) onPreferencesChange({ layout: next });
+      draw();
+      return;
+    }
     if (key === '\u0003') { // Ctrl+C
       if (state.agentRunning) {
         if (typeof state.approval?.resolve === 'function') state.approval.resolve(false);
@@ -420,7 +461,7 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
     if (state.streaming || state.agentRunning || state.approval || state.tick === 0) scheduleRender();
   }, 140);
 
-  systemMessage(`⚙ VALARIA Code prête · projet ${root}\nDécrivez votre tâche : l’agent lit, propose et modifie avec votre approbation. /help pour les commandes.`);
+  systemMessage(`⚙ VALARIA Code prête · projet ${root}\nDécrivez votre tâche : l’agent lit, propose et modifie avec votre approbation. /help · Ctrl+O compte · Ctrl+P interface.`);
   draw();
   return new Promise((resolve) => {
     const timer = setInterval(() => {
@@ -438,8 +479,7 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
 export function renderScreen(state, { client, config, color = true, root = process.cwd() } = {}) {
   const cols = Math.max(60, Math.min(Number(process.stdout.columns) || 96, 120));
   const rows = Math.max(18, Number(process.stdout.rows) || 28);
-  const lines = [];
-  const add = (value = '') => lines.push(value);
+  const layout = ['focus', 'studio', 'compact'].includes(state.layout) ? state.layout : 'focus';
   const c = (text, hex) => paint(text, hex, color);
   const b = (text) => bold(text, color);
   const d = (text) => dim(text, color);
@@ -447,17 +487,15 @@ export function renderScreen(state, { client, config, color = true, root = proce
   const nf = new Intl.NumberFormat('fr-FR');
   const usd = (value) => `${nf.format(Math.round((Number(value) || 0) * 100) / 100)} $`;
   const active = Boolean(state.streaming || state.agentRunning || state.approval);
+  const tick = Number(state.tick) || 0;
   const spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-  const pulse = active ? spinner[state.tick % spinner.length] : (state.tick % 2 ? '●' : '○');
+  const pulse = active ? spinner[tick % spinner.length] : (tick % 2 ? '●' : '○');
   const account = state.account || null;
-  const clientName = account?.client?.name || 'compte VALARIA';
   const planName = account?.plan?.name || account?.client?.period || '—';
-  const quota = account?.quota || {};
-  const req = quota.requests || {};
-  const credit = quota.usd || {};
-  const model = state.model || account?.model || 'modèle';
+  const req = account?.quota?.requests || {};
+  const credit = account?.quota?.usd || {};
+  const model = state.model || 'modèle';
   const mode = state.mode === 'chat' ? 'conversation' : 'agent';
-
   const pct = (used, limit) => (!limit ? 0 : Math.max(0, Math.min(100, Math.round((Number(used || 0) / Number(limit)) * 100))));
   const bar = (used, limit, width = 10) => {
     if (!limit) return c('∞', COLORS.dim);
@@ -468,17 +506,27 @@ export function renderScreen(state, { client, config, color = true, root = proce
   const expires = account?.client?.expiresAt ? new Date(account.client.expiresAt) : null;
   const daysLeft = expires ? Math.max(0, Math.ceil((expires.getTime() - Date.now()) / 86_400_000)) : null;
   const expiresLabel = expires ? expires.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '—';
+  if (state.overlay === 'account') {
+    return renderAccountOverlay(state, { color, cols, rows });
+  }
 
-  add(`  ${c('V', COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${d('agent de code · terminal')}   ${c(pulse, active ? COLORS.amber : COLORS.accent)} ${d(account ? 'en ligne' : 'hors ligne')}   ${d(`v${state.version || '0.3.0'}`)}`);
+  const lines = [];
+  const add = (value = '') => lines.push(value);
+  const head = `  ${c('V', COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${pulse} ${account ? 'en ligne' : 'hors ligne'}   ${d(LAYOUT_LABELS[layout])}   ${c(model, COLORS.amber)}   ${d(`v${state.version || '0.4.0'}`)}`;
+  add(head);
   add(`  ${d('─'.repeat(Math.max(0, cols - 4)))}`);
 
-  const sidebar = cols >= 88 ? 25 : 0;
-  const mainWidth = cols - (sidebar ? sidebar + 4 : 2);
-  const bodyHeight = Math.max(8, rows - (sidebar ? 6 : 7));
+  const sidebar = layout === 'studio' && cols >= 88 ? 24 : 0;
+  const mainWidth = cols - (sidebar ? sidebar + 4 : 4);
+  let bodyHeight = rows - (layout === 'compact' ? 7 : 6);
+  if (layout === 'compact') {
+    add(`  ${d(`${planName} · ${nf.format(req.used || 0)}/${req.limit ? nf.format(req.limit) : '∞'} req · ${usd(credit.used)}${credit.limit ? `/${usd(credit.limit)}` : ''} · ${daysLeft == null ? '—' : `${daysLeft} j`} · ${truncate(model, 25)}`)}`);
+  }
+
   const left = [];
   if (sidebar) {
     left.push(c('COMPTE', COLORS.muted));
-    left.push(` ${b(truncate(clientName, sidebar - 2))}`);
+    left.push(` ${b(truncate(account?.client?.name || 'compte', sidebar - 2))}`);
     left.push(` ${d(truncate(`pass ${planName}`, sidebar - 2))}`);
     left.push('');
     left.push(c('REQUÊTES', COLORS.muted));
@@ -496,8 +544,6 @@ export function renderScreen(state, { client, config, color = true, root = proce
     left.push(` ${c(truncate(model, sidebar - 2), COLORS.amber)}`);
     left.push(c('MODE', COLORS.muted));
     left.push(` ${d(mode)}`);
-  } else {
-    add(`  ${d(`${planName} · ${nf.format(req.used || 0)}/${req.limit ? nf.format(req.limit) : '∞'} req · ${usd(credit.used)}${credit.limit ? `/${usd(credit.limit)}` : ''} · ${mode} · ${truncate(model, 22)}`)}`);
   }
 
   const conversation = [];
@@ -526,9 +572,7 @@ export function renderScreen(state, { client, config, color = true, root = proce
     }
   }
   const main = conversation.slice(-Math.max(2, bodyHeight - approvalLines.length)).concat(approvalLines);
-  while (main.length < bodyHeight) main.unshift('');
-  if (!sidebar) add('');
-
+  while (main.length < bodyHeight) main.push('');
   for (let index = 0; index < bodyHeight; index += 1) {
     const mainLine = truncate(main[index] || '', mainWidth);
     if (sidebar) add(`  ${pad(truncate(left[index] || '', sidebar), sidebar)} ${d('│')} ${mainLine}`);
@@ -536,14 +580,56 @@ export function renderScreen(state, { client, config, color = true, root = proce
   }
 
   add(`  ${d('─'.repeat(Math.max(0, cols - 4)))}`);
-  const prompt = state.approval ? `${c('y', COLORS.accent)}/${c('n', COLORS.danger)}` : `${c('>', COLORS.accent)} ${truncate(state.input || '', cols - 8)}${active ? c('▌', COLORS.accent) : ''}`;
-  add(`  ${prompt}`);
-  add(`  ${d(truncate(state.status || 'prêt', cols - 34))} ${d('· Entrée envoyer · / commandes · Ctrl+C annuler')}`);
+  add(`  ${state.approval ? `${c('y', COLORS.accent)} / ${c('n', COLORS.danger)}` : `${c('>', COLORS.accent)} ${truncate(state.input || '', cols - 6)}${active ? c('▌', COLORS.accent) : ''}`}`);
+  add(`  ${d(truncate(state.status || 'prêt', Math.max(12, cols - 42)))} ${d(`· ${mode} · Ctrl+O compte · Ctrl+P interface · /help`)}`);
   process.stdout.write(`\x1b[H\x1b[2J${lines.join('\n')}\x1b[?25l`);
-}
 
+  function renderAccountOverlay(stateValue, { color: overlayColor, cols: overlayCols, rows: overlayRows }) {
+    const oc = (text, hex) => paint(text, hex, overlayColor);
+    const ob = (text) => bold(text, overlayColor);
+    const od = (text) => dim(text, overlayColor);
+    const onf = new Intl.NumberFormat('fr-FR');
+    const ousd = (value) => `${onf.format(Math.round((Number(value) || 0) * 100) / 100)} $`;
+    const oAccount = stateValue.account || null;
+    const oQuota = oAccount?.quota || {};
+    const oReq = oQuota.requests || {};
+    const oCredit = oQuota.usd || {};
+    const oPlan = oAccount?.plan?.name || oAccount?.client?.period || '—';
+    const oExpiry = oAccount?.client?.expiresAt ? new Date(oAccount.client.expiresAt) : null;
+    const oDays = oExpiry ? Math.max(0, Math.ceil((oExpiry.getTime() - Date.now()) / 86_400_000)) : null;
+    const width = Math.min(72, overlayCols - 8);
+    const oBar = (used, limit) => {
+      if (!limit) return oc('∞', COLORS.dim);
+      const filled = Math.round((Math.max(0, Math.min(100, Math.round((Number(used || 0) / Number(limit)) * 100))) / 100) * 28);
+      return oc('█'.repeat(filled), COLORS.accent) + oc('░'.repeat(Math.max(0, 28 - filled)), COLORS.border);
+    };
+    const out = [];
+    out.push('');
+    out.push(`  ${oc('V', COLORS.accent)}  ${ob('VALARIA')} ${oc('CODE', COLORS.accent2)}   ${od('votre compte')}`);
+    out.push(`  ${od('─'.repeat(width))}`);
+    out.push('');
+    if (!oAccount) {
+      out.push(`  ${od('Compte en cours de chargement…')}`);
+    } else {
+      out.push(`  ${ob(oAccount.client?.name || 'Compte')}  ${od(oAccount.client?.email || '')}`);
+      out.push(`  ${od('PASS')} ${oc(oPlan, COLORS.amber)}   ${od('fin')} ${oDays == null ? '—' : `${oDays} j · ${oExpiry.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}`}`);
+      out.push('');
+      out.push(`  ${od('REQUÊTES')}`);
+      out.push(`  ${oBar(oReq.used, oReq.limit)}  ${onf.format(oReq.used || 0)} / ${oReq.limit ? onf.format(oReq.limit) : '∞'}`);
+      out.push('');
+      out.push(`  ${od('CRÉDIT')}`);
+      out.push(`  ${oBar(oCredit.used, oCredit.limit)}  ${ousd(oCredit.used)} / ${oCredit.limit ? ousd(oCredit.limit) : '∞'}`);
+      out.push('');
+      out.push(`  ${od('MODÈLE')} ${oc(stateValue.model || '—', COLORS.amber)}   ${od('MODE')} ${stateValue.mode === 'chat' ? 'conversation' : 'agent'}   ${od('INTERFACE')} ${LAYOUT_LABELS[stateValue.layout] || 'Focus'}`);
+    }
+    out.push('');
+    out.push(`  ${od('Entrée / Échap fermer')}`);
+    process.stdout.write(`\x1b[H\x1b[2J${out.join('\n')}\x1b[?25l`);
+  }
+}
 export async function runPlainChat({ client, messages, model, onDelta }) {
   return client.stream(messages, { model, onDelta });
 }
 
 export const runTui = createTui;
+

@@ -34,6 +34,26 @@ valaria preview         # aperçu statique de l'interface
 valaria logout          # oublier cet appareil
 ```
 
+## Interfaces
+
+Trois dispositions au choix, sans panneau permanent imposé :
+
+- **Focus** (défaut) : uniquement la conversation et le composeur ;
+- **Studio** : compte, pass, quotas et modèle dans une colonne latérale ;
+- **Compact** : une ligne de synthèse du compte au-dessus de la conversation.
+
+```bash
+valaria --layout studio
+valaria preview --layout studio
+```
+
+Dans la TUI :
+
+- `/layout focus|studio|compact` ;
+- `Ctrl+P` change d’interface ;
+- `Ctrl+O` ou `/account` ouvre l’écran compte et quotas ;
+- `Échap`/`Entrée` ferme cet écran.
+
 ## Dans la TUI
 
 - `Entrée` envoyer un message — il lance l’agent par défaut.

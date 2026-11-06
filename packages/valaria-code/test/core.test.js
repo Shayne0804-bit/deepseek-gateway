@@ -31,11 +31,12 @@ test('configuration locale : sauvegarde, relecture et oubli', () => {
   const home = tmpDir();
   process.env.VALARIA_HOME = home;
   try {
-    saveConfig({ url: 'http://127.0.0.1:1234/v1', token: 'vlt_test', model: 'gpt-5' });
+    saveConfig({ url: 'http://127.0.0.1:1234/v1', token: 'vlt_test', model: 'gpt-5', layout: 'studio' });
     const config = loadConfig();
     assert.equal(config.url, 'http://127.0.0.1:1234');
     assert.equal(config.token, 'vlt_test');
     assert.equal(config.model, 'gpt-5');
+    assert.equal(config.layout, 'studio');
     clearConfig();
     assert.equal(loadConfig(), null);
   } finally {
@@ -123,8 +124,9 @@ test('TUI : en-tête de marque et composeur', () => {
       streaming: false,
       approval: null,
       model: 'gpt-5',
-      version: '0.3.0',
+      version: '0.4.0',
       mode: 'agent',
+      layout: 'studio',
       account: {
         client: { name: 'Léa', expiresAt: new Date(Date.now() + 12 * 86400000).toISOString() },
         plan: { name: 'Créateur' },
@@ -140,6 +142,44 @@ test('TUI : en-tête de marque et composeur', () => {
   assert.match(output, /REQUÊTES/);
   assert.match(output, /Créateur/);
   assert.match(output, /const a = 1/);
+});
+
+test('TUI layouts : focus épuré, studio avec compte, overlay compte', () => {
+  const capture = (state) => {
+    const chunks = [];
+    const original = process.stdout.write;
+    process.stdout.write = (chunk) => { chunks.push(String(chunk)); return true; };
+    try {
+      renderScreen(state, { client: {}, config: {}, color: false });
+    } finally {
+      process.stdout.write = original;
+    }
+    return chunks.join('');
+  };
+  const base = {
+    messages: [{ role: 'user', content: 'salut' }],
+    input: '',
+    status: 'prêt',
+    streaming: false,
+    agentRunning: false,
+    approval: null,
+    model: 'gpt-5',
+    version: '0.4.0',
+    mode: 'agent',
+    account: {
+      client: { name: 'Léa', expiresAt: new Date(Date.now() + 86400000).toISOString() },
+      plan: { name: 'Créateur' },
+      quota: { requests: { used: 2, limit: 100 }, usd: { used: 1, limit: 8 } },
+    },
+  };
+  const focus = capture({ ...base, layout: 'focus' });
+  assert.match(focus, /Focus/);
+  assert.doesNotMatch(focus, /REQUÊTES/);
+  const studio = capture({ ...base, layout: 'studio' });
+  assert.match(studio, /REQUÊTES/);
+  const overlay = capture({ ...base, layout: 'focus', overlay: 'account' });
+  assert.match(overlay, /votre compte/);
+  assert.match(overlay, /REQUÊTES/);
 });
 
 test('onboarding : familles Claude et Codex', () => {
