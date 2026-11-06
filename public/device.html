@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0a0e0c">
+  <meta name="app-version" content="{{APP_VERSION}}">
+  <title>Connecter un appareil — VALARIA Gateway API</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/styles.css?v={{APP_VERSION}}">
+  <link rel="stylesheet" href="/assets/theme.css?v={{APP_VERSION}}">
+</head>
+<body class="public-page device-page">
+  <div class="site-bg" aria-hidden="true"></div>
+  <a class="skip-link" href="#main">Aller au contenu</a>
+  <header class="site-header">
+    <a class="site-brand" href="/">
+      <img class="brand-logo" src="/assets/logo-mark.svg?v={{APP_VERSION}}" alt="" aria-hidden="true" width="34" height="34">
+      <span class="brand-name">VALARIA Gateway</span>
+    </a>
+    <nav class="site-nav" aria-label="Navigation principale">
+      <a href="/">Accueil</a>
+      <a href="/portal">Mon espace</a>
+    </nav>
+    <div class="site-status" id="site-status" aria-live="polite"><span class="dot"></span><span class="status-text">vérification…</span></div>
+  </header>
+
+  <main id="main">
+    <section class="portal-login device-login" aria-labelledby="device-title">
+      <div class="portal-login-copy">
+        <p class="hero-kicker">Connexion d’appareil</p>
+        <h1 id="device-title">Autorisez votre terminal.</h1>
+        <p>VALARIA Code demande à se connecter à votre compte. Vérifiez le code affiché dans le terminal avant d’autoriser.</p>
+        <ul class="portal-points">
+          <li>Le code est valable 10 minutes</li>
+          <li>Vous pouvez révoquer l’appareil plus tard</li>
+          <li>Aucune clé API n’est exposée</li>
+        </ul>
+        <p class="small muted">Vous pouvez fermer cette page après autorisation.</p>
+      </div>
+
+      <div class="panel portal-login-form device-card">
+        <div id="device-error" class="login-error" role="alert" aria-live="assertive"></div>
+        <div id="device-loading" class="device-loading">
+          <span class="live-dot"></span>
+          <span>Vérification de votre session…</span>
+        </div>
+
+        <div id="device-login-required" class="hidden">
+          <h2>Connectez-vous d’abord</h2>
+          <p class="small muted">Pour approuver cet appareil, connectez-vous à votre espace VALARIA.</p>
+          <p class="device-code-preview">Code demandé : <strong id="device-login-code">—</strong></p>
+          <a class="btn btn-primary btn-block" id="device-login-link" href="/portal">Se connecter</a>
+          <p class="small muted device-help">Après connexion, revenez sur cette page : le code sera conservé.</p>
+        </div>
+
+        <div id="device-approve-panel" class="hidden">
+          <h2>Approuver cet appareil</h2>
+          <p class="small muted" id="device-account"></p>
+          <form id="device-approve-form" novalidate>
+            <label class="field full">
+              <span>Code affiché dans le terminal</span>
+              <input type="text" id="device-code" name="code" placeholder="XXXX-XXXX" maxlength="12" autocomplete="one-time-code" spellcheck="false" required>
+            </label>
+            <button type="submit" class="btn btn-primary btn-block" id="device-approve-btn">Autoriser l’appareil</button>
+          </form>
+          <p class="small muted device-help">Si ce code ne vient pas de vous, refusez et fermez cette page.</p>
+        </div>
+
+        <div id="device-success" class="hidden">
+          <div class="device-success-mark">✓</div>
+          <h2>Appareil autorisé</h2>
+          <p class="small muted">Vous pouvez revenir à votre terminal. VALARIA Code recevra son accès automatiquement.</p>
+          <a class="btn btn-ghost btn-block" href="/portal">Ouvrir mon espace</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>VALARIA Gateway API</span>
+    <span class="site-footer-links"><a href="/portal">Mon espace</a><a href="/">Accueil</a></span>
+  </footer>
+  <script src="/assets/device.js?v={{APP_VERSION}}" defer></script>
+</body>
+</html>

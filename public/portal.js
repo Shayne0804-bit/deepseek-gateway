@@ -680,6 +680,44 @@
       </article>`).join('');
   }
 
+  function devicesMarkup(devices) {
+    if (!devices.length) {
+      return '<div class="empty-state"><strong>Aucun appareil connecté</strong><p>Vos terminaux VALARIA Code apparaîtront ici après autorisation depuis la page de connexion d’appareil.</p></div>';
+    }
+    return `<div class="device-list">${devices.map((device) => `
+      <div class="device-row">
+        <span class="device-icon">${icon('terminal')}</span>
+        <div class="device-main">
+          <strong>${esc(device.name || 'Appareil CLI')}</strong>
+          <span class="small muted">ajouté le ${fmtDate(device.createdAt)}${device.lastUsedAt ? ` · dernière activité ${fmtDate(device.lastUsedAt)}` : ' · jamais utilisé'}</span>
+        </div>
+        <span class="badge ${device.active ? 'badge-ok' : 'badge-muted'}">${device.active ? 'actif' : 'révoqué'}</span>
+        ${device.active ? `<button type="button" class="btn btn-ghost btn-sm" data-device-revoke="${esc(device.id)}" data-device-name="${esc(device.name || 'Appareil CLI')}">${icon('logout')}Révoquer</button>` : ''}
+      </div>`).join('')}</div>`;
+  }
+
+  async function loadDevices() {
+    const target = $('#portal-devices');
+    if (!target) return;
+    try {
+      const data = await api('/devices');
+      target.innerHTML = devicesMarkup(data.devices ?? []);
+    } catch (err) {
+      target.innerHTML = `<div class="alert danger">${esc(err.message)}</div>`;
+    }
+  }
+
+  async function revokeDevice(id, name) {
+    if (!window.confirm(`Révoquer l’accès de « ${name} » ? Ce terminal devra se reconnecter.`)) return;
+    try {
+      await api(`/devices/${id}`, { method: 'DELETE' });
+      await loadDevices();
+    } catch (err) {
+      const target = $('#portal-devices');
+      if (target) target.innerHTML = `<div class="alert danger">${esc(err.message)}</div>`;
+    }
+  }
+
   function keyDetailsMarkup(me) {
     if (!me.client.hasKey) {
       return '<div class="empty-state"><strong>Aucune clé API pour le moment</strong><p>Créez votre clé depuis le bouton en haut à droite. Elle sera affichée une seule fois.</p></div>';
@@ -1453,6 +1491,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     $('#portal-plan-grid').innerHTML = planGridMarkup(me);
     $('#plan-currency-note').textContent = planCurrencyNote();
     $('#portal-account-details').innerHTML = accountDetailsMarkup(me);
+    loadDevices();
     $('#portal-endpoints').innerHTML = endpointsMarkup(me);
     $('#portal-usage-table').innerHTML = usageTableMarkup(me);
     $('#portal-usage-hint').textContent = `${fmtInt(me.usage?.totals?.requests ?? 0)} requêtes au total`;
@@ -1485,6 +1524,21 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
   async function loadMe() {
     const me = await api('/me');
     renderMe(me);
+    redirectAfterLogin();
+  }
+
+  /** Retour vers une page interne apres connexion (ex. /device?code=...). */
+  function redirectAfterLogin() {
+    const raw = new URLSearchParams(location.search).get('next');
+    if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return;
+    let target;
+    try {
+      target = new URL(raw, location.origin);
+    } catch {
+      return;
+    }
+    if (target.origin !== location.origin || !target.pathname.startsWith('/device')) return;
+    location.assign(target.pathname + target.search);
   }
 
   async function loadCurrency() {
@@ -1571,6 +1625,11 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     });
     $('#user-nav-backdrop')?.addEventListener('click', () => setUserMenu(false));
     $('#profile-form')?.addEventListener('submit', saveProfile);
+    $('#refresh-devices')?.addEventListener('click', loadDevices);
+    document.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-device-revoke]');
+      if (button) revokeDevice(button.dataset.deviceRevoke, button.dataset.deviceName);
+    });
     const authTabs = [
       ['tab-key', 'key'],
       ['tab-email', 'email'],

@@ -77,6 +77,35 @@ CREATE TABLE IF NOT EXISTS portal_sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_portal_expires ON portal_sessions (expires_at);
 
+-- Autorisation d'appareil CLI (device flow) : codes courts, jetons révocables.
+CREATE TABLE IF NOT EXISTS device_codes (
+  id TEXT PRIMARY KEY,
+  device_hash TEXT NOT NULL UNIQUE,
+  user_code_hash TEXT NOT NULL,
+  device_name TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  client_id TEXT,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  approved_at TEXT,
+  consumed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_device_user_code ON device_codes (user_code_hash);
+CREATE INDEX IF NOT EXISTS idx_device_expires ON device_codes (expires_at);
+
+CREATE TABLE IF NOT EXISTS cli_tokens (
+  id TEXT PRIMARY KEY,
+  token_hash TEXT NOT NULL UNIQUE,
+  client_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  last_used_at TEXT,
+  revoked_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_cli_tokens_client ON cli_tokens (client_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_cli_tokens_hash ON cli_tokens (token_hash);
+
 CREATE TABLE IF NOT EXISTS admin_audit (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   created_at TEXT NOT NULL,
@@ -629,6 +658,83 @@ export function deletePortalSession(db, tokenHash) {
 
 export function cleanupPortalSessions(db, nowIso) {
   db.prepare('DELETE FROM portal_sessions WHERE expires_at <= ?').run(nowIso);
+}
+
+/* ------------------------ appareils / jetons CLI ----------------------- */
+
+export function insertDeviceCode(db, code) {
+  db.prepare(
+    `INSERT INTO device_codes
+       (id, device_hash, user_code_hash, device_name, status, created_at, expires_at)
+     VALUES (?, ?, ?, ?, 'pending', ?, ?)`,
+  ).run(code.id, code.deviceHash, code.userCodeHash, code.deviceName ?? null, code.createdAt, code.expiresAt);
+}
+
+export function getDeviceCodeByDeviceHash(db, deviceHash) {
+  return db.prepare('SELECT * FROM device_codes WHERE device_hash = ?').get(deviceHash);
+}
+
+export function getDeviceCodeByUserCodeHash(db, userCodeHash) {
+  return db.prepare('SELECT * FROM device_codes WHERE user_code_hash = ?').get(userCodeHash);
+}
+
+export function approveDeviceCode(db, userCodeHash, clientId, approvedAt) {
+  const row = db.prepare('SELECT * FROM device_codes WHERE user_code_hash = ?').get(userCodeHash);
+  if (!row || row.status !== 'pending' || row.expires_at <= approvedAt) return null;
+  const result = db.prepare(
+    `UPDATE device_codes
+        SET status = 'approved', client_id = ?, approved_at = ?
+      WHERE id = ? AND status = 'pending'`,
+  ).run(clientId, approvedAt, row.id);
+  return result.changes ? row : null;
+}
+
+export function consumeDeviceCode(db, deviceHash, consumedAt) {
+  const row = db.prepare('SELECT * FROM device_codes WHERE device_hash = ?').get(deviceHash);
+  if (!row || row.status !== 'approved' || row.expires_at <= consumedAt) return null;
+  const result = db.prepare(
+    `UPDATE device_codes
+        SET status = 'consumed', consumed_at = ?
+      WHERE id = ? AND status = 'approved'`,
+  ).run(consumedAt, row.id);
+  return result.changes ? row : null;
+}
+
+export function cleanupDeviceCodes(db, nowIso) {
+  db.prepare('DELETE FROM device_codes WHERE expires_at <= ? OR (consumed_at IS NOT NULL AND consumed_at <= ?)').run(nowIso, nowIso);
+}
+
+export function insertCliToken(db, token) {
+  db.prepare(
+    `INSERT INTO cli_tokens
+       (id, token_hash, client_id, name, created_at, expires_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+  ).run(token.id, token.tokenHash, token.clientId, token.name, token.createdAt, token.expiresAt);
+}
+
+export function getCliTokenByHash(db, tokenHash) {
+  return db.prepare('SELECT * FROM cli_tokens WHERE token_hash = ?').get(tokenHash);
+}
+
+export function touchCliToken(db, id, lastUsedAt) {
+  db.prepare('UPDATE cli_tokens SET last_used_at = ? WHERE id = ?').run(lastUsedAt, id);
+}
+
+export function listCliTokensByClient(db, clientId) {
+  return db.prepare(
+    `SELECT id, client_id, name, created_at, expires_at, last_used_at, revoked_at
+       FROM cli_tokens WHERE client_id = ? ORDER BY created_at DESC`,
+  ).all(clientId);
+}
+
+export function revokeCliToken(db, id, clientId, revokedAt) {
+  return db.prepare(
+    'UPDATE cli_tokens SET revoked_at = ? WHERE id = ? AND client_id = ? AND revoked_at IS NULL',
+  ).run(revokedAt, id, clientId);
+}
+
+export function cleanupCliTokens(db, nowIso) {
+  db.prepare('DELETE FROM cli_tokens WHERE expires_at <= ? AND revoked_at IS NOT NULL').run(nowIso);
 }
 
 /* ------------------------ usage par client (portail) -------------------- */

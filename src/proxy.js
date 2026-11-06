@@ -6,6 +6,7 @@ import {
   ConcurrencyTracker,
   estimateUsage,
   findClientByApiKey,
+  findClientByCliToken,
   isModelAllowed,
   maybeRollPeriod,
   RateLimiter,
@@ -204,7 +205,9 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
       );
       return;
     }
-    let client = await findClientByApiKey(db, apiKey);
+    let client = apiKey.startsWith('vlt_')
+      ? await findClientByCliToken(db, apiKey)
+      : await findClientByApiKey(db, apiKey);
     if (!client) {
       sendApiError(
         res,

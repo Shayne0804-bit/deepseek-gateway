@@ -103,6 +103,15 @@ test('portail : trois surfaces + robots prives', async () => {
     assert.match(signupHtml, /Créer un compte/);
     assert.match(signupHtml, /signup-request-form/);
 
+    const device = await fetch(`${started.url}/device?code=ABCD-EFGH`);
+    assert.equal(device.status, 200);
+    const deviceHtml = await device.text();
+    assert.match(deviceHtml, /Autorisez/);
+    assert.match(deviceHtml, /device-approve-form/);
+    const deviceScript = await fetch(`${started.url}/assets/device.js`);
+    assert.equal(deviceScript.status, 200);
+    assert.match(await deviceScript.text(), /portal\/api\/device\/approve/);
+
     const robots = await fetch(`${started.url}/robots.txt`);
     assert.equal(robots.status, 200);
     assert.match(await robots.text(), /Disallow: \//);

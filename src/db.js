@@ -228,6 +228,56 @@ export async function cleanupPortalSessions(db, nowIso) {
   return dbDriver(db) === 'mongo' ? mongo.cleanupPortalSessions(db, nowIso) : sqlite.cleanupPortalSessions(db, nowIso);
 }
 
+/* ------------------------ appareils / jetons CLI ----------------------- */
+export async function insertDeviceCode(db, code) {
+  return dbDriver(db) === 'mongo' ? mongo.insertDeviceCode(db, code) : sqlite.insertDeviceCode(db, code);
+}
+export async function getDeviceCodeByDeviceHash(db, deviceHash) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.getDeviceCodeByDeviceHash(db, deviceHash)
+    : sqlite.getDeviceCodeByDeviceHash(db, deviceHash);
+}
+export async function getDeviceCodeByUserCodeHash(db, userCodeHash) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.getDeviceCodeByUserCodeHash(db, userCodeHash)
+    : sqlite.getDeviceCodeByUserCodeHash(db, userCodeHash);
+}
+export async function approveDeviceCode(db, userCodeHash, clientId, approvedAt) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.approveDeviceCode(db, userCodeHash, clientId, approvedAt)
+    : sqlite.approveDeviceCode(db, userCodeHash, clientId, approvedAt);
+}
+export async function consumeDeviceCode(db, deviceHash, consumedAt) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.consumeDeviceCode(db, deviceHash, consumedAt)
+    : sqlite.consumeDeviceCode(db, deviceHash, consumedAt);
+}
+export async function cleanupDeviceCodes(db, nowIso) {
+  return dbDriver(db) === 'mongo' ? mongo.cleanupDeviceCodes(db, nowIso) : sqlite.cleanupDeviceCodes(db, nowIso);
+}
+export async function insertCliToken(db, token) {
+  return dbDriver(db) === 'mongo' ? mongo.insertCliToken(db, token) : sqlite.insertCliToken(db, token);
+}
+export async function getCliTokenByHash(db, tokenHash) {
+  return dbDriver(db) === 'mongo' ? mongo.getCliTokenByHash(db, tokenHash) : sqlite.getCliTokenByHash(db, tokenHash);
+}
+export async function touchCliToken(db, id, lastUsedAt) {
+  return dbDriver(db) === 'mongo' ? mongo.touchCliToken(db, id, lastUsedAt) : sqlite.touchCliToken(db, id, lastUsedAt);
+}
+export async function listCliTokensByClient(db, clientId) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.listCliTokensByClient(db, clientId)
+    : sqlite.listCliTokensByClient(db, clientId);
+}
+export async function revokeCliToken(db, id, clientId, revokedAt) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.revokeCliToken(db, id, clientId, revokedAt)
+    : sqlite.revokeCliToken(db, id, clientId, revokedAt);
+}
+export async function cleanupCliTokens(db, nowIso) {
+  return dbDriver(db) === 'mongo' ? mongo.cleanupCliTokens(db, nowIso) : sqlite.cleanupCliTokens(db, nowIso);
+}
+
 /* -------------------------------- audit --------------------------------- */
 export async function recordAdminAudit(db, entry) {
   return dbDriver(db) === 'mongo' ? mongo.recordAdminAudit(db, entry) : sqlite.recordAdminAudit(db, entry);

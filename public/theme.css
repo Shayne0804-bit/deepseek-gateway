@@ -1520,3 +1520,23 @@ body.portal-authenticated #portal-app > main { position: relative; z-index: 1; }
 .guide-sdk-install { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
 .guide-sdk-label { display: block; margin-bottom: 5px; color: var(--muted-2); font-family: var(--mono); font-size: 9px; letter-spacing: 0.07em; text-transform: uppercase; }
 @media (max-width: 760px) { .guide-sdk-install { grid-template-columns: 1fr; } }
+
+/* ------------------------- appareil / VALARIA Code ------------------- */
+.device-page .portal-login { min-height: calc(100vh - 170px); }
+.device-card h2 { margin: 0 0 8px; font-size: 22px; font-weight: 750; letter-spacing: -0.03em; }
+.device-card > .small { margin: 0 0 16px; }
+.device-card .btn-block { margin-top: 4px; }
+.device-loading { display: inline-flex; align-items: center; gap: 9px; color: var(--muted); font-family: var(--mono); font-size: 11px; padding: 12px 0; }
+.device-success-mark { display: grid; place-items: center; width: 44px; height: 44px; margin-bottom: 14px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 22px; border: 1px solid var(--border-strong); }
+.device-help { margin-top: 14px; }
+.device-list { display: flex; flex-direction: column; gap: 8px; }
+.device-row { display: flex; align-items: center; gap: 11px; padding: 11px 12px; border: 1px solid var(--border); border-radius: 9px; background: rgba(255,255,255,0.018); flex-wrap: wrap; }
+.device-icon { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); flex: none; }
+.device-icon .icon { width: 15px; height: 15px; }
+.device-main { display: flex; flex-direction: column; gap: 3px; min-width: 140px; flex: 1; }
+.device-main strong { font-size: 12px; }
+.device-row .btn { margin-left: auto; }
+@media (max-width: 960px) { .device-page .portal-login { min-height: auto; } }
+
+.device-code-preview { margin: 0 0 14px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; color: var(--muted); }
+.device-code-preview strong { color: var(--accent); font-size: 16px; letter-spacing: 0.18em; }

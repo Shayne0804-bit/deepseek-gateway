@@ -1,5 +1,12 @@
-import { hashApiKey } from './auth.js';
-import { getClientByKeyHash, insertUsageAndUpdateClient, resetClientUsage } from './db.js';
+import { hashApiKey, sha256 } from './auth.js';
+import {
+  getCliTokenByHash,
+  getClientById,
+  getClientByKeyHash,
+  insertUsageAndUpdateClient,
+  resetClientUsage,
+  touchCliToken,
+} from './db.js';
 import { canonicalModelName, modelBaseName } from './pricing.js';
 
 export const PERIODS = ['daily', 'monthly', 'total'];
@@ -239,4 +246,19 @@ export async function recordUsage(
 export async function findClientByApiKey(db, apiKey) {
   if (!apiKey || typeof apiKey !== 'string') return null;
   return getClientByKeyHash(db, hashApiKey(apiKey));
+}
+
+/**
+ * Resout un jeton d'appareil CLI (vlt_...) vers le client qui l'a approuve.
+ * Un jeton expire, revoque ou inconnu est refuse. last_used_at est mis a jour.
+ */
+export async function findClientByCliToken(db, token) {
+  if (!token || typeof token !== 'string' || !token.startsWith('vlt_')) return null;
+  const row = await getCliTokenByHash(db, sha256(token));
+  if (!row || row.revoked_at) return null;
+  if (new Date(row.expires_at).getTime() <= Date.now()) return null;
+  const client = await getClientById(db, row.client_id);
+  if (!client) return null;
+  await touchCliToken(db, row.id, new Date().toISOString());
+  return client;
 }

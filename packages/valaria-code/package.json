@@ -1,0 +1,44 @@
+{
+  "name": "valaria-code",
+  "version": "0.1.0",
+  "description": "VALARIA Code — agent de code en terminal, interface plein écran, connexion par appareil au portail VALARIA.",
+  "type": "module",
+  "bin": {
+    "valaria": "bin/valaria.js",
+    "valaria-code": "bin/valaria.js"
+  },
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "keywords": [
+    "valaria",
+    "code",
+    "agent",
+    "terminal",
+    "tui",
+    "llm",
+    "openai",
+    "coding-assistant"
+  ],
+  "license": "MIT",
+  "author": "Shayne0804-bit",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Shayne0804-bit/deepseek-gateway.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

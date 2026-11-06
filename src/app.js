@@ -74,7 +74,10 @@ const ASSETS = {
   '/portal/': { file: 'portal.html', type: 'text/html; charset=utf-8' },
   '/signup': { file: 'signup.html', type: 'text/html; charset=utf-8' },
   '/signup/': { file: 'signup.html', type: 'text/html; charset=utf-8' },
+  '/device': { file: 'device.html', type: 'text/html; charset=utf-8' },
+  '/device/': { file: 'device.html', type: 'text/html; charset=utf-8' },
   '/assets/portal.js': { file: 'portal.js', type: 'text/javascript; charset=utf-8' },
+  '/assets/device.js': { file: 'device.js', type: 'text/javascript; charset=utf-8' },
   '/assets/signup.js': { file: 'signup.js', type: 'text/javascript; charset=utf-8' },
   // Communs
   '/assets/styles.css': { file: 'styles.css', type: 'text/css; charset=utf-8' },

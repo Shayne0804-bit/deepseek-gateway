@@ -852,6 +852,99 @@ export async function cleanupPortalSessions(handle, nowIso) {
   await getCollection(handle, 'portal_sessions').deleteMany({ expires_at: { $lte: nowIso } });
 }
 
+/* ------------------------ appareils / jetons CLI ----------------------- */
+
+export async function insertDeviceCode(handle, code) {
+  await getCollection(handle, 'device_codes').insertOne({
+    id: code.id,
+    device_hash: code.deviceHash,
+    user_code_hash: code.userCodeHash,
+    device_name: code.deviceName ?? null,
+    status: 'pending',
+    client_id: null,
+    created_at: code.createdAt,
+    expires_at: code.expiresAt,
+    approved_at: null,
+    consumed_at: null,
+  });
+}
+
+export async function getDeviceCodeByDeviceHash(handle, deviceHash) {
+  return stripMongoId(await getCollection(handle, 'device_codes').findOne({ device_hash: deviceHash }));
+}
+
+export async function getDeviceCodeByUserCodeHash(handle, userCodeHash) {
+  return stripMongoId(await getCollection(handle, 'device_codes').findOne({ user_code_hash: userCodeHash }));
+}
+
+export async function approveDeviceCode(handle, userCodeHash, clientId, approvedAt) {
+  const row = await getCollection(handle, 'device_codes').findOne({ user_code_hash: userCodeHash });
+  if (!row || row.status !== 'pending' || row.expires_at <= approvedAt) return null;
+  const result = await getCollection(handle, 'device_codes').updateOne(
+    { id: row.id, status: 'pending' },
+    { $set: { status: 'approved', client_id: clientId, approved_at: approvedAt } },
+  );
+  return result.modifiedCount ? stripMongoId(row) : null;
+}
+
+export async function consumeDeviceCode(handle, deviceHash, consumedAt) {
+  const row = await getCollection(handle, 'device_codes').findOne({ device_hash: deviceHash });
+  if (!row || row.status !== 'approved' || row.expires_at <= consumedAt) return null;
+  const result = await getCollection(handle, 'device_codes').updateOne(
+    { id: row.id, status: 'approved' },
+    { $set: { status: 'consumed', consumed_at: consumedAt } },
+  );
+  return result.modifiedCount ? stripMongoId(row) : null;
+}
+
+export async function cleanupDeviceCodes(handle, nowIso) {
+  await getCollection(handle, 'device_codes').deleteMany({
+    $or: [{ expires_at: { $lte: nowIso } }, { consumed_at: { $ne: null, $lte: nowIso } }],
+  });
+}
+
+export async function insertCliToken(handle, token) {
+  await getCollection(handle, 'cli_tokens').insertOne({
+    id: token.id,
+    token_hash: token.tokenHash,
+    client_id: token.clientId,
+    name: token.name,
+    created_at: token.createdAt,
+    expires_at: token.expiresAt,
+    last_used_at: null,
+    revoked_at: null,
+  });
+}
+
+export async function getCliTokenByHash(handle, tokenHash) {
+  return stripMongoId(await getCollection(handle, 'cli_tokens').findOne({ token_hash: tokenHash }));
+}
+
+export async function touchCliToken(handle, id, lastUsedAt) {
+  await getCollection(handle, 'cli_tokens').updateOne({ id }, { $set: { last_used_at: lastUsedAt } });
+}
+
+export async function listCliTokensByClient(handle, clientId) {
+  const rows = await getCollection(handle, 'cli_tokens')
+    .find({ client_id: clientId })
+    .sort({ created_at: -1 })
+    .project({ _id: 0 })
+    .toArray();
+  return rows;
+}
+
+export async function revokeCliToken(handle, id, clientId, revokedAt) {
+  const result = await getCollection(handle, 'cli_tokens').updateOne(
+    { id, client_id: clientId, revoked_at: null },
+    { $set: { revoked_at: revokedAt } },
+  );
+  return result.modifiedCount;
+}
+
+export async function cleanupCliTokens(handle, nowIso) {
+  await getCollection(handle, 'cli_tokens').deleteMany({ expires_at: { $lte: nowIso }, revoked_at: { $ne: null } });
+}
+
 /* -------------------------------- audit --------------------------------- */
 
 export async function recordAdminAudit(handle, { ip = null, action, target = null, details = null, now = new Date() }) {

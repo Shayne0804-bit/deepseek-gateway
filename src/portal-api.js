@@ -32,9 +32,19 @@ import {
   listUsageLogs,
   recordAdminAudit,
   updateClientFields,
+  cleanupDeviceCodes,
+  approveDeviceCode,
+  consumeDeviceCode,
+  getDeviceCodeByDeviceHash,
+  getDeviceCodeByUserCodeHash,
+  insertDeviceCode,
+  insertCliToken,
+  listCliTokensByClient,
+  revokeCliToken,
 } from './db.js';
 import {
   displayKeyPrefix,
+  generateCliToken,
   generateDerivedKey,
   hashApiKey,
   sha256,
@@ -43,6 +53,7 @@ import { getMasterKey } from './secrets.js';
 import {
   checkClientAccess,
   findClientByApiKey,
+  findClientByCliToken,
   maybeRollPeriod,
   periodKeyFor,
   remainingFor,
@@ -74,6 +85,21 @@ const MAX_LOGIN_ATTEMPTS = 10;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MAX_CODE_ATTEMPTS = 5;
+const DEVICE_CODE_TTL_MS = 10 * 60 * 1000;
+const CLI_TOKEN_TTL_MS = 90 * 24 * 3600 * 1000;
+const DEVICE_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function generateUserCode() {
+  let raw = '';
+  for (let index = 0; index < 8; index += 1) {
+    raw += DEVICE_CODE_ALPHABET[crypto.randomInt(0, DEVICE_CODE_ALPHABET.length)];
+  }
+  return `${raw.slice(0, 4)}-${raw.slice(4)}`;
+}
+
+function normalizeUserCode(value) {
+  return String(value ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
 
 function utcStartOfToday(now = new Date()) {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
@@ -129,6 +155,8 @@ function quotaView(client) {
 
 export function createPortalApi({ config, db, log, mailer = null }) {
   const loginAttempts = new Map();
+  const deviceStartAttempts = new Map();
+  const deviceTokenAttempts = new Map();
   const emailRequestAttempts = new Map();
   const emailVerifyAttempts = new Map();
   const emailLastSend = new Map();
@@ -518,6 +546,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
   async function clientFromAuthorization(req) {
     const token = bearerToken(req) || String(req.headers['x-api-key'] ?? '').trim();
     if (!token) return null;
+    if (token.startsWith('vlt_')) return await findClientByCliToken(db, token);
     return await findClientByApiKey(db, token);
   }
 
@@ -647,6 +676,164 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         }
         await cleanupPortalSessions(db, new Date().toISOString());
         await createSession(req, res, client, 'api_key');
+        return;
+      }
+
+      if (route === '/device/start' && method === 'POST') {
+        const ip = clientIp(req, config.trustProxy, config.trustCloudflare);
+        const state = windowState(deviceStartAttempts, ip, 10, LOGIN_WINDOW_MS);
+        if (!state.allowed) {
+          audit(req, 'portal.device.start.rate_limited');
+          sendRateLimited(
+            res,
+            `Trop de demandes de connexion d’appareil. Réessayez dans ${state.retryAfterSeconds} s.`,
+            'too_many_requests',
+            state.retryAfterSeconds,
+            { max_requests: state.max },
+          );
+          return;
+        }
+        const body = await readJsonBody(req, 4 * 1024);
+        const deviceName = String(body.deviceName ?? '').trim().slice(0, 60) || 'Appareil CLI';
+        const now = new Date();
+        await cleanupDeviceCodes(db, now.toISOString());
+        const nowIso = now.toISOString();
+        const expiresAt = new Date(now.getTime() + DEVICE_CODE_TTL_MS).toISOString();
+        const deviceCode = `dvc_${crypto.randomBytes(24).toString('base64url')}`;
+        const userCode = generateUserCode();
+        await insertDeviceCode(db, {
+          id: crypto.randomUUID(),
+          deviceHash: sha256(deviceCode),
+          userCodeHash: sha256(normalizeUserCode(userCode)),
+          deviceName,
+          createdAt: nowIso,
+          expiresAt,
+        });
+        audit(req, 'portal.device.start', deviceName);
+        const origin = requestOrigin(req, config);
+        sendJson(res, 200, {
+          device_code: deviceCode,
+          user_code: userCode,
+          verification_uri: `${origin}/device`,
+          verification_uri_complete: `${origin}/device?code=${encodeURIComponent(userCode)}`,
+          expires_in: Math.floor(DEVICE_CODE_TTL_MS / 1000),
+          interval: 5,
+        });
+        return;
+      }
+
+      if (route === '/device/token' && method === 'POST') {
+        const ip = clientIp(req, config.trustProxy, config.trustCloudflare);
+        const state = windowState(deviceTokenAttempts, ip, 300, LOGIN_WINDOW_MS);
+        if (!state.allowed) {
+          sendRateLimited(res, 'Trop de vérifications. Patientez.', 'too_many_requests', state.retryAfterSeconds);
+          return;
+        }
+        const body = await readJsonBody(req, 4 * 1024);
+        const deviceCode = String(body.device_code ?? '');
+        if (!deviceCode) {
+          portalError(res, 400, 'Code d’appareil manquant.', 'invalid_device_code');
+          return;
+        }
+        const now = new Date();
+        await cleanupDeviceCodes(db, now.toISOString());
+        const row = await getDeviceCodeByDeviceHash(db, sha256(deviceCode));
+        if (!row) {
+          portalError(res, 400, 'Code d’appareil invalide ou expiré.', 'invalid_device_code');
+          return;
+        }
+        if (row.status === 'pending') {
+          sendJson(res, 202, { status: 'pending', interval: 5, expires_in: Math.max(0, Math.ceil((new Date(row.expires_at).getTime() - now.getTime()) / 1000)) });
+          return;
+        }
+        if (row.status !== 'approved') {
+          portalError(res, 409, 'Code d’appareil déjà utilisé.', 'device_code_used');
+          return;
+        }
+        const approved = await consumeDeviceCode(db, sha256(deviceCode), now.toISOString());
+        if (!approved) {
+          portalError(res, 409, 'Code d’appareil déjà utilisé ou expiré.', 'device_code_used');
+          return;
+        }
+        const token = generateCliToken();
+        const tokenExpiresAt = new Date(now.getTime() + CLI_TOKEN_TTL_MS).toISOString();
+        await insertCliToken(db, {
+          id: crypto.randomUUID(),
+          tokenHash: sha256(token),
+          clientId: approved.client_id,
+          name: approved.device_name || 'Appareil CLI',
+          createdAt: now.toISOString(),
+          expiresAt: tokenExpiresAt,
+        });
+        audit(req, 'portal.device.token', approved.device_name || 'Appareil CLI');
+        sendJson(res, 200, {
+          token,
+          token_type: 'Bearer',
+          expires_at: tokenExpiresAt,
+          device_name: approved.device_name || 'Appareil CLI',
+        });
+        return;
+      }
+
+      if (route === '/device/approve' && method === 'POST') {
+        const current = await sessionFromRequest(req);
+        if (!current) {
+          portalError(res, 401, 'Connectez-vous au portail pour approuver cet appareil.', 'unauthorized');
+          return;
+        }
+        if (!requireCsrf(req, res)) return;
+        const body = await readJsonBody(req, 4 * 1024);
+        const normalized = normalizeUserCode(body.user_code);
+        if (normalized.length !== 8) {
+          portalError(res, 400, 'Code d’appareil invalide.', 'invalid_device_code');
+          return;
+        }
+        const approved = await approveDeviceCode(db, sha256(normalized), current.client.id, new Date().toISOString());
+        if (!approved) {
+          portalError(res, 400, 'Code invalide, expiré ou déjà utilisé.', 'device_code_rejected');
+          return;
+        }
+        audit(req, 'portal.device.approve', approved.device_name || 'Appareil CLI');
+        sendJson(res, 200, { ok: true, device_name: approved.device_name || 'Appareil CLI' });
+        return;
+      }
+
+      if (route === '/devices' && method === 'GET') {
+        const current = await sessionFromRequest(req);
+        if (!current) {
+          portalError(res, 401, 'Session portail expirée. Reconnectez-vous.', 'unauthorized');
+          return;
+        }
+        const rows = await listCliTokensByClient(db, current.client.id);
+        sendJson(res, 200, {
+          devices: rows.map((row) => ({
+            id: row.id,
+            name: row.name,
+            createdAt: row.created_at,
+            lastUsedAt: row.last_used_at,
+            expiresAt: row.expires_at,
+            revokedAt: row.revoked_at,
+            active: !row.revoked_at && new Date(row.expires_at).getTime() > Date.now(),
+          })),
+        });
+        return;
+      }
+
+      const deviceMatch = /^\/devices\/([0-9a-f-]{36})$/.exec(route);
+      if (deviceMatch && method === 'DELETE') {
+        const current = await sessionFromRequest(req);
+        if (!current) {
+          portalError(res, 401, 'Session portail expirée. Reconnectez-vous.', 'unauthorized');
+          return;
+        }
+        if (!requireCsrf(req, res)) return;
+        const changed = await revokeCliToken(db, deviceMatch[1], current.client.id, new Date().toISOString());
+        if (!changed) {
+          portalError(res, 404, 'Appareil introuvable.', 'not_found');
+          return;
+        }
+        audit(req, 'portal.device.revoke', deviceMatch[1]);
+        sendJson(res, 200, { ok: true });
         return;
       }
 
