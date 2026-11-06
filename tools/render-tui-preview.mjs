@@ -168,6 +168,10 @@ const diff = screenshot('diff-review', captureScreen({
   ...base,
   layout: 'focus',
   overlay: 'diff',
+  messages: [
+    { role: 'user', content: 'corrige le test de connexion qui échoue une fois sur cinq' },
+    { role: 'assistant', content: 'Je propose de remplacer le délai fixe par une attente de la session. Vérifiez le diff à droite avant d’autoriser.' },
+  ],
   approval: { type: 'write', file: 'tests/login.test.js' },
   diffReview: {
     repo: 'C:/Users/ADMIN/Projets/valaria',
@@ -202,6 +206,10 @@ const diffStudio = screenshot('diff-review-studio', captureScreen({
   ...base,
   layout: 'studio',
   overlay: 'diff',
+  messages: [
+    { role: 'user', content: 'corrige le test de connexion qui échoue une fois sur cinq' },
+    { role: 'assistant', content: 'Je propose de remplacer le délai fixe par une attente de la session. Vérifiez le diff à droite avant d’autoriser.' },
+  ],
   approval: { type: 'write', file: 'tests/login.test.js' },
   diffReview: {
     repo: 'C:/Users/ADMIN/Projets/valaria',

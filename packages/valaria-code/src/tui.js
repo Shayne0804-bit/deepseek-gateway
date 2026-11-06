@@ -888,10 +888,13 @@ function renderDiffOverlay(state, { color = true, cols = 96, rows = 28 } = {}) {
     ? '  ↑↓ fichier   PgUp/PgDn lignes   y autoriser   n refuser   Échap annuler'
     : '  ↑↓ fichier   PgUp/PgDn lignes   Échap fermer';
   const bodyHeight = Math.max(6, rows - 4);
-  const showAccount = state.layout === 'studio' && cols >= 118;
+  const showAccount = state.layout === 'studio' && cols >= 136;
   const accountWidth = 22;
-  const filesWidth = showAccount ? 30 : Math.max(26, Math.min(40, Math.floor(cols * 0.34)));
-  const diffWidth = Math.max(28, cols - 2 - filesWidth - 3 - (showAccount ? accountWidth + 3 : 0));
+  const conversationWidth = Math.max(28, Math.min(44, Math.floor(cols * 0.27)));
+  const filesWidth = Math.max(20, Math.min(32, Math.floor(cols * 0.18)));
+  const separators = showAccount ? 12 : 9;
+  const diffWidth = Math.max(24, cols - 2 - conversationWidth - filesWidth - separators - (showAccount ? accountWidth : 0));
+
   const accountLines = [];
   if (showAccount) {
     const account = state.account || null;
@@ -928,6 +931,20 @@ function renderDiffOverlay(state, { color = true, cols = 96, rows = 28 } = {}) {
     accountLines.push(c('MODE', COLORS.muted));
     accountLines.push(` ${state.mode === 'chat' ? 'conversation' : 'agent'}`);
   }
+
+  const conversationLines = [c('CONVERSATION', COLORS.muted)];
+  const recent = [];
+  for (const message of state.messages) {
+    if (message.role === 'tool') {
+      recent.push(`${c('›', COLORS.accent)} ${truncate(message.content || '', conversationWidth - 2)}`);
+      continue;
+    }
+    const label = message.role === 'user' ? c('❯ vous', COLORS.accent) : message.role === 'assistant' ? b('▌ VALARIA') : d('· système');
+    recent.push(label);
+    for (const line of wrap(message.content || '', Math.max(16, conversationWidth - 2))) recent.push(`  ${line}`);
+  }
+  if (!recent.length) recent.push(d('  Aucun message — décrivez une tâche.'), '', d('  Les messages restent visibles'), d('  pendant la revue du diff.'));
+  conversationLines.push(...recent.slice(-(bodyHeight - 2)));
 
   const fileLines = [];
   fileLines.push(c(`FICHIERS (${files.length})`, COLORS.muted));
@@ -990,15 +1007,12 @@ function renderDiffOverlay(state, { color = true, cols = 96, rows = 28 } = {}) {
   lines.push(header);
   lines.push(d('─'.repeat(Math.max(0, cols - 4))));
   for (let index = 0; index < bodyHeight; index += 1) {
-    const diffLine = truncate(diffLines[index] || '', diffWidth);
-    if (showAccount) {
-      const accountLine = pad(truncate(accountLines[index] || '', accountWidth), accountWidth);
-      const fileLine = pad(truncate(fileLines[index] || '', filesWidth), filesWidth);
-      lines.push(`  ${accountLine} ${d('│')} ${fileLine} ${d('│')} ${diffLine}`);
-    } else {
-      const fileLine = pad(truncate(fileLines[index] || '', filesWidth), filesWidth);
-      lines.push(`  ${fileLine} ${d('│')} ${diffLine}`);
-    }
+    const parts = [];
+    if (showAccount) parts.push(pad(truncate(accountLines[index] || '', accountWidth), accountWidth));
+    parts.push(pad(truncate(conversationLines[index] || '', conversationWidth), conversationWidth));
+    parts.push(pad(truncate(fileLines[index] || '', filesWidth), filesWidth));
+    parts.push(truncate(diffLines[index] || '', diffWidth));
+    lines.push(`  ${parts.join(` ${d('│')} `)}`);
   }
   lines.push(d('─'.repeat(Math.max(0, cols - 4))));
   lines.push(footer);
@@ -1009,6 +1023,7 @@ export async function runPlainChat({ client, messages, model, onDelta }) {
 }
 
 export const runTui = createTui;
+
 
 
 
