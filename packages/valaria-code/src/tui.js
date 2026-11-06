@@ -193,8 +193,14 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
         onEvent: (event) => {
           if (event.type === 'assistant' && event.content) addMessage('assistant', event.content);
           else if (event.type === 'tool') {
-            const label = event.name === 'read_file' ? 'lecture' : event.name === 'write_file' ? 'préparation du patch' : event.name === 'run_command' ? 'commande' : event.name;
-            state.status = `agent · ${label}`;
+            const args = event.args || {};
+            const label = event.name === 'read_file' ? `Lecture ${args.path || ''}`
+              : event.name === 'write_file' ? `Écriture ${args.path || ''}`
+                : event.name === 'run_command' ? `$ ${args.command || ''}`
+                  : event.name === 'search_files' ? `Recherche « ${args.query || ''} »`
+                    : `Liste ${args.path || '.'}`;
+            addMessage('tool', label.trim());
+            state.status = `agent · ${event.name}`;
             scheduleRender();
           } else if (event.type === 'error') systemMessage(`✎ ${event.name} : ${event.message}`);
         },
@@ -502,6 +508,10 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
         return;
       }
     }
+    if (!state.input && !state.streaming && !state.agentRunning && key === '?') {
+      executeCommand('/help');
+      return;
+    }
     if (key === '\u0003') { // Ctrl+C
       if (state.agentRunning) {
         if (typeof state.approval?.resolve === 'function') state.approval.resolve(false);
@@ -623,7 +633,10 @@ export function renderScreen(state, { client, config, color = true, root = proce
 
   const lines = [];
   const add = (value = '') => lines.push(value);
-  const head = `  ${c('V', COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${pulse} ${account ? 'en ligne' : 'hors ligne'}   ${d(LAYOUT_LABELS[layout])}   ${c(model, COLORS.amber)}   ${d(`v${state.version || '0.5.0'}`)}`;
+  const project = String(root).replace(/\\/g, '/').split('/').filter(Boolean).pop() || 'projet';
+  const head = layout === 'focus'
+    ? `  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${d('—')}   ${d(project)}   ${pulse} ${d(account ? 'en ligne' : 'hors ligne')}`
+    : `  ${c('V', COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${pulse} ${account ? 'en ligne' : 'hors ligne'}   ${d(LAYOUT_LABELS[layout])}   ${c(model, COLORS.amber)}   ${d(`v${state.version || '0.5.0'}`)}`;
   add(head);
   add(`  ${d('─'.repeat(Math.max(0, cols - 4)))}`);
 
@@ -659,7 +672,12 @@ export function renderScreen(state, { client, config, color = true, root = proce
 
   const conversation = [];
   for (const message of state.messages) {
-    const prefix = message.role === 'user' ? c('›', COLORS.accent) : message.role === 'assistant' ? c('▌', COLORS.accent2) : c('·', COLORS.dim);
+    if (message.role === 'tool') {
+      conversation.push(`${c('›', COLORS.accent)} ${message.content || ''}`);
+      conversation.push('');
+      continue;
+    }
+    const prefix = message.role === 'user' ? c('❯', COLORS.accent) : message.role === 'assistant' ? c('▌', COLORS.accent2) : c('·', COLORS.dim);
     const label = message.role === 'user' ? c('vous', COLORS.muted) : message.role === 'assistant' ? b('VALARIA') : d('système');
     conversation.push(`${prefix} ${label}`);
     for (const line of wrap(message.content || '', Math.max(20, mainWidth - 2))) conversation.push(`  ${line}`);
@@ -691,8 +709,14 @@ export function renderScreen(state, { client, config, color = true, root = proce
   }
 
   add(`  ${d('─'.repeat(Math.max(0, cols - 4)))}`);
-  add(`  ${state.approval ? `${c('y', COLORS.accent)} / ${c('n', COLORS.danger)}` : `${c('>', COLORS.accent)} ${truncate(state.input || '', cols - 6)}${active ? c('▌', COLORS.accent) : ''}`}`);
-  add(`  ${d(truncate(state.status || 'prêt', Math.max(12, cols - 42)))} ${d(`· ${mode} · Ctrl+O compte · Ctrl+P interface · /help`)}`);
+  const placeholder = layout === 'focus' && !state.input && !state.approval ? d('Entrez une tâche ou / pour les commandes') : '';
+  add(`  ${state.approval ? `${c('y', COLORS.accent)} / ${c('n', COLORS.danger)}` : `${c('>', COLORS.accent)} ${truncate(state.input || placeholder, cols - 6)}${active ? c('▌', COLORS.accent) : ''}`}`);
+  if (layout === 'focus') {
+    const usage = `${nf.format(req.used || 0)}/${req.limit ? nf.format(req.limit) : '∞'}`;
+    add(`  ${d(`${truncate(model, 24)} · ${mode} · ${truncate(planName, 14)} · ${usage} req · /model · /account · ? aide`)}`);
+  } else {
+    add(`  ${d(truncate(state.status || 'prêt', Math.max(12, cols - 42)))} ${d(`· ${mode} · Ctrl+O compte · Ctrl+P interface · /help`)}`);
+  }
   process.stdout.write(`\x1b[H\x1b[2J${lines.join('\n')}\x1b[?25l`);
 
   function renderAccountOverlay(stateValue, { color: overlayColor, cols: overlayCols, rows: overlayRows }) {

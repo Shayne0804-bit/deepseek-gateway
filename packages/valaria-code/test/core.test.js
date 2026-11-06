@@ -173,7 +173,8 @@ test('TUI layouts : focus épuré, studio avec compte, overlay compte', () => {
     },
   };
   const focus = capture({ ...base, layout: 'focus' });
-  assert.match(focus, /Focus/);
+  assert.match(focus, /Entrez une tâche/);
+  assert.match(focus, /VALARIA CODE/);
   assert.doesNotMatch(focus, /REQUÊTES/);
   const studio = capture({ ...base, layout: 'studio' });
   assert.match(studio, /REQUÊTES/);
