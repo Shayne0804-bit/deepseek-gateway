@@ -19,7 +19,7 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function createTui({ client, config, model, color = supportsColor(), onModelChange = null } = {}) {
+export function createTui({ client, config, model, version = '0.2.0', color = supportsColor(), onModelChange = null } = {}) {
   const state = {
     messages: [],
     input: '',
@@ -33,6 +33,7 @@ export function createTui({ client, config, model, color = supportsColor(), onMo
     abort: null,
     closed: false,
     model,
+    version,
     startedAt: Date.now(),
   };
   const root = process.cwd();

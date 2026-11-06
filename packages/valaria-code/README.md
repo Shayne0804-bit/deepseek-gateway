@@ -25,6 +25,7 @@ valaria login           # autoriser cet appareil
 valaria status          # compte, pass, quotas
 valaria models          # modèles disponibles
 valaria chat "Bonjour"  # réponse simple sans TUI
+valaria preview         # aperçu statique de l'interface
 valaria logout          # oublier cet appareil
 ```
 

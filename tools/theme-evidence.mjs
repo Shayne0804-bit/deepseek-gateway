@@ -381,6 +381,10 @@ async function main() {
   await evaluate("document.getElementById('guide-params').scrollIntoView({block:'start'})");
   await sleep(250);
   await screenshot('19e-public-portal-guide-params-desktop.png', 'Guide : parametres de requete et tableau des erreurs et quotas.', viewport.label, { keepScroll: true });
+  await evaluate("window.scrollTo(0, 0)");
+  await evaluate("document.querySelector('[data-user-view=\\\"settings\\\"]').click()");
+  await sleep(450);
+  await screenshot('19i-public-portal-settings-desktop.png', 'Reglages : profil, compte et appareils connectes VALARIA Code avec revocation.', viewport.label, { keepScroll: true });
   await evaluate("document.querySelector('[data-user-view=\\\"overview\\\"]').click()");
   await sleep(300);
 

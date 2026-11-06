@@ -17,7 +17,7 @@ import {
   resolveAuthConfig,
   saveConfig,
 } from '../src/config.js';
-import { runTui } from '../src/tui.js';
+import { runTui, renderScreen } from '../src/tui.js';
 import { supportsColor } from '../src/theme.js';
 
 const PACKAGE_ROOT = path.resolve(import.meta.dirname, '..');
@@ -55,6 +55,7 @@ function help() {
     valaria status               quotas, pass et compte
     valaria models               lister les modèles autorisés
     valaria chat "..."           envoyer un message sans TUI
+    valaria preview              aperçu statique de l'interface VALARIA
     valaria --version | --help
 
   OPTIONS
@@ -183,6 +184,28 @@ async function commandChat(flags) {
   }
 }
 
+async function commandPreview() {
+  renderScreen({
+    messages: [
+      { role: 'user', content: 'Ajoute un test pour la fonction de calcul.' },
+      { role: 'assistant', content: 'Je lis le fichier de test, puis je propose un patch. Aucun fichier ne sera écrit sans votre approbation.' },
+    ],
+    input: '/agent ajoute un test',
+    status: 'prêt',
+    streaming: false,
+    agentRunning: false,
+    approval: null,
+    model: process.env.VALARIA_MODEL || DEFAULT_MODEL,
+    version: PKG.version,
+  }, {
+    client: { baseUrl: normalizeBaseUrl(process.env.VALARIA_GATEWAY_URL || DEFAULT_BASE_URL) },
+    config: { url: normalizeBaseUrl(process.env.VALARIA_GATEWAY_URL || DEFAULT_BASE_URL) },
+    color: supportsColor(),
+  });
+  console.log('\n');
+  return 0;
+}
+
 async function commandTui(flags) {
   const auth = resolveAuthConfig(flags);
   if (!auth.token) { printLoginInstructions(auth.url); return 1; }
@@ -198,6 +221,7 @@ async function commandTui(flags) {
       client,
       config,
       model: auth.model,
+      version: PKG.version,
       onModelChange: (model) => {
         const current = loadConfig() || {};
         saveConfig({ ...current, url: auth.url, token: auth.token, model, deviceName: current.deviceName || 'VALARIA Code' });
@@ -234,6 +258,8 @@ async function main() {
     case 'chat':
     case 'ask':
       return commandChat(flags);
+    case 'preview':
+      return commandPreview();
     case '':
       return commandTui(flags);
     default:
