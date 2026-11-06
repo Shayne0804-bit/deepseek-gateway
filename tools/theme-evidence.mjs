@@ -368,6 +368,9 @@ async function main() {
   await evaluate("document.getElementById('guide-cases').scrollIntoView({block:'start'})");
   await sleep(300);
   await screenshot('19g-public-portal-guide-usecases-desktop.png', 'Guide : choix par cas d usage (chat, Codex, Claude Code) et note de capacite texte/code uniquement.', viewport.label, { keepScroll: true });
+  await evaluate("document.getElementById('guide-install').scrollIntoView({block:'start'})");
+  await sleep(300);
+  await screenshot('19h-public-portal-guide-install-desktop.png', 'Guide : installation npm, configuration JSON/TOML et lancement CLI pour Claude Code et Codex.', viewport.label, { keepScroll: true });
   await evaluate("document.getElementById('guide-examples').scrollIntoView({block:'start'})");
   await evaluate("document.getElementById('guide-examples').scrollIntoView({block:'start'})");
   await sleep(300);

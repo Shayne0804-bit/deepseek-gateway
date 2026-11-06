@@ -1036,6 +1036,22 @@ codex</code></pre>
               </div>
               <span class="badge badge-muted">${esc(openaiModel)}</span>
             </div>
+            <div class="guide-sdk-install">
+              <div>
+                <span class="guide-sdk-label">Node.js — SDK OpenAI</span>
+                <div class="guide-command-row">
+                  <code id="guide-sdk-node">npm install openai</code>
+                  <button type="button" class="icon-btn" data-guide-copy-target="guide-sdk-node" aria-label="Copier npm install openai">${icon('copy')}</button>
+                </div>
+              </div>
+              <div>
+                <span class="guide-sdk-label">Python — SDK OpenAI</span>
+                <div class="guide-command-row">
+                  <code id="guide-sdk-python">pip install openai</code>
+                  <button type="button" class="icon-btn" data-guide-copy-target="guide-sdk-python" aria-label="Copier pip install openai">${icon('copy')}</button>
+                </div>
+              </div>
+            </div>
             <div class="code-tabs" role="tablist" aria-label="Langage de l'exemple">
               <button type="button" class="code-tab active" role="tab" aria-selected="true" data-guide-tab="curl">${icon('terminal')}cURL</button>
               <button type="button" class="code-tab" role="tab" aria-selected="false" data-guide-tab="node">${icon('code')}Node.js</button>

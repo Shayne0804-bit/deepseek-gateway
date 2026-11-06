@@ -1487,3 +1487,36 @@ body.portal-authenticated #portal-app > main { position: relative; z-index: 1; }
 .guide-capability-note strong { color: var(--text-2); }
 .guide-capability-note p { margin: 2px 0 0; }
 @media (max-width: 900px) { .guide-use-grid { grid-template-columns: 1fr; } }
+
+/* --- installation clients CLI --- */
+.guide-client-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.guide-client-card { border: 1px solid var(--border); border-radius: 12px; background: rgba(255,255,255,0.018); overflow: hidden; min-width: 0; }
+.guide-client-head { display: flex; align-items: flex-start; gap: 10px; padding: 15px 16px; border-bottom: 1px solid var(--border); background: rgba(62,233,127,0.025); }
+.guide-client-icon { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); flex: none; }
+.guide-client-icon .icon { width: 16px; height: 16px; }
+.guide-client-head > div { min-width: 0; flex: 1; }
+.guide-client-head h3 { margin: 0 0 3px; font-size: 14px; }
+.guide-client-head p { margin: 0; color: var(--muted); font-size: 10.5px; line-height: 1.4; }
+.guide-client-step { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; padding: 14px 16px; border-top: 1px solid rgba(125,225,166,0.07); }
+.guide-client-step:first-of-type { border-top: 0; }
+.guide-client-num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-family: var(--mono); font-size: 9px; }
+.guide-client-step h4 { margin: 2px 0 7px; font-size: 11.5px; color: var(--text-2); }
+.guide-client-step h4 code { font-size: 10px; overflow-wrap: anywhere; }
+.guide-client-hint { margin: 7px 0 0; color: var(--muted-2); font-size: 10px; line-height: 1.55; }
+.guide-client-hint code { overflow-wrap: anywhere; font-size: 9.5px; }
+.guide-command-row { display: flex; align-items: center; gap: 8px; background: #050b07; border: 1px solid var(--border); border-radius: 7px; padding: 7px 8px 7px 11px; }
+.guide-command-row code { flex: 1; min-width: 0; color: #b9dcc4; font-family: var(--mono); font-size: 10.5px; overflow-wrap: anywhere; }
+.guide-command-row .icon-btn { width: 25px; height: 25px; flex: none; }
+.guide-config-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 0; }
+.guide-config-head > span { color: var(--muted-2); font-family: var(--mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; }
+.guide-config-head .btn { padding: 4px 8px; font-size: 9.5px; }
+.guide-config { margin: 6px 0 0; padding: 11px; max-height: 230px; overflow: auto; border: 1px solid var(--border); border-radius: 7px; background: #050b07; }
+.guide-config code { color: #b9dcc4; font-family: var(--mono); font-size: 10px; line-height: 1.65; white-space: pre; }
+.guide-prereq { display: flex; gap: 8px; align-items: flex-start; margin-top: 13px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font-size: 10.5px; line-height: 1.55; }
+.guide-prereq .icon { width: 13px; height: 13px; color: var(--accent); flex: none; margin-top: 1px; }
+.guide-prereq code { font-size: 9.5px; }
+@media (max-width: 900px) { .guide-client-grid { grid-template-columns: 1fr; } }
+
+.guide-sdk-install { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.guide-sdk-label { display: block; margin-bottom: 5px; color: var(--muted-2); font-family: var(--mono); font-size: 9px; letter-spacing: 0.07em; text-transform: uppercase; }
+@media (max-width: 760px) { .guide-sdk-install { grid-template-columns: 1fr; } }

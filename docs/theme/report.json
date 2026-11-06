@@ -99,6 +99,11 @@
     },
     {
       "viewport": "1440x900",
+      "artifact": "19h-public-portal-guide-install-desktop.png",
+      "observation": "Guide : installation npm, configuration JSON/TOML et lancement CLI pour Claude Code et Codex."
+    },
+    {
+      "viewport": "1440x900",
       "artifact": "19d-public-portal-guide-examples-desktop.png",
       "observation": "Guide : onglets cURL, Node.js, Python, Codex CLI et Anthropic avec bouton copier."
     },
