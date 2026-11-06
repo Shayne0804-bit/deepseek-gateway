@@ -36,9 +36,10 @@ export async function playSplash({ output = process.stdout, color = true, reduce
       lines.push(`${' '.repeat(offset)}${art}`);
     }
     lines.push('');
-    const scanWidth = Math.max(8, Math.floor(cols * 0.42));
-    const scanPos = Math.min(cols - scanWidth - 1, Math.floor(((cols - scanWidth) * frame) / (frameCount - 1)));
-    lines.push(`${' '.repeat(scanPos)}${paint('─'.repeat(scanWidth), COLORS.accent, color)}`);
+    const scanWidth = Math.min(46, Math.max(18, cols - 10));
+    const revealed = Math.max(1, Math.ceil((scanWidth * (frame + 1)) / frameCount));
+    const scanLeft = Math.floor((cols - scanWidth) / 2);
+    lines.push(`${' '.repeat(scanLeft)}${paint('─'.repeat(revealed), COLORS.accent, color)}`);
     lines.push('');
     lines.push(`${' '.repeat(Math.max(0, Math.floor((cols - TAGLINE.length) / 2)))}${dim(TAGLINE, color)}`);
     lines.push(`${' '.repeat(Math.max(0, Math.floor((cols - 14) / 2)))}${bold(`v${version}`, color)}`);

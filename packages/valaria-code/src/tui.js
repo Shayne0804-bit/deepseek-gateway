@@ -730,7 +730,11 @@ export function renderScreen(state, { client, config, color = true, root = proce
       approvalLines.push(`  ${d('commande proposée par l’agent')}`);
     }
   }
-  const main = conversation.slice(-Math.max(2, bodyHeight - approvalLines.length)).concat(approvalLines);
+  let main = conversation.slice(-Math.max(2, bodyHeight - approvalLines.length)).concat(approvalLines);
+  if (!hasConversation) {
+    const offset = Math.max(0, Math.floor((bodyHeight - main.length) / 2));
+    main = Array(offset).fill('').concat(main);
+  }
   while (main.length < bodyHeight) main.push('');
   for (let index = 0; index < bodyHeight; index += 1) {
     const mainLine = truncate(main[index] || '', mainWidth);
@@ -739,7 +743,7 @@ export function renderScreen(state, { client, config, color = true, root = proce
   }
 
   add(`  ${d('─'.repeat(Math.max(0, cols - 4)))}`);
-  const placeholder = layout === 'focus' && !state.input && !state.approval ? d('Entrez une tâche ou / pour les commandes') : '';
+  const placeholder = !state.input && !state.approval ? d('Entrez une tâche ou / pour les commandes') : '';
   add(`  ${state.approval ? `${c('y', COLORS.accent)} / ${c('n', COLORS.danger)}` : `${c('>', COLORS.accent)} ${truncate(state.input || placeholder, cols - 6)}${active ? c('▌', COLORS.accent) : ''}`}`);
   if (layout === 'focus') {
     const usage = `${nf.format(req.used || 0)}/${req.limit ? nf.format(req.limit) : '∞'}`;
