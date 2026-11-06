@@ -498,7 +498,7 @@
     document.body.classList.toggle('user-menu-open', open);
   }
 
-  const ZERO_DECIMAL_CURRENCIES = new Set(['XOF', 'XAF', 'JPY', 'KRW', 'CLP', 'VND', 'IDR', 'PYG', 'UGX', 'RWF', 'GNF', 'KMF', 'DJF']);
+  const TWO_DECIMAL_CURRENCIES = new Set(['EUR', 'USD', 'GBP', 'CAD', 'AUD', 'CHF']);
 
   function formatPlanPrice(priceEur) {
     const currency = state.currency;
@@ -506,17 +506,14 @@
       return `${Number(priceEur).toFixed(2).replace('.', ',')} €`;
     }
     const amount = Number(priceEur) * Number(currency.rate);
-    const zero = ZERO_DECIMAL_CURRENCIES.has(currency.currency);
-    try {
-      return new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
-        currency: currency.currency,
-        maximumFractionDigits: zero ? 0 : 2,
-        minimumFractionDigits: zero ? 0 : 2,
-      }).format(amount);
-    } catch {
-      return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: zero ? 0 : 2 }).format(amount)} ${currency.currency}`;
-    }
+    const decimals = TWO_DECIMAL_CURRENCIES.has(currency.currency) ? 2 : 0;
+    const label = ['XOF', 'XAF'].includes(currency.currency) ? 'FCFA' : currency.currency;
+    const formatted = new Intl.NumberFormat('en-US', {
+      maximumFractionDigits: decimals,
+      minimumFractionDigits: decimals,
+      useGrouping: true,
+    }).format(amount).replace(/,/g, ' ').replace(/\./g, ',');
+    return `${formatted}\u00A0${label}`;
   }
 
   function planCurrencyNote() {
@@ -571,7 +568,7 @@
           ${plan.id === currentId ? '<span class="badge badge-ok">actuel</span>' : ''}
         </div>
         <p class="plan-tagline">${esc(plan.tagline || '')}</p>
-        <p class="plan-price">${formatPlanPrice(plan.priceEur)} <span>/ 30 j</span></p>
+        <p class="plan-price">${formatPlanPrice(plan.priceEur)} <span class="plan-period">/ 30 j</span></p>
         <ul class="plan-features">
           ${(plan.features ?? []).map((feature) => `<li>${esc(feature)}</li>`).join('')}
           <li>${esc(plan.support || '')}</li>

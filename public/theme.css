@@ -1008,8 +1008,9 @@ body.menu-open { overflow: hidden; }
 .plan-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .plan-card h3 { margin: 0; font-size: 17px; }
 .plan-tagline { margin: 0 0 14px; color: var(--muted); font-size: 12px; line-height: 1.5; min-height: 36px; }
-.plan-price { margin: 0 0 14px; font-size: 22px; font-weight: 750; letter-spacing: -0.03em; }
+.plan-price { margin: 0 0 14px; font-size: clamp(18px, 1.6vw, 22px); font-weight: 750; letter-spacing: -0.03em; white-space: nowrap; }
 .plan-price span { font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.plan-period { display: block; margin-top: 2px; }
 .plan-features { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
 .plan-features li { color: var(--text-2); font-size: 12px; }
 .plan-features li::before { content: "· "; color: var(--accent); font-weight: 700; }
@@ -1021,3 +1022,4 @@ body.menu-open { overflow: hidden; }
   .plan-grid { grid-template-columns: 1fr; }
   .plan-current { flex-direction: column; }
 }
+

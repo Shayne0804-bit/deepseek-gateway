@@ -49,6 +49,7 @@ import {
 import { loadPricing } from './pricing.js';
 import { loadModelAliases } from './model-aliases.js';
 import { PASS_PLANS, getPassPlan, publicPlan } from './plans.js';
+import { currencyContext } from './currency.js';
 import { deviceHashFor, isDisposableEmail } from './abuse.js';
 import { lookupIpqsEmail, lookupIpqsIp, verifyHcaptcha, verifyTurnstile } from './fraud.js';
 import {
@@ -632,6 +633,16 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         }
         await cleanupPortalSessions(db, new Date().toISOString());
         await createSession(req, res, client, 'api_key');
+        return;
+      }
+
+      if (route === '/currency' && method === 'GET') {
+        const context = await currencyContext(req, {
+          locale: url.searchParams.get('locale') || '',
+          timezone: url.searchParams.get('tz') || '',
+          config,
+        });
+        sendJson(res, 200, context);
         return;
       }
 
