@@ -2104,3 +2104,37 @@ body.portal-authenticated #portal-app > main { position: relative; z-index: 1; }
   .device-page .portal-login-form,
   .portal-login-form { position: sticky; top: 102px; align-self: start; }
 }
+
+/* Desktop large : composition pleine largeur, hero remonte, consoles non superposees. */
+@media (min-width: 1081px) {
+  .landing-v2 .site-header,
+  .landing-v2 main,
+  .landing-v2 .site-footer { width: min(1800px, calc(100% - 96px)); }
+  .landing-v2 .site-header { padding: 12px 0; }
+  .landing-v2 .hero {
+    grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
+    gap: clamp(48px, 5vw, 96px);
+    align-items: start;
+    padding: clamp(46px, 5vw, 78px) 0 clamp(46px, 4.8vw, 70px);
+  }
+  .landing-v2 .hero h1 {
+    max-width: 840px;
+    font-size: clamp(48px, 5vw, 76px);
+    line-height: .94;
+    margin-bottom: 22px;
+  }
+  .landing-v2 .hero-lede { max-width: 62ch; }
+  .landing-v2 .hero-v2-visual { width: 100%; max-width: 790px; padding: 0; justify-self: end; }
+  .landing-v2 .console-api { width: 100%; }
+  .landing-v2 .console-cli { width: 100%; margin: 16px 0 0; }
+  .landing-v2 .floating-tag { right: 18px; bottom: -13px; }
+  .landing-v2 .hero-facts { margin-top: 28px; }
+  .landing-v2 .hero-facts > div { padding-right: 18px; }
+}
+
+/* Toutes les pages publiques desktop utilisent la même largeur de composition. */
+@media (min-width: 961px) {
+  .public-page .site-header,
+  .public-page main,
+  .public-page .site-footer { width: min(1800px, calc(100% - 96px)); }
+}
