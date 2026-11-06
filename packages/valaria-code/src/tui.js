@@ -7,6 +7,7 @@ import readline from 'node:readline';
 import { COLORS, bold, dim, paint, rule, stripAnsi, truncate, visibleLength, wrap, supportsColor } from './theme.js';
 import { runAgent } from './agent.js';
 import { MARK, PULSE, SPINNER, TAGLINE, WORDMARK } from './assets.js';
+import { collectWorkspaceDiff, summarize } from './diff-view.js';
 import { playSplash } from './splash.js';
 import { diffText, extractCode, listFiles, readFile, runCommand, writeFile } from './tools.js';
 
@@ -27,7 +28,7 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function createTui({ client, config, model, layout = 'focus', version = '0.6.1', color = supportsColor(), animations = true, account = null, onModelChange = null, onPreferencesChange = null } = {}) {
+export function createTui({ client, config, model, layout = 'focus', version = '0.7.0', color = supportsColor(), animations = true, account = null, onModelChange = null, onPreferencesChange = null } = {}) {
   const state = {
     messages: [],
     input: '',
@@ -40,6 +41,7 @@ export function createTui({ client, config, model, layout = 'focus', version = '
     mode: 'agent',
     layout: ['focus', 'studio', 'compact'].includes(layout) ? layout : 'focus',
     overlay: null,
+    diffReview: null,
     approval: null,
     abort: null,
     closed: false,
@@ -163,10 +165,29 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
       const content = extractCode(result.content);
       state.approval = { type: 'write', file, before, content, diff: diffText(before, content) };
       state.status = 'approbation requise';
+      openDiffReview({ path: file, content, diff: state.approval.diff, status: 'M' }).catch(() => {});
+      return;
     } catch (error) {
       systemMessage(`✎ Échec de préparation : ${error.message}`);
       state.status = `erreur : ${error.message}`;
     }
+    draw();
+  }
+
+  async function openDiffReview(extra = null) {
+    state.status = 'analyse des fichiers…';
+    draw();
+    const review = await collectWorkspaceDiff(root, extra);
+    if (!review.ok) {
+      systemMessage(`⚙ ${review.error}`);
+      state.status = 'prêt';
+      draw();
+      return;
+    }
+    const selected = extra?.path ? review.files.findIndex((file) => file.path === extra.path) : 0;
+    state.diffReview = { ...review, selected: Math.max(0, selected), scroll: 0, canApprove: Boolean(state.approval) };
+    state.overlay = 'diff';
+    state.status = state.approval ? 'revue du diff · y autoriser / n refuser' : 'revue du diff';
     draw();
   }
 
@@ -193,6 +214,10 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
           state.approval = { ...request, resolve };
           state.status = 'approbation demandée par l’agent';
           draw();
+          if (request.type === 'write') {
+            const content = request.content || '';
+            openDiffReview({ path: request.file, content, diff: request.diff, status: 'M' }).catch(() => {});
+          }
         }),
         onEvent: (event) => {
           if (event.type === 'assistant' && event.content) addMessage('assistant', event.content);
@@ -307,7 +332,7 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
     const argument = rest.join(' ').trim();
     switch (command) {
       case 'help':
-        systemMessage('⚙ Votre message est exécuté par l’agent (lecture/patch/tests, avec approbations).\n/chat <message> · /agent <tâche> · /interview · /plan <objectif> · /review\n/files [dossier] · /read <fichier> · /edit <fichier> <instruction> · /run <commande>\n/models · /model <nom> · /account · /layout focus|studio|compact · /animations on|off · /mode agent|chat · /usage · /clear · /quit\n\nCtrl+O : compte · Ctrl+P : interface · Ctrl+C : annuler · 1/2/3 : suggestion');
+        systemMessage('⚙ Votre message est exécuté par l’agent (lecture/patch/tests, avec approbations).\n/chat <message> · /agent <tâche> · /interview · /plan <objectif> · /review · /diff\n/files [dossier] · /read <fichier> · /edit <fichier> <instruction> · /run <commande>\n/models · /model <nom> · /account · /layout focus|studio|compact · /animations on|off · /mode agent|chat · /usage · /clear · /quit\n\nCtrl+O : compte · Ctrl+P : interface · Ctrl+C : annuler · 1/2/3 : suggestion');
         break;
       case 'agent': {
         await runAgentTask(argument, { explicit: true });
@@ -315,6 +340,10 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
       }
       case 'plan': {
         await planTask(argument);
+        return;
+      }
+      case 'diff': {
+        await openDiffReview();
         return;
       }
       case 'interview': {
@@ -424,17 +453,24 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
     draw();
   }
 
+  function denyPending() {
+    const approval = state.approval;
+    if (!approval) return;
+    state.approval = null;
+    state.overlay = null;
+    state.diffReview = null;
+    if (typeof approval.resolve === 'function') approval.resolve(false);
+    systemMessage('⚙ Action refusée.');
+    state.status = 'prêt';
+    draw();
+  }
+
   function submit() {
     const value = state.input.trim();
     if (state.approval) {
       if (/^y(es)?$/i.test(value)) approvePending();
-      else if (/^n(o)?$/i.test(value)) {
-        if (typeof state.approval.resolve === 'function') state.approval.resolve(false);
-        systemMessage('⚙ Action refusée.');
-        state.approval = null;
-        state.status = 'prêt';
-        draw();
-      } else {
+      else if (/^n(o)?$/i.test(value)) denyPending();
+      else {
         state.status = 'répondez y (autoriser) ou n (refuser)';
         state.input = '';
         draw();
@@ -457,6 +493,8 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
   async function approvePending() {
     const approval = state.approval;
     state.approval = null;
+    state.overlay = null;
+    state.diffReview = null;
     if (!approval) return;
     if (typeof approval.resolve === 'function') {
       approval.resolve(true);
@@ -494,6 +532,42 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
       return;
     }
     if (state.overlay) {
+      if (state.overlay === 'diff') {
+        const review = state.diffReview;
+        if (key === '\x1b[A' || key === 'k') {
+          if (review?.files?.length) {
+            review.selected = (review.selected + review.files.length - 1) % review.files.length;
+            review.scroll = 0;
+            draw();
+          }
+          return;
+        }
+        if (key === '\x1b[B' || key === 'j') {
+          if (review?.files?.length) {
+            review.selected = (review.selected + 1) % review.files.length;
+            review.scroll = 0;
+            draw();
+          }
+          return;
+        }
+        if (key === '\x1b[5~' || key === '\x1b[6~') {
+          if (review) {
+            review.scroll = Math.max(0, (review.scroll || 0) + (key === '\x1b[5~' ? -12 : 12));
+            draw();
+          }
+          return;
+        }
+        if (state.approval && (/^y$/i.test(key) || /^n$/i.test(key))) {
+          if (key.toLowerCase() === 'y') approvePending();
+          else denyPending();
+          return;
+        }
+        if (key === '\u0003' || key === '\u001b' || key === 'q') {
+          if (state.approval) denyPending();
+          else { state.overlay = null; state.diffReview = null; draw(); }
+        }
+        return;
+      }
       if (key === '\u0003' || key === '\u001b' || key === '\r' || key === '\n' || key === 'q') {
         state.overlay = null;
         draw();
@@ -648,13 +722,16 @@ export function renderScreen(state, { client, config, color = true, root = proce
   if (state.overlay === 'account') {
     return renderAccountOverlay(state, { color, cols, rows });
   }
+  if (state.overlay === 'diff') {
+    return renderDiffOverlay(state, { color, cols, rows });
+  }
 
   const lines = [];
   const add = (value = '') => lines.push(value);
   const project = String(root).replace(/\\/g, '/').split('/').filter(Boolean).pop() || 'projet';
   const head = layout === 'focus'
     ? `  ${c(MARK, COLORS.accent)} ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${d('—')}   ${d(project)}   ${pulse} ${d(account ? 'en ligne' : 'hors ligne')}`
-    : `  ${c(MARK, COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${pulse} ${account ? 'en ligne' : 'hors ligne'}   ${d(LAYOUT_LABELS[layout])}   ${c(model, COLORS.amber)}   ${d(`v${state.version || '0.6.1'}`)}`;
+    : `  ${c(MARK, COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${pulse} ${account ? 'en ligne' : 'hors ligne'}   ${d(LAYOUT_LABELS[layout])}   ${c(model, COLORS.amber)}   ${d(`v${state.version || '0.7.0'}`)}`;
   add(head);
   add(`  ${d('─'.repeat(Math.max(0, cols - 4)))}`);
 
@@ -796,10 +873,143 @@ export function renderScreen(state, { client, config, color = true, root = proce
     process.stdout.write(`\x1b[H\x1b[2J${out.join('\n')}\x1b[?25l`);
   }
 }
+function renderDiffOverlay(state, { color = true, cols = 96, rows = 28 } = {}) {
+  const c = (text, hex) => paint(text, hex, color);
+  const b = (text) => bold(text, color);
+  const d = (text) => dim(text, color);
+  const pad = (text, width) => `${text}${' '.repeat(Math.max(0, width - visibleLength(text)))}`;
+  const review = state.diffReview || { files: [] };
+  const files = review.files || [];
+  const selectedIndex = Math.max(0, Math.min(files.length - 1, Number(review.selected) || 0));
+  const selected = files[selectedIndex] || null;
+  const stats = summarize(files);
+  const header = `  ${c('◈', COLORS.accent)} ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${d('revue du diff')}   ${d(`${stats.files} fichier(s)`)}   ${c(`+${stats.additions}`, COLORS.accent)} ${c(`−${stats.deletions}`, COLORS.danger)}`;
+  const footer = state.approval
+    ? '  ↑↓ fichier   PgUp/PgDn lignes   y autoriser   n refuser   Échap annuler'
+    : '  ↑↓ fichier   PgUp/PgDn lignes   Échap fermer';
+  const bodyHeight = Math.max(6, rows - 4);
+  const showAccount = state.layout === 'studio' && cols >= 118;
+  const accountWidth = 22;
+  const filesWidth = showAccount ? 30 : Math.max(26, Math.min(40, Math.floor(cols * 0.34)));
+  const diffWidth = Math.max(28, cols - 2 - filesWidth - 3 - (showAccount ? accountWidth + 3 : 0));
+  const accountLines = [];
+  if (showAccount) {
+    const account = state.account || null;
+    const q = account?.quota || {};
+    const req = q.requests || {};
+    const credit = q.usd || {};
+    const nf = new Intl.NumberFormat('fr-FR');
+    const usd = (value) => `${nf.format(Math.round((Number(value) || 0) * 100) / 100)} $`;
+    const days = account?.client?.expiresAt ? Math.max(0, Math.ceil((new Date(account.client.expiresAt).getTime() - Date.now()) / 86_400_000)) : null;
+    const bar = (used, limit, width = 12) => {
+      if (!limit) return c('∞', COLORS.dim);
+      const percent = Math.max(0, Math.min(100, Math.round((Number(used || 0) / Number(limit)) * 100)));
+      const filled = Math.round((percent / 100) * width);
+      const tone = percent >= 90 ? COLORS.danger : percent >= 75 ? COLORS.amber : COLORS.accent;
+      return c('█'.repeat(filled), tone) + c('░'.repeat(Math.max(0, width - filled)), COLORS.border);
+    };
+    accountLines.push(c('COMPTE', COLORS.muted));
+    accountLines.push(` ${b(truncate(account?.client?.name || 'compte', accountWidth - 2))}`);
+    accountLines.push(` ${d(truncate(`pass ${account?.plan?.name || '—'}`, accountWidth - 2))}`);
+    accountLines.push('');
+    accountLines.push(c('REQUÊTES', COLORS.muted));
+    accountLines.push(` ${bar(req.used, req.limit, 12)}`);
+    accountLines.push(` ${d(`${nf.format(req.used || 0)} / ${req.limit ? nf.format(req.limit) : '∞'}`)}`);
+    accountLines.push('');
+    accountLines.push(c('CRÉDIT', COLORS.muted));
+    accountLines.push(` ${bar(credit.used, credit.limit, 12)}`);
+    accountLines.push(` ${d(`${usd(credit.used)} / ${credit.limit ? usd(credit.limit) : '∞'}`)}`);
+    accountLines.push('');
+    accountLines.push(c('PASS', COLORS.muted));
+    accountLines.push(` ${days == null ? '—' : `${days} j`}`);
+    accountLines.push('');
+    accountLines.push(c('MODÈLE', COLORS.muted));
+    accountLines.push(` ${c(truncate(state.model || '—', accountWidth - 2), COLORS.amber)}`);
+    accountLines.push(c('MODE', COLORS.muted));
+    accountLines.push(` ${state.mode === 'chat' ? 'conversation' : 'agent'}`);
+  }
+
+  const fileLines = [];
+  fileLines.push(c(`FICHIERS (${files.length})`, COLORS.muted));
+  fileLines.push(d('répertoire'));
+  const fileRows = Math.max(2, bodyHeight - 3);
+  const start = Math.max(0, Math.min(Math.max(0, files.length - fileRows), selectedIndex - Math.floor(fileRows / 2)));
+  for (let index = start; index < Math.min(files.length, start + fileRows); index += 1) {
+    const file = files[index];
+    const selectedFile = index === selectedIndex;
+    const marker = selectedFile ? c('›', COLORS.accent) : ' ';
+    const tone = file.status === 'A' ? COLORS.accent : file.status === 'D' ? COLORS.danger : COLORS.amber;
+    const label = `${marker} ${c(file.status, tone)} ${truncate(file.path, filesWidth - 9)}`;
+    fileLines.push(selectedFile ? b(label) : label);
+    fileLines.push(`   ${c(`+${file.additions || 0}`, COLORS.accent)} ${c(`−${file.deletions || 0}`, COLORS.danger)}`);
+  }
+
+  const diffLines = [];
+  diffLines.push(selected ? `${b(truncate(selected.path, diffWidth - 2))}  ${c(selected.status, selected.status === 'D' ? COLORS.danger : COLORS.amber)} ${c(`+${selected.additions || 0}`, COLORS.accent)} ${c(`−${selected.deletions || 0}`, COLORS.danger)}` : d('Aucun fichier'));
+  diffLines.push(d('─'.repeat(diffWidth)));
+  if (selected) {
+    let oldLine = 0;
+    let newLine = 0;
+    const parsed = [];
+    for (const line of String(selected.diff || '').split(/\r?\n/)) {
+      if (line.startsWith('@@')) {
+        const match = /@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
+        oldLine = match ? Number(match[1]) : 1;
+        newLine = match ? Number(match[2]) : 1;
+        parsed.push({ kind: 'hunk', text: line, number: '' });
+      } else if (line.startsWith('+++') || line.startsWith('---') || line.startsWith('diff ') || line.startsWith('index ') || line.startsWith('Binary files ')) {
+        continue;
+      } else if (line.startsWith('+')) {
+        parsed.push({ kind: 'add', number: String(newLine).padStart(4, ' '), text: line.slice(1) });
+        newLine += 1;
+      } else if (line.startsWith('-')) {
+        parsed.push({ kind: 'del', number: String(oldLine).padStart(4, ' '), text: line.slice(1) });
+        oldLine += 1;
+      } else if (line.startsWith(' ')) {
+        parsed.push({ kind: 'ctx', number: String(newLine).padStart(4, ' '), text: line.slice(1) });
+        oldLine += 1;
+        newLine += 1;
+      } else if (line) {
+        parsed.push({ kind: 'meta', number: '', text: line });
+      }
+    }
+    if (!parsed.length) diffLines.push(d('  (fichier binaire ou vide — pas d’aperçu texte)'));
+    const maxLines = Math.max(1, bodyHeight - 4);
+    const offset = Math.max(0, Math.min((parsed.length - maxLines), Number(review.scroll) || 0));
+    if (offset > 0) diffLines.push(d('  …'));
+    for (const line of parsed.slice(offset, offset + maxLines - (offset > 0 ? 1 : 0))) {
+      const text = truncate(line.text, diffWidth - 7);
+      if (line.kind === 'add') diffLines.push(`${d(line.number)} ${c('+', COLORS.accent)} ${c(text, COLORS.accent)}`);
+      else if (line.kind === 'del') diffLines.push(`${d(line.number)} ${c('−', COLORS.danger)} ${c(text, COLORS.danger)}`);
+      else if (line.kind === 'hunk') diffLines.push(`${d(line.number)} ${c(text, COLORS.amber)}`);
+      else diffLines.push(`${d(line.number)}   ${d(text)}`);
+    }
+  }
+
+  const lines = [];
+  lines.push(header);
+  lines.push(d('─'.repeat(Math.max(0, cols - 4))));
+  for (let index = 0; index < bodyHeight; index += 1) {
+    const diffLine = truncate(diffLines[index] || '', diffWidth);
+    if (showAccount) {
+      const accountLine = pad(truncate(accountLines[index] || '', accountWidth), accountWidth);
+      const fileLine = pad(truncate(fileLines[index] || '', filesWidth), filesWidth);
+      lines.push(`  ${accountLine} ${d('│')} ${fileLine} ${d('│')} ${diffLine}`);
+    } else {
+      const fileLine = pad(truncate(fileLines[index] || '', filesWidth), filesWidth);
+      lines.push(`  ${fileLine} ${d('│')} ${diffLine}`);
+    }
+  }
+  lines.push(d('─'.repeat(Math.max(0, cols - 4))));
+  lines.push(footer);
+  process.stdout.write(`\x1b[H\x1b[2J${lines.join('\n')}\x1b[?25l`);
+}
 export async function runPlainChat({ client, messages, model, onDelta }) {
   return client.stream(messages, { model, onDelta });
 }
 
 export const runTui = createTui;
+
+
 
 

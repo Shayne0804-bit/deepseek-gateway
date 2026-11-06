@@ -12,6 +12,7 @@ import { clearConfig, loadConfig, saveConfig } from '../src/config.js';
 import { groupModels } from '../src/onboarding.js';
 import { LOGO_LINES, MARK, SPINNER } from '../src/assets.js';
 import { playSplash } from '../src/splash.js';
+import { collectWorkspaceDiff } from '../src/diff-view.js';
 import { renderScreen } from '../src/tui.js';
 import { diffText, listFiles, readFile, runCommand, writeFile } from '../src/tools.js';
 
@@ -209,6 +210,60 @@ test('TUI accueil : écran vide avec marque et actions', () => {
   assert.match(output, /VALARIA CODE/);
   assert.match(output, /Décrivez une tâche/);
   assert.match(output, /planifier/);
+});
+
+test('diff review : fichiers à gauche et lignes +/- à droite', () => {
+  const chunks = [];
+  const original = process.stdout.write;
+  process.stdout.write = (chunk) => { chunks.push(String(chunk)); return true; };
+  try {
+    renderScreen({
+      messages: [],
+      input: '',
+      status: 'revue',
+      streaming: false,
+      approval: { type: 'write', file: 'src/a.js' },
+      overlay: 'diff',
+      diffReview: {
+        selected: 0,
+        scroll: 0,
+        files: [
+          { path: 'src/a.js', status: 'M', additions: 1, deletions: 1, diff: '--- a/src/a.js\n+++ b/src/a.js\n@@ -1 +1 @@\n-const a = 1\n+const a = 2' },
+          { path: 'src/b.js', status: 'A', additions: 2, deletions: 0, diff: '--- /dev/null\n+++ b/src/b.js\n@@ -0,0 +1,1 @@\n+export const b = 2' },
+        ],
+      },
+      model: 'gpt-5',
+      version: '0.6.1',
+      mode: 'agent',
+      account: null,
+    }, { client: {}, config: {}, color: false });
+  } finally {
+    process.stdout.write = original;
+  }
+  const output = chunks.join('');
+  assert.match(output, /FICHIERS \(2\)/);
+  assert.match(output, /src\/a\.js/);
+  assert.match(output, /const a = 1/);
+  assert.match(output, /const a = 2/);
+});
+
+test('diff view : lecture des changements git', async (t) => {
+  const root = tmpDir();
+  const init = await runCommand('git init', { cwd: root });
+  if (init.code !== 0) return t.skip('git indisponible');
+  writeFile(root, 'a.js', 'const a = 1;\n');
+  await runCommand('git add a.js', { cwd: root });
+  await runCommand('git -c user.name=Test -c user.email=test@example.invalid -c commit.gpgsign=false commit -m init', { cwd: root });
+  writeFile(root, 'a.js', 'const a = 2;\n');
+  writeFile(root, 'b.js', 'export const b = 3;\n');
+  const review = await collectWorkspaceDiff(root);
+  assert.equal(review.ok, true);
+  const files = Object.fromEntries(review.files.map((file) => [file.path, file]));
+  assert.equal(files['a.js'].status, 'M');
+  assert.equal(files['a.js'].additions, 1);
+  assert.equal(files['a.js'].deletions, 1);
+  assert.equal(files['b.js'].status, 'A');
+  assert.match(files['b.js'].diff, /\+export const b = 3/);
 });
 
 test('assets et splash animé', async () => {

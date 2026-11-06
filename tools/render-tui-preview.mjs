@@ -85,7 +85,7 @@ async function captureSplash() {
     rows: 52,
     write: (chunk) => { frames.push(String(chunk)); return true; },
   };
-  await playSplash({ output, color: true, frameMs: 1, version: '0.6.1' });
+  await playSplash({ output, color: true, frameMs: 1, version: '0.7.0' });
   return ansiToHtml(frames[frames.length - 1] || '');
 }
 
@@ -135,7 +135,7 @@ const base = {
   agentRunning: false,
   approval: null,
   model: 'claude-opus-5.5',
-  version: '0.6.1',
+  version: '0.7.0',
   mode: 'agent',
   tick: 0,
   account,
@@ -164,6 +164,75 @@ const approval = screenshot('approval', captureScreen({
     diff: '--- a/tests/login.test.js\n+++ b/tests/login.test.js\n@@ -1,4 +1,5 @@\n- await page.waitForTimeout(250)\n+ await page.waitForCookie("session")\n  await expect(page).toHaveURL("/dashboard")',
   },
 }));
+const diff = screenshot('diff-review', captureScreen({
+  ...base,
+  layout: 'focus',
+  overlay: 'diff',
+  approval: { type: 'write', file: 'tests/login.test.js' },
+  diffReview: {
+    repo: 'C:/Users/ADMIN/Projets/valaria',
+    selected: 0,
+    scroll: 0,
+    files: [
+      {
+        path: 'tests/login.test.js',
+        status: 'M',
+        additions: 2,
+        deletions: 1,
+        diff: '--- a/tests/login.test.js\n+++ b/tests/login.test.js\n@@ -1,4 +1,5 @@\n- import { delay } from "node:timers/promises"\n+ import { expect } from "@playwright/test"\n const login = async (page) => {\n-  await page.waitForTimeout(250)\n+  await page.waitForCookie("session")\n   await expect(page).toHaveURL("/dashboard")\n }',
+      },
+      {
+        path: 'src/session.js',
+        status: 'A',
+        additions: 12,
+        deletions: 0,
+        diff: '--- /dev/null\n+++ b/src/session.js\n@@ -0,0 +1,3 @@\n+export const sessionCookie = "session"\n+export const sessionTtl = 86400\n+',
+      },
+      {
+        path: 'old/helper.js',
+        status: 'D',
+        additions: 0,
+        deletions: 4,
+        diff: '--- a/old/helper.js\n+++ /dev/null\n@@ -1,3 +0,0 @@\n-export const oldHelper = true\n-// legacy\n-// remove me\n',
+      },
+    ],
+  },
+}));
+const diffStudio = screenshot('diff-review-studio', captureScreen({
+  ...base,
+  layout: 'studio',
+  overlay: 'diff',
+  approval: { type: 'write', file: 'tests/login.test.js' },
+  diffReview: {
+    repo: 'C:/Users/ADMIN/Projets/valaria',
+    selected: 0,
+    scroll: 0,
+    files: [
+      {
+        path: 'tests/login.test.js',
+        status: 'M',
+        additions: 2,
+        deletions: 1,
+        diff: '--- a/tests/login.test.js\n+++ b/tests/login.test.js\n@@ -1,4 +1,5 @@\n- import { delay } from "node:timers/promises"\n+ import { expect } from "@playwright/test"\n const login = async (page) => {\n-  await page.waitForTimeout(250)\n+  await page.waitForCookie("session")\n   await expect(page).toHaveURL("/dashboard")\n }',
+      },
+      {
+        path: 'src/session.js',
+        status: 'A',
+        additions: 12,
+        deletions: 0,
+        diff: '--- /dev/null\n+++ b/src/session.js\n@@ -0,0 +1,3 @@\n+export const sessionCookie = "session"\n+export const sessionTtl = 86400\n+',
+      },
+      {
+        path: 'old/helper.js',
+        status: 'D',
+        additions: 0,
+        deletions: 4,
+        diff: '--- a/old/helper.js\n+++ /dev/null\n@@ -1,3 +0,0 @@\n-export const oldHelper = true\n-// legacy\n-// remove me\n',
+      },
+    ],
+  },
+}));
 const studio = screenshot('studio', captureScreen({ ...base, layout: 'studio' }));
 const splash = screenshot('splash', await captureSplash());
-console.log(JSON.stringify({ focus, active, approval, studio, splash }, null, 2));
+console.log(JSON.stringify({ focus, active, approval, diff, diffStudio, studio, splash }, null, 2));
+

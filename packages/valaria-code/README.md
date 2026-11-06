@@ -57,6 +57,19 @@ Dans la TUI :
 - `Ctrl+O` ou `/account` ouvre l’écran compte et quotas ;
 - `Échap`/`Entrée` ferme cet écran.
 
+## Revue de diff
+
+`/diff` ouvre une revue en deux colonnes :
+
+- à gauche, les fichiers modifiés, ajoutés ou supprimés du répertoire ;
+- à droite, les lignes `+`/`−` du fichier sélectionné, avec numéros de ligne.
+
+En mode **Studio**, la colonne compte reste à gauche, puis viennent la liste des
+fichiers et le diff : tout ce qui concerne les changements est donc à droite.
+
+Une proposition d’écriture de l’agent ouvre automatiquement cette revue ;
+`y` autorise, `n` refuse, `↑↓` change de fichier et `PgUp/PgDn` fait défiler.
+
 ## Assets et animations
 
 - logo ASCII VALARIA au démarrage ;
