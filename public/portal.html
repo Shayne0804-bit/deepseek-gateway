@@ -112,13 +112,13 @@
           </div>
         </div>
         <nav class="nav" aria-label="Navigation de l'espace utilisateur">
-          <button class="nav-item active" data-user-view="overview">Vue d'ensemble</button>
-          <button class="nav-item" data-user-view="pass">Mon pass</button>
-          <button class="nav-item" data-user-view="keys">Mes clés API</button>
-          <button class="nav-item" data-user-view="usage">Consommation</button>
-          <button class="nav-item" data-user-view="requests">Requêtes</button>
-          <button class="nav-item" data-user-view="settings">Réglages</button>
-          <button class="nav-item" data-user-view="guide">Guide d'intégration</button>
+          <button class="nav-item active" data-user-view="overview"><span class="btn-icon" data-icon="grid" aria-hidden="true"></span>Vue d'ensemble</button>
+          <button class="nav-item" data-user-view="pass"><span class="btn-icon" data-icon="pass" aria-hidden="true"></span>Mon pass</button>
+          <button class="nav-item" data-user-view="keys"><span class="btn-icon" data-icon="key" aria-hidden="true"></span>Mes clés API</button>
+          <button class="nav-item" data-user-view="usage"><span class="btn-icon" data-icon="chart" aria-hidden="true"></span>Consommation</button>
+          <button class="nav-item" data-user-view="requests"><span class="btn-icon" data-icon="list" aria-hidden="true"></span>Requêtes</button>
+          <button class="nav-item" data-user-view="settings"><span class="btn-icon" data-icon="settings" aria-hidden="true"></span>Réglages</button>
+          <button class="nav-item" data-user-view="guide"><span class="btn-icon" data-icon="book" aria-hidden="true"></span>Guide d'intégration</button>
         </nav>
         <div class="sidebar-foot">
           <div class="provider-pill">
@@ -142,8 +142,8 @@
             </div>
           </div>
           <div class="topbar-actions">
-            <button type="button" class="btn btn-primary btn-sm hidden" id="create-key-btn">Créer ma clé API</button>
-            <button type="button" class="btn btn-ghost btn-sm" id="logout-btn">Se déconnecter</button>
+            <button type="button" class="btn btn-primary btn-sm hidden" id="create-key-btn"><span class="btn-icon" data-icon="plus" aria-hidden="true"></span>Créer ma clé API</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="logout-btn"><span class="btn-icon" data-icon="logout" aria-hidden="true"></span>Se déconnecter</button>
           </div>
         </header>
 
@@ -162,10 +162,10 @@
             <div class="alert warn"><strong>Copiez cette clé maintenant :</strong> elle ne sera plus jamais affichée en entier.</div>
             <div class="key-reveal">
               <code id="new-key-value"></code>
-              <button type="button" class="btn btn-ghost" id="copy-new-key">Copier</button>
+              <button type="button" class="btn btn-ghost" id="copy-new-key"><span class="btn-icon" data-icon="copy" aria-hidden="true"></span>Copier</button>
             </div>
             <div class="form-actions" style="justify-content:flex-start">
-              <button type="button" class="btn btn-primary" id="dismiss-key-btn">J'ai copié ma clé</button>
+              <button type="button" class="btn btn-primary" id="dismiss-key-btn"><span class="btn-icon" data-icon="check" aria-hidden="true"></span>J'ai copié ma clé</button>
             </div>
           </div>
         </section>
@@ -220,7 +220,7 @@
               <div class="panel-head">
                 <div><h2>Ma clé API</h2><span class="hint">Identifiant et état de votre accès.</span></div>
                 <div class="panel-head-actions">
-                  <button type="button" class="btn btn-ghost btn-sm" id="rotate-key-btn">Régénérer ma clé</button>
+                  <button type="button" class="btn btn-ghost btn-sm" id="rotate-key-btn"><span class="btn-icon" data-icon="refresh" aria-hidden="true"></span>Régénérer ma clé</button>
                 </div>
               </div>
               <div id="portal-key-details"></div>
@@ -258,7 +258,7 @@
                 </label>
                 <div class="form-actions full">
                   <span class="small muted" id="profile-status" aria-live="polite"></span>
-                  <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+                  <button type="submit" class="btn btn-primary btn-sm"><span class="btn-icon" data-icon="save" aria-hidden="true"></span>Enregistrer</button>
                 </div>
               </form>
             </section>
@@ -273,12 +273,7 @@
           </section>
 
           <section class="user-panel hidden" data-user-panel="guide">
-            <section class="panel">
-              <div class="panel-head">
-                <div><h2>Guide d'intégration</h2><span class="hint">Exemples prêts à copier.</span></div>
-              </div>
-              <div id="portal-usage"></div>
-            </section>
+            <div id="portal-guide"></div>
           </section>
         </div>
       </main>

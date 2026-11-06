@@ -362,6 +362,15 @@ async function main() {
   await evaluate("document.querySelector('[data-user-view=\\\"pass\\\"]').click()");
   await sleep(400);
   await screenshot('19b-public-portal-pass-desktop.png', 'Section Mon pass : pass actif et niveaux Decouverte, Createur, Equipe et Business.');
+  await evaluate("document.querySelector('[data-user-view=\\\"guide\\\"]').click()");
+  await sleep(500);
+  await screenshot('19c-public-portal-guide-desktop.png', 'Nouveau guide d integration : parcours en 3 etapes, endpoints OpenAI/Anthropic, exemples de code, modeles, parametres et erreurs.');
+  await evaluate("document.getElementById('guide-examples').scrollIntoView({block:'start'})");
+  await sleep(300);
+  await screenshot('19d-public-portal-guide-examples-desktop.png', 'Guide : onglets cURL, Node.js, Python et Anthropic avec bouton copier.', viewport.label, { keepScroll: true });
+  await evaluate("document.getElementById('guide-params').scrollIntoView({block:'start'})");
+  await sleep(250);
+  await screenshot('19e-public-portal-guide-params-desktop.png', 'Guide : parametres de requete et tableau des erreurs et quotas.', viewport.label, { keepScroll: true });
   await evaluate("document.querySelector('[data-user-view=\\\"overview\\\"]').click()");
   await sleep(300);
 
@@ -658,6 +667,7 @@ main().catch((error) => {
   console.error('ECHEC SCRIPT:', error);
   process.exit(1);
 });
+
 
 
 

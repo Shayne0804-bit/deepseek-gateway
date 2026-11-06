@@ -88,6 +88,21 @@
       "observation": "Section Mon pass : pass actif et niveaux Decouverte, Createur, Equipe et Business."
     },
     {
+      "viewport": "1440x900",
+      "artifact": "19c-public-portal-guide-desktop.png",
+      "observation": "Nouveau guide d integration : parcours en 3 etapes, endpoints OpenAI/Anthropic, exemples de code, modeles, parametres et erreurs."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "19d-public-portal-guide-examples-desktop.png",
+      "observation": "Guide : onglets cURL, Node.js, Python et Anthropic avec bouton copier."
+    },
+    {
+      "viewport": "1440x900",
+      "artifact": "19e-public-portal-guide-params-desktop.png",
+      "observation": "Guide : parametres de requete et tableau des erreurs et quotas."
+    },
+    {
       "viewport": "390x844",
       "artifact": "20-public-portal-mobile.png",
       "observation": "Espace utilisateur en 390x844 : cartes de quota empilees, tableaux contenus, controles tactiles >= 24 px, aucun debordement."

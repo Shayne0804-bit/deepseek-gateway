@@ -12,6 +12,49 @@
   const $ = (selector) => document.querySelector(selector);
   const state = { me: null, busy: false, emailBusy: false, newKey: null, userView: 'overview', currency: null };
 
+  const ICONS = {
+    grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+    pass: '<path d="M3 9a2 2 0 0 0 0 6v3h18v-3a2 2 0 0 1 0-6V6H3v3Z"/><path d="M13 6v12"/>',
+    key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9"/><path d="m17 4 3 3"/><path d="m14 7 3 3"/>',
+    chart: '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>',
+    list: '<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.1.36.3.7.6 1 .3.28.7.42 1.1.42H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51.58Z"/>',
+    book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/>',
+    plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+    copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+    check: '<path d="m20 6-11 11-5-5"/>',
+    refresh: '<path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12A9 9 0 0 1 18.5 5.8L21 8"/><path d="M21 3v5h-5"/>',
+    save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/>',
+    terminal: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3"/><path d="M13 15h4"/>',
+    code: '<path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/><path d="m14.5 4-5 16"/>',
+    arrow: '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
+    spark: '<path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3Z"/><path d="M19 16v4"/><path d="M17 18h4"/>',
+    shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
+    external: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-.8.6-1.5 1.2-1.5 2.5"/><path d="M12 17h.01"/>',
+    layers: '<path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18Z"/>',
+    dollar: '<path d="M12 2v20"/><path d="M17 5.5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+    lock: '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+    download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
+  };
+
+  function icon(name, extraClass = '') {
+    const path = ICONS[name] || ICONS.spark;
+    return `<svg class="icon ${extraClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${path}</svg>`;
+  }
+
+  function paintIcons(root = document) {
+    root.querySelectorAll('[data-icon]').forEach((element) => {
+      const name = element.dataset.icon;
+      if (!name) return;
+      const svg = icon(name);
+      if (element.innerHTML !== svg) element.innerHTML = svg;
+    });
+  }
+
   function esc(value) {
     return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -430,9 +473,10 @@
 
   async function createApiKey() {
     const button = $('#create-key-btn');
+    const previousLabel = button.innerHTML;
     $('#key-error').textContent = '';
     button.disabled = true;
-    button.textContent = 'Création…';
+    button.innerHTML = `${icon('refresh')}Création…`;
     try {
       const data = await api('/key', { method: 'POST' });
       state.newKey = data.key;
@@ -444,15 +488,16 @@
       status.textContent = err.message;
     } finally {
       button.disabled = false;
-      button.textContent = 'Créer ma clé API';
+      button.innerHTML = previousLabel;
     }
   }
 
   async function rotateApiKey() {
     if (!window.confirm('Régénérer votre clé API ? L’ancienne clé cessera de fonctionner immédiatement.')) return;
     const button = $('#rotate-key-btn');
+    const previousLabel = button.innerHTML;
     button.disabled = true;
-    button.textContent = 'Régénération…';
+    button.innerHTML = `${icon('refresh')}Régénération…`;
     try {
       const data = await api('/key/rotate', { method: 'POST' });
       state.newKey = data.key;
@@ -462,7 +507,7 @@
       $('#portal-status').innerHTML = `<strong>${esc(err.message)}</strong>`;
     } finally {
       button.disabled = false;
-      button.textContent = 'Régénérer ma clé';
+      button.innerHTML = previousLabel;
     }
   }
 
@@ -612,6 +657,328 @@
       ['fin du pass', me.client.expiresAt ? fmtDate(me.client.expiresAt) : 'sans date de fin'],
     ];
     return `<dl class="spec-list">${rows.map(([key, value]) => `<div class="spec-row"><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>`;
+  }
+
+  function guideMarkup(me) {
+    const base = me.baseUrl || '';
+    const anthropic = me.anthropicBaseUrl || `${base.replace(/\/v1\/?$/, '')}/anthropic`;
+    const models = (me.models ?? []).filter((name) => !/deepseek/i.test(name));
+    const model = models[0] || 'votre-modele';
+    const hasKey = Boolean(me.client?.hasKey);
+    const keyHint = hasKey ? `${me.client.keyPrefix}…` : 'Aucune clé active';
+    const keyState = hasKey
+      ? `<span class="badge badge-ok">${keyHint}</span>`
+      : '<span class="badge badge-warn">à créer</span>';
+
+    const curlCode = [
+      `curl ${base}/chat/completions \\`,
+      '  -H "Authorization: Bearer VOTRE_CLE_API" \\',
+      '  -H "Content-Type: application/json" \\',
+      `  -d '{"model":"${model}","messages":[{"role":"user","content":"Bonjour"}]}'`,
+    ].join('\n');
+
+    const nodeCode = [
+      "import OpenAI from 'openai';",
+      '',
+      'const client = new OpenAI({',
+      "  apiKey: 'VOTRE_CLE_API',",
+      `  baseURL: '${base}',`,
+      '});',
+      '',
+      'const completion = await client.chat.completions.create({',
+      `  model: '${model}',`,
+      "  messages: [{ role: 'user', content: 'Bonjour' }],",
+      '});',
+      '',
+      'console.log(completion.choices[0].message.content);',
+    ].join('\n');
+
+    const pythonCode = [
+      'from openai import OpenAI',
+      '',
+      'client = OpenAI(',
+      '    api_key="VOTRE_CLE_API",',
+      `    base_url="${base}",`,
+      ')',
+      '',
+      'response = client.chat.completions.create(',
+      `    model="${model}",`,
+      '    messages=[{"role": "user", "content": "Bonjour"}],',
+      ')',
+      '',
+      'print(response.choices[0].message.content)',
+    ].join('\n');
+
+    const anthropicCode = [
+      `curl ${anthropic}/v1/messages \\`,
+      '  -H "x-api-key: VOTRE_CLE_API" \\',
+      '  -H "anthropic-version: 2023-06-01" \\',
+      '  -H "Content-Type: application/json" \\',
+      `  -d '{"model":"${model}","max_tokens":1024,"messages":[{"role":"user","content":"Bonjour"}]}'`,
+    ].join('\n');
+
+    const codePanel = (id, label, code) => `
+      <div class="guide-code-panel${id === 'curl' ? '' : ' hidden'}" data-code-panel="${id}">
+        <div class="guide-code-top">
+          <span>${esc(label)}</span>
+          <button type="button" class="btn btn-ghost btn-sm" data-guide-copy-target="guide-code-${id}">
+            ${icon('copy')}Copier
+          </button>
+        </div>
+        <pre class="guide-code" id="guide-code-${id}"><code>${esc(code)}</code></pre>
+      </div>`;
+
+    const modelUsage = (name) => {
+      if (/opus/i.test(name)) return 'Raisonnement et tâches complexes';
+      if (/fable/i.test(name)) return 'Écriture longue et créative';
+      if (/v4-pro/i.test(name)) return 'Généraliste, code et analyse';
+      return 'Usage général';
+    };
+
+    return `
+      <section class="panel guide-hero">
+        <div class="guide-hero-copy">
+          <p class="hero-kicker">Guide d'intégration</p>
+          <h2>De la clé au premier appel,<br><span class="accent-word">en quelques minutes.</span></h2>
+          <p class="guide-lede">Une API compatible OpenAI, des exemples prêts à copier et un endpoint Anthropic pour Claude Code. Choisissez votre langage, collez votre clé, c'est parti.</p>
+          <div class="guide-hero-actions">
+            <button type="button" class="btn btn-primary" data-guide-copy-target="guide-base-url">${icon('copy')}Copier l'URL de base</button>
+            <button type="button" class="btn btn-ghost" data-guide-view="keys">${icon('key')}${hasKey ? 'Gérer ma clé' : 'Créer ma clé'}</button>
+          </div>
+          <div class="guide-hero-meta">
+            <span class="chip">${icon('check')}OpenAI SDK</span>
+            <span class="chip">${icon('terminal')}cURL</span>
+            <span class="chip">${icon('layers')}Streaming SSE</span>
+            <span class="chip">${icon('shield')}Clé dérivée</span>
+          </div>
+        </div>
+        <div class="guide-terminal" aria-label="Aperçu d'une requête API">
+          <div class="guide-terminal-bar">
+            <span class="terminal-dots"><i></i><i></i><i></i></span>
+            <span class="mono">POST /chat/completions</span>
+            <span class="badge badge-ok">200</span>
+          </div>
+          <pre class="guide-terminal-code">{
+  "model": "${esc(model)}",
+  "messages": [
+    { "role": "user", "content": "Bonjour" }
+  ],
+  "stream": true
+}</pre>
+          <div class="guide-terminal-foot">
+            <span class="live-dot"></span>
+            <span>réponse en streaming · ${esc(keyHint)}</span>
+          </div>
+        </div>
+      </section>
+
+      <div class="guide-steps">
+        <article class="guide-step">
+          <span class="guide-step-index">01</span>
+          <div>
+            <h3>Créez votre clé API</h3>
+            <p>Une clé <code>sk-dsk-…</code> personnelle, affichée une seule fois.</p>
+            <button type="button" class="btn btn-ghost btn-sm" data-guide-view="keys">${icon('key')}Mes clés</button>
+          </div>
+        </article>
+        <article class="guide-step">
+          <span class="guide-step-index">02</span>
+          <div>
+            <h3>Copiez l'URL de base</h3>
+            <p><code>${esc(base)}</code> — à utiliser dans votre SDK ou votre client HTTP.</p>
+            <button type="button" class="btn btn-ghost btn-sm" data-guide-copy-target="guide-base-url">${icon('copy')}Copier</button>
+          </div>
+        </article>
+        <article class="guide-step">
+          <span class="guide-step-index">03</span>
+          <div>
+            <h3>Envoyez votre premier appel</h3>
+            <p>Choisissez un exemple ci-dessous et remplacez la clé.</p>
+            <a class="btn btn-ghost btn-sm" href="#guide-examples">${icon('arrow')}Voir un exemple</a>
+          </div>
+        </article>
+      </div>
+
+      <div class="guide-layout">
+        <aside class="panel guide-toc-panel">
+          <p class="guide-toc-title">Sommaire</p>
+          <nav class="guide-toc" aria-label="Sommaire du guide">
+            <a href="#guide-endpoints">${icon('globe')}Points d'accès</a>
+            <a href="#guide-examples">${icon('code')}Premiers exemples</a>
+            <a href="#guide-models">${icon('layers')}Modèles</a>
+            <a href="#guide-params">${icon('settings')}Paramètres</a>
+            <a href="#guide-errors">${icon('shield')}Erreurs & quotas</a>
+            <a href="#guide-faq">${icon('help')}FAQ</a>
+          </nav>
+          <div class="guide-toc-help">
+            <p class="small muted">Besoin d'un coup de main ?</p>
+            <button type="button" class="btn btn-ghost btn-sm" data-guide-view="settings">${icon('settings')}Réglages</button>
+          </div>
+        </aside>
+
+        <div class="guide-content">
+          <section class="panel guide-section" id="guide-endpoints">
+            <div class="panel-head">
+              <div>
+                <span class="guide-eyebrow">01 · Connexion</span>
+                <h2>Points d'accès</h2>
+                <span class="hint">Deux formats compatibles, une seule clé.</span>
+              </div>
+              <span class="badge badge-ok">${icon('check')}opérationnel</span>
+            </div>
+            <div class="guide-endpoint-grid">
+              <article class="guide-endpoint">
+                <div class="guide-endpoint-head">
+                  <span class="guide-endpoint-icon">${icon('globe')}</span>
+                  <div><h3>OpenAI-compatible</h3><p>SDK OpenAI, LangChain, LlamaIndex, scripts HTTP.</p></div>
+                </div>
+                <div class="guide-kv">
+                  <span>Base URL</span>
+                  <code id="guide-base-url">${esc(base)}</code>
+                  <button type="button" class="icon-btn" data-guide-copy-target="guide-base-url" aria-label="Copier l'URL de base">${icon('copy')}</button>
+                </div>
+                <div class="guide-kv"><span>Auth</span><code>Authorization: Bearer VOTRE_CLE_API</code></div>
+                <div class="guide-kv"><span>Format</span><code>POST /chat/completions</code></div>
+              </article>
+              <article class="guide-endpoint">
+                <div class="guide-endpoint-head">
+                  <span class="guide-endpoint-icon">${icon('terminal')}</span>
+                  <div><h3>Claude Code / Anthropic</h3><p>Pour les clients qui parlent le protocole Anthropic Messages.</p></div>
+                </div>
+                <div class="guide-kv">
+                  <span>Base URL</span>
+                  <code id="guide-anthropic-url">${esc(anthropic)}</code>
+                  <button type="button" class="icon-btn" data-guide-copy-target="guide-anthropic-url" aria-label="Copier l'URL Anthropic">${icon('copy')}</button>
+                </div>
+                <div class="guide-kv"><span>Auth</span><code>x-api-key: VOTRE_CLE_API</code></div>
+                <div class="guide-kv"><span>Version</span><code>anthropic-version: 2023-06-01</code></div>
+              </article>
+            </div>
+            <div class="guide-note">${icon('lock')}<span>Votre clé est personnelle et n'expose jamais le fournisseur. Ne la partagez pas et stockez-la dans un gestionnaire de secrets.</span></div>
+          </section>
+
+          <section class="panel guide-section" id="guide-examples">
+            <div class="panel-head">
+              <div>
+                <span class="guide-eyebrow">02 · Premier appel</span>
+                <h2>Exemples prêts à copier</h2>
+                <span class="hint">Remplacez <code>VOTRE_CLE_API</code> par votre clé.</span>
+              </div>
+              <span class="badge badge-muted">${esc(model)}</span>
+            </div>
+            <div class="code-tabs" role="tablist" aria-label="Langage de l'exemple">
+              <button type="button" class="code-tab active" role="tab" aria-selected="true" data-guide-tab="curl">${icon('terminal')}cURL</button>
+              <button type="button" class="code-tab" role="tab" aria-selected="false" data-guide-tab="node">${icon('code')}Node.js</button>
+              <button type="button" class="code-tab" role="tab" aria-selected="false" data-guide-tab="python">${icon('code')}Python</button>
+              <button type="button" class="code-tab" role="tab" aria-selected="false" data-guide-tab="anthropic">${icon('terminal')}Anthropic</button>
+            </div>
+            <div class="guide-code-wrap">
+              ${codePanel('curl', 'cURL', curlCode)}
+              ${codePanel('node', 'Node.js — SDK OpenAI', nodeCode)}
+              ${codePanel('python', 'Python — SDK OpenAI', pythonCode)}
+              ${codePanel('anthropic', 'Claude Code / Anthropic', anthropicCode)}
+            </div>
+            <div class="guide-inline-links">
+              <button type="button" class="btn btn-ghost btn-sm" data-guide-view="keys">${icon('key')}Voir ma clé</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-guide-view="settings">${icon('settings')}Points d'accès</button>
+            </div>
+          </section>
+
+          <section class="panel guide-section" id="guide-models">
+            <div class="panel-head">
+              <div>
+                <span class="guide-eyebrow">03 · Modèles</span>
+                <h2>Modèles disponibles</h2>
+                <span class="hint">Les alias autorisés pour votre compte.</span>
+              </div>
+            </div>
+            ${models.length ? `<div class="table-wrap"><table class="guide-model-table">
+              <thead><tr><th>Modèle</th><th>Idéal pour</th><th class="right">Statut</th></tr></thead>
+              <tbody>${models.map((name) => `<tr>
+                <td><code>${esc(name)}</code></td>
+                <td class="muted">${esc(modelUsage(name))}</td>
+                <td class="right"><span class="badge badge-ok">disponible</span></td>
+              </tr>`).join('')}</tbody>
+            </table></div>` : '<div class="empty-state">Aucun modèle autorisé pour le moment.</div>'}
+            <p class="small muted" style="margin:14px 0 0">Utilisez l'identifiant exact comme valeur de <code>model</code>. Les modèles non listés peuvent être refusés par votre pass.</p>
+          </section>
+
+          <section class="panel guide-section" id="guide-params">
+            <div class="panel-head">
+              <div>
+                <span class="guide-eyebrow">04 · Requête</span>
+                <h2>Paramètres utiles</h2>
+                <span class="hint">Les clés que vous utiliserez le plus souvent.</span>
+              </div>
+            </div>
+            <div class="guide-param-grid">
+              <div class="guide-param"><code>model</code><p>Identifiant du modèle, par exemple <code>${esc(model)}</code>.</p></div>
+              <div class="guide-param"><code>messages</code><p>Liste des tours de conversation ; le contenu peut être du texte ou des parties multimodales.</p></div>
+              <div class="guide-param"><code>stream</code><p><code>true</code> pour recevoir la réponse en SSE, idéal pour un effet de frappe.</p></div>
+              <div class="guide-param"><code>temperature</code><p>Entre 0 et 2. Plus bas = réponses déterministes, plus haut = plus créatives.</p></div>
+              <div class="guide-param"><code>max_tokens</code><p>Plafonné par votre pass. Laissez vide pour utiliser la limite du modèle.</p></div>
+              <div class="guide-param"><code>stream_options</code><p>Ajoutez <code>{"include_usage": true}</code> pour recevoir les tokens en fin de flux.</p></div>
+            </div>
+          </section>
+
+          <section class="panel guide-section" id="guide-errors">
+            <div class="panel-head">
+              <div>
+                <span class="guide-eyebrow">05 · Diagnostic</span>
+                <h2>Erreurs & quotas</h2>
+                <span class="hint">Les réponses à connaître avant de déboguer.</span>
+              </div>
+            </div>
+            <div class="table-wrap"><table class="guide-model-table">
+              <thead><tr><th>Code</th><th>Signification</th><th>Réflexe</th></tr></thead>
+              <tbody>
+                <tr><td><code>401</code></td><td>Clé absente ou invalide.</td><td>Vérifiez l'en-tête <code>Authorization</code>.</td></tr>
+                <tr><td><code>403</code></td><td>Accès désactivé ou pass expiré.</td><td>Ouvrez <strong>Mon pass</strong> ou contactez l'administrateur.</td></tr>
+                <tr><td><code>404</code></td><td>Modèle ou route inconnue.</td><td>Utilisez un modèle listé et l'URL de base exacte.</td></tr>
+                <tr><td><code>429</code></td><td>Débit trop élevé.</td><td>Respectez <code>Retry-After</code> et votre limite req/min.</td></tr>
+                <tr><td><code>402</code> / quota</td><td>Quota ou crédit épuisé.</td><td>Consultez <strong>Consommation</strong> et renouvelez votre pass.</td></tr>
+              </tbody>
+            </table></div>
+          </section>
+
+          <section class="panel guide-section" id="guide-faq">
+            <div class="panel-head">
+              <div>
+                <span class="guide-eyebrow">06 · Aide</span>
+                <h2>Questions fréquentes</h2>
+                <span class="hint">Les réponses aux blocages les plus courants.</span>
+              </div>
+            </div>
+            <div class="guide-faq">
+              <details open>
+                <summary>Où trouver ma clé API ?</summary>
+                <p>Ouvrez <strong>Mes clés API</strong>. La clé complète est affichée une seule fois à la création ; ensuite seule son empreinte reste visible. Si vous l'avez perdue, régénérez-la.</p>
+              </details>
+              <details>
+                <summary>Quel endpoint choisir ?</summary>
+                <p>Utilisez l'endpoint <strong>OpenAI-compatible</strong> pour la majorité des SDK et outils. L'endpoint <strong>Anthropic</strong> est destiné aux clients qui parlent le protocole Messages, comme Claude Code.</p>
+              </details>
+              <details>
+                <summary>Comment suivre ma consommation ?</summary>
+                <p>La page <strong>Consommation</strong> détaille les tokens et le coût par jour. La page <strong>Requêtes</strong> donne le détail des appels récents et leur latence.</p>
+              </details>
+              <details>
+                <summary>Puis-je utiliser le SDK OpenAI ?</summary>
+                <p>Oui. Renseignez votre clé et l'URL de base <code>${esc(base)}</code>. Les autres SDK compatibles OpenAI fonctionnent de la même manière.</p>
+              </details>
+            </div>
+            <div class="guide-foot-actions">
+              <button type="button" class="btn btn-primary btn-sm" data-guide-view="keys">${icon('key')}Gérer ma clé</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-guide-view="usage">${icon('chart')}Voir ma consommation</button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div class="guide-status-bar">
+        <span>${icon('shield')}Connexion chiffrée · ${keyState}</span>
+        <span class="muted">URL : <code>${esc(base)}</code></span>
+      </div>`;
   }
 
   function endpointsMarkup(me) {
@@ -853,7 +1220,11 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     $('#portal-usage-hint').textContent = `${fmtInt(me.usage?.totals?.requests ?? 0)} requêtes au total`;
     const profileName = $('#profile-form [name="displayName"]');
     if (profileName) profileName.value = me.client.name || '';
-    $('#portal-usage').innerHTML = usageMarkup(me);
+    const guideRoot = $('#portal-guide');
+    if (guideRoot) {
+      guideRoot.innerHTML = guideMarkup(me);
+      paintIcons(guideRoot);
+    }
 
     $('#portal-logs-hint').textContent = `${fmtInt(me.usage?.totals?.requests ?? 0)} requêtes · ${fmtInt(me.usage?.today?.requests ?? 0)} aujourd'hui`;
     $('#portal-recent-hint').textContent = `${fmtInt(me.usage?.today?.requests ?? 0)} aujourd'hui`;
@@ -997,10 +1368,11 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     });
     $('#copy-new-key').addEventListener('click', async () => {
       const button = $('#copy-new-key');
+      const previous = button.innerHTML;
       try {
         await navigator.clipboard.writeText($('#new-key-value').textContent || '');
-        button.textContent = 'Copié';
-        setTimeout(() => { button.textContent = 'Copier'; }, 1500);
+        button.innerHTML = `${icon('check')}Copié`;
+        setTimeout(() => { button.innerHTML = previous; }, 1500);
       } catch {
         button.textContent = 'Copie impossible';
       }
@@ -1010,13 +1382,54 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
       if (!button) return;
       try {
         await navigator.clipboard.writeText(button.getAttribute('data-copy') || '');
-        const previous = button.textContent;
-        button.textContent = 'Copié';
-        setTimeout(() => { button.textContent = previous; }, 1500);
+        const previous = button.innerHTML;
+        button.innerHTML = `${icon('check')}Copié`;
+        setTimeout(() => { button.innerHTML = previous; }, 1500);
       } catch {
         button.textContent = 'Copie impossible';
       }
     });
+    document.addEventListener('click', async (event) => {
+      const guideView = event.target.closest('[data-guide-view]');
+      if (guideView) {
+        setUserView(guideView.dataset.guideView);
+        return;
+      }
+
+      const copyButton = event.target.closest('[data-guide-copy-target]');
+      if (copyButton) {
+        const target = document.getElementById(copyButton.dataset.guideCopyTarget);
+        if (!target) return;
+        const previous = copyButton.innerHTML;
+        try {
+          await navigator.clipboard.writeText(target.textContent || '');
+          copyButton.innerHTML = copyButton.classList.contains('icon-btn') ? icon('check') : `${icon('check')}Copié`;
+          setTimeout(() => { copyButton.innerHTML = previous; }, 1500);
+        } catch {
+          toastInline(copyButton, 'Copie impossible');
+        }
+        return;
+      }
+
+      const codeTab = event.target.closest('[data-guide-tab]');
+      if (codeTab) {
+        const id = codeTab.dataset.guideTab;
+        document.querySelectorAll('[data-guide-tab]').forEach((tab) => {
+          const active = tab.dataset.guideTab === id;
+          tab.classList.toggle('active', active);
+          tab.setAttribute('aria-selected', String(active));
+        });
+        document.querySelectorAll('[data-code-panel]').forEach((panel) => {
+          panel.classList.toggle('hidden', panel.dataset.codePanel !== id);
+        });
+      }
+    });
+  }
+
+  function toastInline(element, message) {
+    const previous = element.innerHTML;
+    element.textContent = message;
+    setTimeout(() => { element.innerHTML = previous; }, 1500);
   }
 
   async function detectEmailLogin() {
@@ -1066,6 +1479,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
 
   async function init() {
     wire();
+    paintIcons();
     refreshStatus();
     setInterval(refreshStatus, 60_000);
     await detectEmailLogin();
@@ -1079,6 +1493,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
 
   init();
 })();
+
 
 
 
