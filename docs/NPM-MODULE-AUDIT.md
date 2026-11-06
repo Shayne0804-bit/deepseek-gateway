@@ -373,13 +373,19 @@ Implémenté :
   - SDK exporté.
 - tests : device flow, révocation, jeton CLI, package (config/API/auth/outils/TUI/agent).
 
-Reste avant publication npm :
+Publication :
 
-1. alimenter les métadonnées finales du package (éventuelle capture TUI) ;
-2. publier `valaria-code@0.2.0` — **bloqué par la 2FA npm**, un code OTP est
-   nécessaire ;
-3. vérifier `npm install -g valaria-code` puis le parcours réel `valaria login`
-   depuis le registre.
+- **`valaria-code@0.2.0` est publié sur npm** (dernière version : `latest`) ;
+- propriétaire : `ducky12` ;
+- tarball : `https://registry.npmjs.org/valaria-code/-/valaria-code-0.2.0.tgz` ;
+- installation depuis le registre vérifiée (`npm install valaria-code@0.2.0`) ;
+- binaire vérifié : `valaria --version` → `0.2.0` ;
+- npm a créé le placeholder temporaire `0.0.0-stage` pendant la publication
+  staged ; `latest` pointe bien sur `0.2.0`.
+
+Le parcours `valaria login` réel nécessite une approbation humaine sur `/device` ;
+le flux complet (démarrage → approbation → jeton → `/v1/models` → révocation) a
+été testé de bout en bout contre la passerelle.
 
 ### Limite actuelle du MVP
 
