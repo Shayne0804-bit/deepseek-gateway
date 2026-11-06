@@ -1448,3 +1448,42 @@ body.portal-authenticated #portal-app > main { position: relative; z-index: 1; }
 }
 .guide-alias-note .icon { width: 13px; height: 13px; color: var(--accent); flex: none; margin-top: 1px; }
 .guide-alias-note code { font-size: 9.5px; color: var(--text-2); }
+
+/* --- guides par cas d'usage --- */
+.guide-use-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.guide-use-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 17px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.02);
+  min-width: 0;
+}
+.guide-use-card:hover { border-color: var(--border-strong); background: rgba(62, 233, 127, 0.03); }
+.guide-use-icon { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: var(--accent-soft); color: var(--accent); }
+.guide-use-icon .icon { width: 16px; height: 16px; }
+.guide-use-card h3 { margin: 0; font-size: 14px; }
+.guide-use-card p { margin: 0; color: var(--muted); font-size: 11.5px; line-height: 1.55; flex: 1; }
+.guide-use-meta { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.guide-use-meta code { font-size: 10px; color: var(--text-2); }
+.guide-use-card .btn { margin-top: 2px; }
+.guide-capability-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding: 12px 13px;
+  border: 1px solid rgba(240, 198, 116, 0.18);
+  border-radius: 9px;
+  background: rgba(240, 198, 116, 0.035);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.guide-capability-note .icon { width: 15px; height: 15px; color: var(--accent); flex: none; margin-top: 1px; }
+.guide-capability-note strong { color: var(--text-2); }
+.guide-capability-note p { margin: 2px 0 0; }
+@media (max-width: 900px) { .guide-use-grid { grid-template-columns: 1fr; } }

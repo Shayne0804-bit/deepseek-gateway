@@ -94,6 +94,11 @@
     },
     {
       "viewport": "1440x900",
+      "artifact": "19g-public-portal-guide-usecases-desktop.png",
+      "observation": "Guide : choix par cas d usage (chat, Codex, Claude Code) et note de capacite texte/code uniquement."
+    },
+    {
+      "viewport": "1440x900",
       "artifact": "19d-public-portal-guide-examples-desktop.png",
       "observation": "Guide : onglets cURL, Node.js, Python, Codex CLI et Anthropic avec bouton copier."
     },

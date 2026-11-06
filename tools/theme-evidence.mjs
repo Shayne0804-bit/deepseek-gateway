@@ -365,6 +365,10 @@ async function main() {
   await evaluate("document.querySelector('[data-user-view=\\\"guide\\\"]').click()");
   await sleep(500);
   await screenshot('19c-public-portal-guide-desktop.png', 'Nouveau guide d integration : parcours en 3 etapes, endpoints OpenAI/Anthropic, exemples de code, modeles, parametres et erreurs.');
+  await evaluate("document.getElementById('guide-cases').scrollIntoView({block:'start'})");
+  await sleep(300);
+  await screenshot('19g-public-portal-guide-usecases-desktop.png', 'Guide : choix par cas d usage (chat, Codex, Claude Code) et note de capacite texte/code uniquement.', viewport.label, { keepScroll: true });
+  await evaluate("document.getElementById('guide-examples').scrollIntoView({block:'start'})");
   await evaluate("document.getElementById('guide-examples').scrollIntoView({block:'start'})");
   await sleep(300);
   await screenshot('19d-public-portal-guide-examples-desktop.png', 'Guide : onglets cURL, Node.js, Python, Codex CLI et Anthropic avec bouton copier.', viewport.label, { keepScroll: true });

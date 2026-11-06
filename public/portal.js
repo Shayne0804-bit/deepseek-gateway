@@ -667,6 +667,7 @@
       || models.find((name) => /^(gpt|codex|o[34])/i.test(name))
       || models[0]
       || 'votre-modele';
+    const chatModel = models.find((name) => /^gpt-5$/i.test(name)) || openaiModel;
     const anthropicModel = models.find((name) => /^claude/i.test(name)) || openaiModel;
     const codexModel = models.find((name) => /^gpt-5-codex/i.test(name)) || 'gpt-5-codex';
     const hasKey = Boolean(me.client?.hasKey);
@@ -824,10 +825,51 @@
         </article>
       </div>
 
+      <section class="panel guide-section" id="guide-cases">
+        <div class="panel-head">
+          <div>
+            <span class="guide-eyebrow">01 · Cas d'usage</span>
+            <h2>Quel guide pour votre usage ?</h2>
+            <span class="hint">Le bon endpoint et le bon alias, sans mauvaise surprise.</span>
+          </div>
+        </div>
+        <div class="guide-use-grid">
+          <article class="guide-use-card">
+            <span class="guide-use-icon">${icon('spark')}</span>
+            <h3>Chat & assistants</h3>
+            <p>Réponses texte, résumés, rédaction, support conversationnel.</p>
+            <div class="guide-use-meta"><code>${esc(chatModel)}</code><span class="badge badge-muted">texte</span></div>
+            <button type="button" class="btn btn-ghost btn-sm" data-guide-usecase="node">${icon('arrow')}Voir le guide</button>
+          </article>
+          <article class="guide-use-card">
+            <span class="guide-use-icon">${icon('terminal')}</span>
+            <h3>Code & agents Codex</h3>
+            <p>Génération et refactorisation de code via Codex CLI.</p>
+            <div class="guide-use-meta"><code>${esc(codexModel)}</code><span class="badge badge-muted">texte + code</span></div>
+            <button type="button" class="btn btn-ghost btn-sm" data-guide-usecase="codex">${icon('arrow')}Voir le guide</button>
+          </article>
+          <article class="guide-use-card">
+            <span class="guide-use-icon">${icon('book')}</span>
+            <h3>Claude Code</h3>
+            <p>Clients qui utilisent le protocole Anthropic Messages.</p>
+            <div class="guide-use-meta"><code>${esc(anthropicModel)}</code><span class="badge badge-muted">texte + code</span></div>
+            <button type="button" class="btn btn-ghost btn-sm" data-guide-usecase="anthropic">${icon('arrow')}Voir le guide</button>
+          </article>
+        </div>
+        <div class="guide-capability-note">
+          ${icon('shield')}
+          <div>
+            <strong>Une seule capacité réelle : le texte et le code.</strong>
+            <p>Les alias OpenAI/Codex sont des noms d'accès au même modèle texte. Ils ne génèrent ni image, ni audio, ni vidéo et ne transforment pas la passerelle en modèle multimodal.</p>
+          </div>
+        </div>
+      </section>
+
       <div class="guide-layout">
         <aside class="panel guide-toc-panel">
           <p class="guide-toc-title">Sommaire</p>
           <nav class="guide-toc" aria-label="Sommaire du guide">
+            <a href="#guide-cases">${icon('spark')}Cas d'usage</a>
             <a href="#guide-endpoints">${icon('globe')}Points d'accès</a>
             <a href="#guide-examples">${icon('code')}Premiers exemples</a>
             <a href="#guide-models">${icon('layers')}Modèles</a>
@@ -845,7 +887,7 @@
           <section class="panel guide-section" id="guide-endpoints">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">01 · Connexion</span>
+                <span class="guide-eyebrow">02 · Connexion</span>
                 <h2>Points d'accès</h2>
                 <span class="hint">Deux formats compatibles, une seule clé.</span>
               </div>
@@ -886,7 +928,7 @@
           <section class="panel guide-section" id="guide-examples">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">02 · Premier appel</span>
+                <span class="guide-eyebrow">03 · Premier appel</span>
                 <h2>Exemples prêts à copier</h2>
                 <span class="hint">Remplacez <code>VOTRE_CLE_API</code> par votre clé.</span>
               </div>
@@ -915,34 +957,35 @@
           <section class="panel guide-section" id="guide-models">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">03 · Modèles</span>
+                <span class="guide-eyebrow">04 · Modèles</span>
                 <h2>Modèles disponibles</h2>
                 <span class="hint">Les alias autorisés pour votre compte, dont Codex / OpenAI.</span>
               </div>
             </div>
             ${models.length ? `<div class="table-wrap"><table class="guide-model-table">
-              <thead><tr><th>Modèle</th><th>Idéal pour</th><th class="right">Statut</th></tr></thead>
+              <thead><tr><th>Modèle</th><th>Idéal pour</th><th>Capacité</th><th class="right">Statut</th></tr></thead>
               <tbody>${models.map((name) => `<tr>
                 <td><code>${esc(name)}</code></td>
                 <td class="muted">${esc(modelUsage(name))}</td>
+                <td><span class="badge badge-muted">texte / code</span></td>
                 <td class="right"><span class="badge badge-ok">disponible</span></td>
               </tr>`).join('')}</tbody>
             </table></div>` : '<div class="empty-state">Aucun modèle autorisé pour le moment.</div>'}
-            <p class="guide-alias-note">${icon('code')}<span>Codex CLI accepte notamment <code>gpt-5-codex</code>, <code>gpt-5</code>, <code>codex</code>, <code>o4-mini</code> et <code>o3</code>. Ces alias sont routés par la passerelle ; utilisez celui attendu par votre client.</span></p>
+            <p class="guide-alias-note">${icon('shield')}<span><strong>Texte et code uniquement.</strong> Les alias Codex/OpenAI ne sont pas des modèles d'image ou multimodaux : ils produisent du texte et du code avec le modèle de la passerelle.</span></p>
             <p class="small muted" style="margin:10px 0 0">Utilisez l'identifiant exact comme valeur de <code>model</code>. Les modèles non listés peuvent être refusés par votre pass.</p>
           </section>
 
           <section class="panel guide-section" id="guide-params">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">04 · Requête</span>
+                <span class="guide-eyebrow">05 · Requête</span>
                 <h2>Paramètres utiles</h2>
                 <span class="hint">Les clés que vous utiliserez le plus souvent.</span>
               </div>
             </div>
             <div class="guide-param-grid">
               <div class="guide-param"><code>model</code><p>Identifiant du modèle, par exemple <code>${esc(openaiModel)}</code>.</p></div>
-              <div class="guide-param"><code>messages</code><p>Liste des tours de conversation ; le contenu peut être du texte ou des parties multimodales.</p></div>
+              <div class="guide-param"><code>messages</code><p>Liste des tours de conversation. Le contenu est du texte uniquement : la passerelle ne traite pas les images.</p></div>
               <div class="guide-param"><code>stream</code><p><code>true</code> pour recevoir la réponse en SSE, idéal pour un effet de frappe.</p></div>
               <div class="guide-param"><code>temperature</code><p>Entre 0 et 2. Plus bas = réponses déterministes, plus haut = plus créatives.</p></div>
               <div class="guide-param"><code>max_tokens</code><p>Plafonné par votre pass. Laissez vide pour utiliser la limite du modèle.</p></div>
@@ -953,7 +996,7 @@
           <section class="panel guide-section" id="guide-errors">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">05 · Diagnostic</span>
+                <span class="guide-eyebrow">06 · Diagnostic</span>
                 <h2>Erreurs & quotas</h2>
                 <span class="hint">Les réponses à connaître avant de déboguer.</span>
               </div>
@@ -973,7 +1016,7 @@
           <section class="panel guide-section" id="guide-faq">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">06 · Aide</span>
+                <span class="guide-eyebrow">07 · Aide</span>
                 <h2>Questions fréquentes</h2>
                 <span class="hint">Les réponses aux blocages les plus courants.</span>
               </div>
@@ -1440,6 +1483,14 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
         return;
       }
 
+      const useCase = event.target.closest('[data-guide-usecase]');
+      if (useCase) {
+        const tab = document.querySelector(`[data-guide-tab="${useCase.dataset.guideUsecase}"]`);
+        if (tab) tab.click();
+        document.getElementById('guide-examples')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+
       const codeTab = event.target.closest('[data-guide-tab]');
       if (codeTab) {
         const id = codeTab.dataset.guideTab;
@@ -1522,6 +1573,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
 
   init();
 })();
+
 
 
 
