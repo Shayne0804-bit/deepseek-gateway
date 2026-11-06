@@ -61,6 +61,7 @@
     if (!element) return;
     element.textContent = message;
     element.classList.toggle('visible', Boolean(message));
+    element.style.display = message ? 'block' : 'none';
   }
 
   function setBusy(busy, button, label) {
@@ -254,5 +255,6 @@
   $('#signup-back').addEventListener('click', resetFlow);
   init();
 })();
+
 
 

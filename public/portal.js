@@ -211,6 +211,7 @@
     if (!element) return;
     element.textContent = message;
     element.classList.toggle('visible', Boolean(message));
+    element.style.display = message ? 'block' : 'none';
   }
 
   function showLogin(message = '') {
@@ -256,6 +257,7 @@
     if (!element) return;
     element.textContent = message;
     element.classList.toggle('visible', Boolean(message));
+    element.style.display = message ? 'block' : 'none';
   }
 
   function resetEmailFlow() {
@@ -1077,5 +1079,6 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
 
   init();
 })();
+
 
 
