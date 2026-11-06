@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '3.9.2';
+export const APP_VERSION = '3.9.3';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -126,6 +126,9 @@ export function loadConfig(overrides = {}) {
     // deepseek-flash, meme si le client demande deepseek-v4-pro ou un alias Claude.
     // Mettre BILLED_MODEL=none pour desactiver ce forcage.
     billedModel: overrides.billedModel ?? raw('BILLED_MODEL') ?? 'deepseek-flash',
+    // Les alias premium consomment le credit au tarif v4-pro, meme si le modele
+    // reellement appele reste flash. Desactivable via ALIAS_PREMIUM_BILLING=0.
+    aliasPremiumBilling: overrides.aliasPremiumBilling ?? boolOr(raw('ALIAS_PREMIUM_BILLING'), true),
     // Chaine vide = non definie par l'environnement (le panneau peut alors la configurer).
     providerBaseUrl: stripTrailingSlash(overrides.providerBaseUrl ?? raw('DEEPSEEK_BASE_URL') ?? ''),
     publicBaseUrl: stripTrailingSlash(overrides.publicBaseUrl ?? raw('PUBLIC_BASE_URL') ?? ''),
@@ -353,6 +356,8 @@ export function loadConfig(overrides = {}) {
   config.signupEnabled = Boolean(config.signupEnabled);
   return config;
 }
+
+
 
 
 

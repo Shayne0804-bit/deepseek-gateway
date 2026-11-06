@@ -7,6 +7,7 @@ import { PASS_PLANS, getPassPlan, passPlanFields } from '../src/plans.js';
 import { openDb, closeDb, insertUsageLog, clientCreditWindowSince } from '../src/db.js';
 import { reserveCreditSlot, releaseCreditSlot } from '../src/db.js';
 import { toMicroUsd, fromMicroUsd } from '../src/money.js';
+import { creditPricingModelFor } from '../src/pricing.js';
 
 test('plans : durees, credit site et plafond 5 h', () => {
   const byId = Object.fromEntries(PASS_PLANS.map((plan) => [plan.id, plan]));
@@ -87,4 +88,11 @@ test('money : conversion micro-USD sans perte', () => {
   assert.equal(toMicroUsd(0.123456), 123456);
   assert.equal(fromMicroUsd(123456), 0.123456);
   assert.equal(toMicroUsd(1.0000004), 1000000);
+});
+
+test('alias premium : consomme le credit au tarif gros modele', () => {
+  assert.equal(creditPricingModelFor('claude-opus-5', 'deepseek-flash'), 'deepseek-v4-pro');
+  assert.equal(creditPricingModelFor('fable-5.1', 'deepseek-flash'), 'deepseek-v4-pro');
+  assert.equal(creditPricingModelFor('deepseek-flash', 'deepseek-flash'), 'deepseek-flash');
+  assert.equal(creditPricingModelFor('claude-opus-5', 'deepseek-flash', false), 'deepseek-flash');
 });

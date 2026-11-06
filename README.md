@@ -635,6 +635,8 @@ Les bénéfices sont bruts, avant frais de paiement, pour un pass consommé à 1
 
 ## Alias de modèles (déguisement)
 
+Les alias de gros modèles (claude-opus*, able-*, gpt-5*, deepseek-v4-pro) restent servis par deepseek-flash, mais leur consommation de crédit est facturée au tarif premium deepseek-v4-pro. Désactivable avec `ALIAS_PREMIUM_BILLING=0`. Le coût réel interne reste celui de flash.
+
 Vous pouvez exposer aux clients (Claude Code, SDK OpenAI…) un **nom de modèle différent** de
 celui réellement utilisé par DeepSeek. Un alias est une simple règle
 « nom demandé → modèle DeepSeek » :
@@ -1279,4 +1281,5 @@ La connexion admin demandera alors le mot de passe + les 6 chiffres. Sans cette 
 ## Securite des credits
 
 Les reservations de credit sont persistees en base (table/collection `credit_reservations`) en micro-USD entiers. En MongoDB Atlas, la reservation utilise une transaction : plusieurs instances ne peuvent pas franchir le meme plafond simultanement. Les reservations expirent automatiquement si un processus s'arrete.
+
 

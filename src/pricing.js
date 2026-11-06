@@ -225,3 +225,17 @@ export function computeCost(usage, model, pricing = DEFAULT_PRICING, now = new D
     (normalized.completion / 1e6) * outputPrice;
   return Math.round(cost * 1e6) / 1e6;
 }
+
+/**
+ * Modele de tarification du credit pour un alias commercial.
+ * Les alias "gros modeles" sont servis par flash mais consomment le credit
+ * au tarif premium : le service commercial et le cout technique restent separes.
+ */
+const PREMIUM_ALIAS_PATTERN = /^(claude-opus|fable-|gpt-5|deepseek-v4-pro)/i;
+
+export function creditPricingModelFor(requestedModel, servedModel, enabled = true) {
+  if (enabled && typeof requestedModel === 'string' && PREMIUM_ALIAS_PATTERN.test(requestedModel.trim())) {
+    return 'deepseek-v4-pro';
+  }
+  return servedModel;
+}

@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { computeCost, canonicalModelName, loadPricing, normalizeUsage } from './pricing.js';
+import { computeCost, canonicalModelName, creditPricingModelFor, loadPricing, normalizeUsage } from './pricing.js';
 import { loadModelAliases, resolveModelAlias } from './model-aliases.js';
 import {
   checkClientAccess,
@@ -339,6 +339,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
     // Nom de modele demande par le client quand il differe du modele facture
     // (ex. fable-5.1 -> deepseek-flash), pour un journal de facturation reel.
     let logRequestedModel = null;
+    let creditPricingModel = null;
     const record = async (opts) => {
       if (recorded) return;
       recorded = true;
@@ -441,7 +442,10 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           if (model && body.model !== model) {
             body.model = model;
             bodyMutated = true;
-            if (requestedModel) logRequestedModel = requestedModel;
+            if (requestedModel) {
+              logRequestedModel = requestedModel;
+              creditPricingModel = creditPricingModelFor(requestedModel, model, config.aliasPremiumBilling);
+            }
             responseHeaders['x-gateway-billed-model'] = model;
             if (requestedModel && model !== requestedModel) {
               responseHeaders['x-gateway-requested-model'] = requestedModel;
@@ -482,7 +486,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           : Math.floor(client.maxOutputTokens ?? 4096));
         const promptEstimate = estimateUsage(rawBody ?? '', 0).prompt;
         const maxUsage = { prompt: promptEstimate, completion: maxOut, total: promptEstimate + maxOut, cacheHit: 0, cacheMiss: promptEstimate };
-        const realEstimate = computeCost(maxUsage, body.model ?? null, pricing);
+        const realEstimate = computeCost(maxUsage, creditPricingModel ?? body.model ?? null, pricing);
         const creditEstimate = Math.round(realEstimate * config.siteCreditRate * 1e6) / 1e6;
         const totalRoom = client.quotaUsd == null ? Infinity : Math.max(0, client.quotaUsd - client.usedUsd);
         const fiveRoom = plan?.credit5hLimit == null ? Infinity : Math.max(0, plan.credit5hLimit - credit5hUsed);
@@ -581,7 +585,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           await record({
             model: modelFromRequest,
             usage: estimateUsage(rawBody ?? '', bytesStreamed),
-            costUsd: computeCost(estimateUsage(rawBody ?? '', bytesStreamed), modelFromRequest, pricing),
+            costUsd: computeCost(estimateUsage(rawBody ?? '', bytesStreamed), creditPricingModel ?? modelFromRequest, pricing),
             status: 0,
             streamed: true,
             estimated: true,
@@ -631,7 +635,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
             await record({
               model: modelFromRequest,
               usage: estimateUsage(rawBody ?? '', 0),
-              costUsd: computeCost(estimateUsage(rawBody ?? '', 0), modelFromRequest, pricing),
+              costUsd: computeCost(estimateUsage(rawBody ?? '', 0), creditPricingModel ?? modelFromRequest, pricing),
               status: 0,
               estimated: true,
               error: 'client_aborted',
@@ -659,7 +663,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
             billedUsage = estimateUsage(rawBody ?? '', text.length);
             estimated = true;
           }
-          const cost = billedUsage ? computeCost(billedUsage, modelFromRequest ?? payload?.model, pricing) : 0;
+          const cost = billedUsage ? computeCost(billedUsage, creditPricingModel ?? modelFromRequest ?? payload?.model, pricing) : 0;
           await record({
             model: modelFromRequest ?? payload?.model ?? null,
             usage: billedUsage,
@@ -727,7 +731,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
         const aborted = err?.name === 'AbortError';
         const usage = streamState.usage ?? estimateUsage(rawBody ?? '', bytesStreamed);
         const estimated = !streamState.usage;
-        const cost = computeCost(usage, streamState.model, pricing);
+        const cost = computeCost(usage, creditPricingModel ?? streamState.model, pricing);
         await record({
           model: streamState.model,
           usage,
@@ -758,7 +762,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
 
       const usage = streamState.usage ?? estimateUsage(rawBody ?? '', bytesStreamed);
       const estimated = !streamState.usage;
-      const cost = computeCost(usage, streamState.model, pricing);
+      const cost = computeCost(usage, creditPricingModel ?? streamState.model, pricing);
       await record({
         model: streamState.model,
         usage,
@@ -805,6 +809,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
 
   return handleProxy;
 }
+
 
 
 
