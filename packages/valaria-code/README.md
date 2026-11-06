@@ -15,12 +15,14 @@ valaria
 
 `valaria login` ouvre le portail VALARIA. Connectez-vous, vérifiez le code affiché
 dans le terminal, puis autorisez l'appareil. Après connexion, choisissez
-**Claude** ou **Codex** : le modèle retenu est enregistré sur l'appareil.
-Le CLI reçoit ensuite un jeton révocable.
+**Claude**, **Codex** ou **DeepSeek** : le modèle retenu est enregistré sur
+l'appareil. Le CLI reçoit ensuite un jeton révocable.
 
-L’interface principale affiche en permanence le compte, le pass, les barres de
-quotas et le modèle. Un message naturel lance directement l’agent : il peut lire
-et modifier les fichiers, avec approbation avant écriture et avant commande.
+L’interface principale est **Focus** par défaut : conversation et composeur
+uniquement. Le compte, le pass et les quotas restent consultables avec
+`/account` ou `Ctrl+O`, ou dans les interfaces Studio et Compact. Un message
+naturel lance directement l’agent : il peut lire et modifier les fichiers, avec
+approbation avant écriture et avant commande.
 
 ## Commandes
 
@@ -60,6 +62,8 @@ Dans la TUI :
 - `/help` lister les commandes.
 - `/chat <message>` conversation simple sans outils.
 - `/agent <tâche>` relancer explicitement l’agent.
+- `/interview`, `/plan <objectif>`, `/review` : parcours guidé proche de Freebuff.
+- après chaque réponse, des suggestions `1/2/3` proposent la suite.
 - `/files` explorer le projet.
 - `/read <fichier>` ajouter un fichier au contexte.
 - `/edit <fichier> <instruction>` préparer une modification, avec diff et

@@ -7,14 +7,17 @@ import { COLORS, bold, dim, paint, supportsColor } from './theme.js';
 export const MODEL_FAMILIES = [
   { id: 'claude', label: 'Claude', description: 'Raisonnement, rédaction et code' },
   { id: 'codex', label: 'Codex', description: 'Code, agents et refactorisation' },
+  { id: 'deepseek', label: 'DeepSeek', description: 'Rapide et économique pour le code' },
 ];
 
 export function groupModels(models = []) {
   const claude = models.filter((name) => /^claude/i.test(name));
   const codex = models.filter((name) => /^(gpt-5|gpt-4|codex)/i.test(name));
+  const deepseek = models.filter((name) => /^deepseek/i.test(name));
   return {
     claude: claude.length ? claude : models,
     codex: codex.length ? codex : models,
+    deepseek: deepseek.length ? deepseek : models,
   };
 }
 

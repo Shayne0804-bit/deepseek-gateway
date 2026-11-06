@@ -25,7 +25,7 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function createTui({ client, config, model, layout = 'focus', version = '0.4.0', color = supportsColor(), account = null, onModelChange = null, onPreferencesChange = null } = {}) {
+export function createTui({ client, config, model, layout = 'focus', version = '0.5.0', color = supportsColor(), account = null, onModelChange = null, onPreferencesChange = null } = {}) {
   const state = {
     messages: [],
     input: '',
@@ -45,6 +45,7 @@ export function createTui({ client, config, model, layout = 'focus', version = '
     version,
     account,
     tick: 0,
+    suggestions: [],
     startedAt: Date.now(),
   };
   const root = process.cwd();
@@ -74,6 +75,16 @@ export function createTui({ client, config, model, layout = 'focus', version = '
 
   function systemMessage(content) {
     addMessage('system', content);
+  }
+
+  function suggestionsFor(task) {
+    const base = [
+      { code: '1', label: 'Lancer les tests', input: '/run npm test' },
+      { code: '2', label: 'Planifier la suite', input: `/plan ${task}` },
+      { code: '3', label: 'Voir mon compte', input: '/account' },
+    ];
+    state.suggestions = base;
+    systemMessage(`Suggestions : ${base.map((item) => `[${item.code}] ${item.label}`).join('  ·  ')}`);
   }
 
   function apiMessages() {
@@ -108,6 +119,7 @@ export function createTui({ client, config, model, layout = 'focus', version = '
       });
       if (!assistant.content && result?.content) assistant.content = result.content;
       state.status = result?.usage?.total_tokens ? `prêt · ${result.usage.total_tokens} tokens` : 'prêt';
+      suggestionsFor(text);
     } catch (error) {
       if (error?.name === 'AbortError' || state.abort?.signal.aborted) {
         assistant.content += '\n\n[annulé]';
@@ -188,6 +200,7 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
         },
       });
       systemMessage(`⚙ Agent terminé · ${result.steps} étape(s)`);
+      suggestionsFor(task);
       state.status = 'prêt';
     } catch (error) {
       systemMessage(`✎ Agent : ${error.message}`);
@@ -202,15 +215,104 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
     }
   }
 
+  async function planTask(task) {
+    if (!task) {
+      systemMessage('usage : /plan <objectif>');
+      return;
+    }
+    state.streaming = true;
+    state.status = 'planification…';
+    draw();
+    try {
+      const result = await client.chat([
+        { role: 'system', content: `${SYSTEM_PROMPT}\nMode planification : ne modifie aucun fichier. Produis un plan court et ordonné, avec les fichiers concernés et les vérifications à lancer.` },
+        { role: 'user', content: task },
+      ], { model: state.model, maxTokens: 4096 });
+      addMessage('assistant', result.content);
+      suggestionsFor(task);
+      state.status = 'prêt';
+    } catch (error) {
+      systemMessage(`✎ Plan : ${error.message}`);
+      state.status = `erreur : ${error.message}`;
+    } finally {
+      state.streaming = false;
+      refreshAccount();
+      draw();
+    }
+  }
+
+  async function interviewTask() {
+    state.streaming = true;
+    state.status = 'interview…';
+    draw();
+    try {
+      const result = await client.chat([
+        { role: 'system', content: `${SYSTEM_PROMPT}\nMode interview : pose au maximum 3 questions courtes pour clarifier le besoin avant de coder. Ne propose pas encore de patch.` },
+        { role: 'user', content: 'Je veux clarifier ma demande avant de commencer.' },
+      ], { model: state.model, maxTokens: 1024 });
+      addMessage('assistant', result.content);
+      state.status = 'prêt';
+    } catch (error) {
+      systemMessage(`✎ Interview : ${error.message}`);
+      state.status = `erreur : ${error.message}`;
+    } finally {
+      state.streaming = false;
+      refreshAccount();
+      draw();
+    }
+  }
+
+  async function reviewTask() {
+    state.streaming = true;
+    state.status = 'revue du diff…';
+    draw();
+    try {
+      const diff = await runCommand('git diff --stat', { cwd: root });
+      const detail = await runCommand('git diff', { cwd: root });
+      const text = `${diff.stdout}\n${detail.stdout}`.trim();
+      if (!text) {
+        systemMessage('⚙ Aucun changement à relire.');
+        state.status = 'prêt';
+        return;
+      }
+      const result = await client.chat([
+        { role: 'system', content: `${SYSTEM_PROMPT}\nMode revue : analyse le diff, signale les bugs, risques et tests manquants. Ne modifie rien.` },
+        { role: 'user', content: text.slice(0, 60_000) },
+      ], { model: state.model, maxTokens: 4096 });
+      addMessage('assistant', result.content);
+      suggestionsFor('corrige les points de la revue');
+      state.status = 'prêt';
+    } catch (error) {
+      systemMessage(`✎ Revue : ${error.message}`);
+      state.status = `erreur : ${error.message}`;
+    } finally {
+      state.streaming = false;
+      refreshAccount();
+      draw();
+    }
+  }
+
   async function executeCommand(line) {
     const [command, ...rest] = line.slice(1).trim().split(/\s+/);
     const argument = rest.join(' ').trim();
     switch (command) {
       case 'help':
-        systemMessage('⚙ Votre message est exécuté par l’agent (lecture/patch/tests, avec approbations).\n/chat <message> · /agent <tâche> · /files [dossier] · /read <fichier>\n/edit <fichier> <instruction> · /run <commande> · /models · /model <nom> · /account\n/layout focus|studio|compact · /mode agent|chat · /usage · /clear · /quit\n\nCtrl+O : compte · Ctrl+P : interface · Ctrl+C : annuler');
+        systemMessage('⚙ Votre message est exécuté par l’agent (lecture/patch/tests, avec approbations).\n/chat <message> · /agent <tâche> · /interview · /plan <objectif> · /review\n/files [dossier] · /read <fichier> · /edit <fichier> <instruction> · /run <commande>\n/models · /model <nom> · /account · /layout focus|studio|compact · /mode agent|chat · /usage · /clear · /quit\n\nCtrl+O : compte · Ctrl+P : interface · Ctrl+C : annuler · 1/2/3 : suggestion');
         break;
       case 'agent': {
         await runAgentTask(argument, { explicit: true });
+        return;
+      }
+      case 'plan': {
+        await planTask(argument);
+        return;
+      }
+      case 'interview': {
+        await interviewTask();
+        return;
+      }
+      case 'review': {
+        await reviewTask();
         return;
       }
       case 'chat': {
@@ -391,6 +493,15 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
       draw();
       return;
     }
+    if (!state.input && !state.streaming && !state.agentRunning && state.suggestions.length && ['1', '2', '3'].includes(key)) {
+      const suggestion = state.suggestions[Number(key) - 1];
+      if (suggestion) {
+        state.suggestions = [];
+        state.input = suggestion.input;
+        submit();
+        return;
+      }
+    }
     if (key === '\u0003') { // Ctrl+C
       if (state.agentRunning) {
         if (typeof state.approval?.resolve === 'function') state.approval.resolve(false);
@@ -512,7 +623,7 @@ export function renderScreen(state, { client, config, color = true, root = proce
 
   const lines = [];
   const add = (value = '') => lines.push(value);
-  const head = `  ${c('V', COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${pulse} ${account ? 'en ligne' : 'hors ligne'}   ${d(LAYOUT_LABELS[layout])}   ${c(model, COLORS.amber)}   ${d(`v${state.version || '0.4.0'}`)}`;
+  const head = `  ${c('V', COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${pulse} ${account ? 'en ligne' : 'hors ligne'}   ${d(LAYOUT_LABELS[layout])}   ${c(model, COLORS.amber)}   ${d(`v${state.version || '0.5.0'}`)}`;
   add(head);
   add(`  ${d('─'.repeat(Math.max(0, cols - 4)))}`);
 

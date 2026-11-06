@@ -1,6 +1,6 @@
 {
   "name": "valaria-code",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "VALARIA Code — agent de code en terminal, interface plein écran, connexion par appareil au portail VALARIA.",
   "type": "module",
   "bin": {

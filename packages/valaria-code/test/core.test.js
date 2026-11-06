@@ -182,10 +182,11 @@ test('TUI layouts : focus épuré, studio avec compte, overlay compte', () => {
   assert.match(overlay, /REQUÊTES/);
 });
 
-test('onboarding : familles Claude et Codex', () => {
-  const families = groupModels(['claude-opus-5.5', 'fable-5', 'gpt-5-codex', 'gpt-5']);
+test('onboarding : familles Claude, Codex et DeepSeek', () => {
+  const families = groupModels(['claude-opus-5.5', 'fable-5', 'gpt-5-codex', 'gpt-5', 'deepseek-v4-pro', 'deepseek-flash']);
   assert.deepEqual(families.claude, ['claude-opus-5.5']);
   assert.deepEqual(families.codex, ['gpt-5-codex', 'gpt-5']);
+  assert.deepEqual(families.deepseek, ['deepseek-v4-pro', 'deepseek-flash']);
 });
 
 test('agent : lecture, proposition de patch, approbation et synthèse', async () => {
