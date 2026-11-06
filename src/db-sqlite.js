@@ -874,3 +874,12 @@ export function releaseCreditSlot(db, id) {
     /* ignore */
   }
 }
+
+/** Aligne les anciens pass d'essai (0.3 $ reel) sur le credit site actuel. */
+export function raiseTrialCreditQuota(db, minUsd) {
+  const value = Number(minUsd) || 0;
+  if (value <= 0) return 0;
+  return db.prepare(
+    "UPDATE clients SET quota_usd = ? WHERE plan = 'essai' AND quota_usd IS NOT NULL AND quota_usd < ?",
+  ).run(value, value).changes;
+}

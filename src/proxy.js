@@ -481,18 +481,22 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
       // concurrentes de franchir le meme plafond avant l'enregistrement.
       if (req.method === 'POST' && body) {
         const explicitMax = Number(body.max_tokens ?? body.max_completion_tokens ?? body.max_output_tokens ?? 0);
-        const maxOut = Math.max(1, Number.isFinite(explicitMax) && explicitMax > 0
+        let maxOut = Math.max(1, Number.isFinite(explicitMax) && explicitMax > 0
           ? Math.floor(explicitMax)
           : Math.floor(client.maxOutputTokens ?? 4096));
         const promptEstimate = estimateUsage(rawBody ?? '', 0).prompt;
-        const maxUsage = { prompt: promptEstimate, completion: maxOut, total: promptEstimate + maxOut, cacheHit: 0, cacheMiss: promptEstimate };
-        const realEstimate = computeCost(maxUsage, creditPricingModel ?? body.model ?? null, pricing);
-        const creditEstimate = Math.round(realEstimate * config.siteCreditRate * 1e6) / 1e6;
+        const priceModel = creditPricingModel ?? body.model ?? null;
+        const promptReal = computeCost(
+          { prompt: promptEstimate, completion: 0, total: promptEstimate, cacheHit: 0, cacheMiss: promptEstimate },
+          priceModel,
+          pricing,
+        );
+        const promptCredit = promptReal * config.siteCreditRate;
         const totalRoom = client.quotaUsd == null ? Infinity : Math.max(0, client.quotaUsd - client.usedUsd);
         const fiveRoom = plan?.credit5hLimit == null ? Infinity : Math.max(0, plan.credit5hLimit - credit5hUsed);
         const weekRoom = plan?.creditWeeklyLimit == null ? Infinity : Math.max(0, plan.creditWeeklyLimit - creditWeekUsed);
         const room = Math.min(totalRoom, fiveRoom, weekRoom);
-        if (creditEstimate > room + 1e-9) {
+        if (promptCredit > room + 1e-9) {
           const code = fiveRoom <= totalRoom && fiveRoom <= weekRoom
             ? 'credit_window_exceeded'
             : weekRoom <= totalRoom
@@ -502,13 +506,39 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           sendApiError(
             res,
             429,
-            `Credit insuffisant pour cette requete (estimation ${creditEstimate.toFixed(4)} $, disponible ${Math.max(0, room).toFixed(4)} $).`,
+            `Credit insuffisant pour cette requete (entree estimee ${promptCredit.toFixed(4)} $, disponible ${Math.max(0, room).toFixed(4)} $).`,
             code === 'insufficient_quota' ? 'insufficient_quota' : 'rate_limit_error',
             code,
             { ...responseHeaders, 'retry-after': '60' },
           );
           return;
         }
+        // Plafonne la sortie a ce que le credit restant peut payer, au lieu
+        // de refuser une requete sur la base de la sortie maximale theorique.
+        const outputUnitReal = computeCost(
+          { prompt: 0, completion: 1_000_000, total: 1_000_000, cacheHit: 0, cacheMiss: 0 },
+          priceModel,
+          pricing,
+        );
+        const outputCreditPerToken = (outputUnitReal * config.siteCreditRate) / 1_000_000;
+        if (outputCreditPerToken > 0 && room !== Infinity) {
+          const affordableOut = Math.floor((room - promptCredit) / outputCreditPerToken);
+          if (affordableOut < 1) {
+            release();
+            sendApiError(res, 429, 'Credit insuffisant pour produire une reponse.', 'insufficient_quota', 'insufficient_quota', responseHeaders);
+            return;
+          }
+          if (affordableOut < maxOut) {
+            maxOut = affordableOut;
+            const maxKey = ['max_tokens', 'max_completion_tokens', 'max_output_tokens'].find((key) => body[key] != null)
+              ?? (pathname.includes('/responses') ? 'max_output_tokens' : 'max_tokens');
+            body[maxKey] = maxOut;
+            rawBody = JSON.stringify(body);
+          }
+        }
+        const maxUsage = { prompt: promptEstimate, completion: maxOut, total: promptEstimate + maxOut, cacheHit: 0, cacheMiss: promptEstimate };
+        const realEstimate = computeCost(maxUsage, priceModel, pricing);
+        const creditEstimate = Math.round(realEstimate * config.siteCreditRate * 1e6) / 1e6;
         const amountMicro = toMicroUsd(creditEstimate);
         const availableMicro = room === Infinity ? Number.MAX_SAFE_INTEGER : Math.max(0, toMicroUsd(room));
         const reservationId = crypto.randomUUID();

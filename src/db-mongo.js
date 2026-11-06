@@ -1064,3 +1064,14 @@ export async function releaseCreditSlot(handle, id) {
     /* ignore */
   }
 }
+
+/** Aligne les anciens pass d'essai (0.3 $ reel) sur le credit site actuel. */
+export async function raiseTrialCreditQuota(handle, minUsd) {
+  const value = Number(minUsd) || 0;
+  if (value <= 0) return 0;
+  const result = await getCollection(handle, 'clients').updateMany(
+    { plan: 'essai', quota_usd: { $ne: null, $lt: value } },
+    { $set: { quota_usd: value } },
+  );
+  return result.modifiedCount ?? 0;
+}

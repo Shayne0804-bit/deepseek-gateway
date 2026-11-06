@@ -10,6 +10,7 @@ import {
   cleanupPortalEmailCodes,
   cleanupPortalSessions,
   clearTrialRequestQuotas,
+  raiseTrialCreditQuota,
   closeDb,
   deleteUsageLogsBefore,
   getSetting,
@@ -203,6 +204,11 @@ export async function startGateway(overrides = {}) {
   const trialQuotaCleanup = await clearTrialRequestQuotas(db);
   if (trialQuotaCleanup > 0) {
     log.info(`Quota de requetes retire sur ${trialQuotaCleanup} pass(es) d'essai.`);
+  }
+  if (!(await getSetting(db, 'trial_credit_site_migrated', false))) {
+    const raised = await raiseTrialCreditQuota(db, config.trialQuotaUsd);
+    await setSetting(db, 'trial_credit_site_migrated', true);
+    if (raised > 0) log.info(`Credit site d'essai aligne sur ${raised} ancien(s) pass(es).`);
   }
 
   // Mot de passe administrateur (premiere utilisation).
@@ -530,6 +536,7 @@ export function printStartupBanner(started, log = console.log) {
   log('   Ctrl+C pour arreter.');
   log('');
 }
+
 
 
 

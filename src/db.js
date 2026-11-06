@@ -194,6 +194,11 @@ export async function releaseCreditSlot(db, id) {
     ? mongo.releaseCreditSlot(db, id)
     : sqlite.releaseCreditSlot(db, id);
 }
+export async function raiseTrialCreditQuota(db, minUsd) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.raiseTrialCreditQuota(db, minUsd)
+    : sqlite.raiseTrialCreditQuota(db, minUsd);
+}
 export async function clearTrialRequestQuotas(db) {
   return dbDriver(db) === 'mongo'
     ? mongo.clearTrialRequestQuotas(db)
@@ -295,6 +300,7 @@ export async function recordAdminAudit(db, entry) {
 export async function listAdminAudit(db, options) {
   return dbDriver(db) === 'mongo' ? mongo.listAdminAudit(db, options) : sqlite.listAdminAudit(db, options);
 }
+
 
 
 
