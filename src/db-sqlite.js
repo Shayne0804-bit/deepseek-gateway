@@ -713,3 +713,14 @@ export function clientCreditWindowSince(db, clientId, sinceIso) {
 export function clearTrialRequestQuotas(db) {
   return db.prepare("UPDATE clients SET quota_requests = NULL WHERE plan = 'essai'").run().changes;
 }
+
+/** Consommation de credit site par client sur deux fenetres (5 h / 7 j). */
+export function clientCreditWindows(db, since5hIso, since7dIso) {
+  const rows = db.prepare(
+    `SELECT client_id,
+            COALESCE(SUM(CASE WHEN created_at >= ? THEN cost_usd ELSE 0 END), 0) AS used5h,
+            COALESCE(SUM(cost_usd), 0) AS used7d
+       FROM usage_logs WHERE created_at >= ? GROUP BY client_id`,
+  ).all(since5hIso, since7dIso);
+  return new Map(rows.map((row) => [row.client_id, { used5h: Number(row.used5h), used7d: Number(row.used7d) }]));
+}

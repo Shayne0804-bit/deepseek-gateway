@@ -1706,3 +1706,10 @@ textarea { min-height: 120px; resize: vertical; font-family: var(--mono); font-s
   html::after { display: none; }
 }
 
+
+/* Plafonds de credit 5 h / semaine (vue d'ensemble admin). */
+.credit-limits { display: grid; gap: 14px; }
+.credit-limit-row { display: grid; grid-template-columns: minmax(140px, 0.5fr) minmax(0, 1.5fr); gap: 16px; align-items: center; }
+.credit-limit-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.credit-limit-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; min-width: 0; }
+@media (max-width: 760px) { .credit-limit-row { grid-template-columns: 1fr; } .credit-limit-bars { grid-template-columns: 1fr; } }

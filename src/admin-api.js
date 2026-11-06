@@ -4,6 +4,7 @@ import {
   countAllUsage,
   countClients,
   countUsageSince,
+  clientCreditWindows,
   deleteAllAdminSessions,
   deleteClient,
   deleteSetting,
@@ -92,6 +93,7 @@ function publicClient(client, today = null) {
     planName: getPassPlan(client.plan)?.name
       ?? (client.plan === 'essai' ? 'Essai' : null),
     credit5hLimit: getPassPlan(client.plan)?.credit5hLimit ?? null,
+    creditWeeklyLimit: getPassPlan(client.plan)?.creditWeeklyLimit ?? null,
     hasKey: Boolean(client.keyPrefix && String(client.keyPrefix).startsWith('sk-dsk-')),
     keyPrefix: client.keyPrefix,
     enabled: client.enabled,
@@ -490,6 +492,26 @@ export function createAdminApi({ config, db, log, mailer }) {
         const pricingValue = await getSetting(db, 'pricing', null);
         const pricing = loadPricing(() => pricingValue);
         const exhausted = clients.filter((c) => checkClientAccess(c)?.code === 'insufficient_quota').length;
+        const since5h = new Date(now.getTime() - (config.siteCreditWindowHours || 5) * 3_600_000).toISOString();
+        const since7d = new Date(now.getTime() - 7 * 86_400_000).toISOString();
+        const creditUsage = await clientCreditWindows(db, since5h, since7d);
+        const round6 = (value) => Math.round((Number(value) || 0) * 1e6) / 1e6;
+        const creditLimits = clients.map((client) => {
+          const plan = getPassPlan(client.plan);
+          const used = creditUsage.get(client.id) ?? { used5h: 0, used7d: 0 };
+          return {
+            id: client.id,
+            name: client.name,
+            plan: client.plan ?? null,
+            planName: plan?.name ?? (client.plan === 'essai' ? 'Essai' : null),
+            used5h: round6(used.used5h),
+            limit5h: plan?.credit5hLimit ?? null,
+            usedWeek: round6(used.used7d),
+            limitWeek: plan?.creditWeeklyLimit ?? null,
+            remaining5h: plan?.credit5hLimit != null ? round6(Math.max(0, plan.credit5hLimit - used.used5h)) : null,
+            remainingWeek: plan?.creditWeeklyLimit != null ? round6(Math.max(0, plan.creditWeeklyLimit - used.used7d)) : null,
+          };
+        });
         sendJson(res, 200, {
           generatedAt: now.toISOString(),
           provider: { configured: Boolean(provider.apiKey), source: provider.source },
@@ -514,6 +536,7 @@ export function createAdminApi({ config, db, log, mailer }) {
             .map(([id, usage]) => ({ id, ...usage }))
             .sort((a, b) => b.tokens - a.tokens)
             .slice(0, 5),
+          creditLimits,
           server: serverInfo(config),
         });
         return;

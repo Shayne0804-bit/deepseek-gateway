@@ -290,6 +290,30 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
     }
 
     const pricingValue = await getSetting(db, 'pricing', null);
+
+    // ---- 3 ter. Plafond glissant hebdomadaire (7 jours) ----------------
+    const weeklyLimit = Number(plan?.creditWeeklyLimit ?? 0);
+    if (weeklyLimit > 0) {
+      const sinceIso = new Date(Date.now() - 7 * 86_400_000).toISOString();
+      const win = await clientCreditWindowSince(db, client.id, sinceIso);
+      if (win.total >= weeklyLimit) {
+        const oldestMs = win.oldest ? Date.parse(win.oldest) : NaN;
+        const retryAfter = Number.isFinite(oldestMs)
+          ? Math.max(1, Math.ceil((oldestMs + 7 * 86_400_000 - Date.now()) / 1000))
+          : 3600;
+        release();
+        log.warn(`[${req.requestId ?? '-'}] Plafond hebdomadaire atteint pour ${client.name}.`);
+        sendApiError(
+          res,
+          429,
+          `Plafond hebdomadaire de crédit atteint (${weeklyLimit.toFixed(2)} $). Réessayez dans ${Math.ceil(retryAfter / 3600)} h.`,
+          'rate_limit_error',
+          'credit_week_exceeded',
+          { ...responseHeaders, 'retry-after': String(retryAfter) },
+        );
+        return;
+      }
+    }
     const aliasesValue = await getSetting(db, 'model_aliases', null);
     const pricing = loadPricing(() => pricingValue);
     const modelAliases = loadModelAliases(() => aliasesValue);

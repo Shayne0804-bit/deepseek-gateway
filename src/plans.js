@@ -15,12 +15,13 @@ export const PASS_PLANS = Object.freeze([
     quotaRequests: null,
     quotaUsd: 5,
     credit5hLimit: 0.45,
+    creditWeeklyLimit: 5,
     rpmLimit: 20,
     concurrencyLimit: 2,
     maxOutputTokens: 4096,
     keys: 1,
     support: 'Email sous 72 h',
-    features: ['7 jours renouvelables', '5 $ de crédit site', '0,45 $ max / 5 h'],
+    features: ['7 jours renouvelables', '5 $ de crédit site', '0,45 $ max / 5 h', '5 $ max / semaine'],
   },
   {
     id: 'createur',
@@ -31,12 +32,13 @@ export const PASS_PLANS = Object.freeze([
     quotaRequests: null,
     quotaUsd: 15,
     credit5hLimit: 0.7,
+    creditWeeklyLimit: 7.5,
     rpmLimit: 60,
     concurrencyLimit: 3,
     maxOutputTokens: 8192,
     keys: 3,
     support: 'Email sous 48 h',
-    features: ['14 jours renouvelables', '15 $ de crédit site', '0,70 $ max / 5 h'],
+    features: ['14 jours renouvelables', '15 $ de crédit site', '0,70 $ max / 5 h', '7,50 $ max / semaine'],
   },
   {
     id: 'equipe',
@@ -47,12 +49,13 @@ export const PASS_PLANS = Object.freeze([
     quotaRequests: null,
     quotaUsd: 40,
     credit5hLimit: 0.9,
+    creditWeeklyLimit: 10,
     rpmLimit: 150,
     concurrencyLimit: 6,
     maxOutputTokens: 16384,
     keys: 8,
     support: 'Support prioritaire 24 h',
-    features: ['30 jours renouvelables', '40 $ de crédit site', '0,90 $ max / 5 h'],
+    features: ['30 jours renouvelables', '40 $ de crédit site', '0,90 $ max / 5 h', '10 $ max / semaine'],
   },
   {
     id: 'business',
@@ -63,12 +66,13 @@ export const PASS_PLANS = Object.freeze([
     quotaRequests: null,
     quotaUsd: 100,
     credit5hLimit: 2.1,
+    creditWeeklyLimit: 25,
     rpmLimit: 400,
     concurrencyLimit: 12,
     maxOutputTokens: 32768,
     keys: 25,
     support: 'Support dédié + SLA 99,5 %',
-    features: ['30 jours renouvelables', '100 $ de crédit site', '2,10 $ max / 5 h'],
+    features: ['30 jours renouvelables', '100 $ de crédit site', '2,10 $ max / 5 h', '25 $ max / semaine'],
   },
 ]);
 
@@ -104,5 +108,7 @@ export function passPlanFields(id, now = new Date()) {
 export function publicPlan(plan) {
   return { ...plan, features: [...plan.features] };
 }
+
+
 
 

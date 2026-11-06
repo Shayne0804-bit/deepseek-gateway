@@ -1262,11 +1262,14 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     if (userStatusDot) userStatusDot.className = `dot ${hasKey && me.client.enabled ? 'ok' : 'warn'}`;
 
     const q = me.quota;
-    $('#portal-quotas').innerHTML = [
+    const cards = [
       quotaCard('Requêtes', q.requests, fmtInt),
-      quotaCard('Crédit', q.usd, fmtUsd),
-      passCard(me),
-    ].join('');
+      quotaCard('Crédit site', q.usd, fmtUsd),
+    ];
+    if (me.limits?.credit5h) cards.push(quotaCard('Crédit / 5 h', me.limits.credit5h, fmtUsd));
+    if (me.limits?.creditWeek) cards.push(quotaCard('Crédit / semaine', me.limits.creditWeek, fmtUsd));
+    cards.push(passCard(me));
+    $('#portal-quotas').innerHTML = cards.join('');
 
     const series = me.usage?.series ?? [];
     $('#portal-chart-hint').textContent = `${fmtInt(me.usage?.totals?.requests ?? 0)} requêtes · ${fmtUsd(me.usage?.totals?.cost ?? 0)} de crédit site`;

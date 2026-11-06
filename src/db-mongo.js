@@ -921,3 +921,18 @@ export async function clearTrialRequestQuotas(handle) {
   );
   return result.modifiedCount ?? 0;
 }
+
+/** Consommation de credit site par client sur deux fenetres (5 h / 7 j). */
+export async function clientCreditWindows(handle, since5hIso, since7dIso) {
+  const rows = await getCollection(handle, 'usage_logs').aggregate([
+    { $match: { created_at: { $gte: since7dIso } } },
+    {
+      $group: {
+        _id: '$client_id',
+        used5h: { $sum: { $cond: [{ $gte: ['$created_at', since5hIso] }, '$cost_usd', 0] } },
+        used7d: { $sum: '$cost_usd' },
+      },
+    },
+  ]).toArray();
+  return new Map(rows.map((row) => [row._id, { used5h: Number(row.used5h || 0), used7d: Number(row.used7d || 0) }]));
+}

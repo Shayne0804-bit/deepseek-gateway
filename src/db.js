@@ -179,6 +179,11 @@ export async function clientCreditWindowSince(db, clientId, sinceIso) {
     ? mongo.clientCreditWindowSince(db, clientId, sinceIso)
     : sqlite.clientCreditWindowSince(db, clientId, sinceIso);
 }
+export async function clientCreditWindows(db, since5hIso, since7dIso) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.clientCreditWindows(db, since5hIso, since7dIso)
+    : sqlite.clientCreditWindows(db, since5hIso, since7dIso);
+}
 export async function clearTrialRequestQuotas(db) {
   return dbDriver(db) === 'mongo'
     ? mongo.clearTrialRequestQuotas(db)
@@ -230,4 +235,5 @@ export async function recordAdminAudit(db, entry) {
 export async function listAdminAudit(db, options) {
   return dbDriver(db) === 'mongo' ? mongo.listAdminAudit(db, options) : sqlite.listAdminAudit(db, options);
 }
+
 

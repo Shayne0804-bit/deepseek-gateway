@@ -13,6 +13,7 @@ import {
   cleanupSignupIdentities,
   clientUsageSeriesSince,
   countClientUsageSince,
+  clientCreditWindowSince,
   countSignupIdentitiesByDevice,
   countSignupIdentitiesByIp,
   deletePortalEmailCode,
@@ -541,6 +542,13 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       now,
     );
     const access = checkClientAccess(client, now);
+    const plan = getPassPlan(client.plan);
+    const fiveLimit = plan?.credit5hLimit ?? null;
+    const weekLimit = plan?.creditWeeklyLimit ?? (client.plan === 'essai' ? config.trialQuotaUsd : null);
+    const since5h = new Date(now.getTime() - (config.siteCreditWindowHours || 5) * 3_600_000).toISOString();
+    const since7d = new Date(now.getTime() - 7 * 86_400_000).toISOString();
+    const credit5hUsed = fiveLimit != null ? (await clientCreditWindowSince(db, client.id, since5h)).total : 0;
+    const creditWeekUsed = weekLimit != null ? (await clientCreditWindowSince(db, client.id, since7d)).total : 0;
     const origin = requestOrigin(req, config);
     return {
       client: {
@@ -564,6 +572,12 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         allowedModels: client.allowedModels
           ? client.allowedModels.filter((id) => id !== 'deepseek-flash')
           : null,
+        credit5h: fiveLimit == null
+          ? null
+          : { used: credit5hUsed, limit: fiveLimit, remaining: Math.max(0, fiveLimit - credit5hUsed) },
+        creditWeek: weekLimit == null
+          ? null
+          : { used: creditWeekUsed, limit: weekLimit, remaining: Math.max(0, weekLimit - creditWeekUsed) },
       },
       models: (await availableModelIds(db)).filter((id) => id !== 'deepseek-flash'),
       plan: (() => {
@@ -581,6 +595,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
             support: 'Communauté',
             features: [
               `${config.trialQuotaUsd} $ de crédit site`,
+              `${config.trialQuotaUsd} $ max / semaine`,
               `${config.trialDays} jours`,
             ],
           };

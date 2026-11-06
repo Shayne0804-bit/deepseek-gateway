@@ -452,7 +452,7 @@
     if (client.quotaTokens != null) parts.push(quotaBar('Tokens', client.usedTokens, client.quotaTokens, fmtCompact));
     if (client.quotaRequests != null) parts.push(quotaBar('Requêtes', client.usedRequests, client.quotaRequests, fmtInt));
     if (client.quotaUsd != null) parts.push(quotaBar('Crédit site', client.usedUsd, client.quotaUsd, (v) => fmtUsd(v)));
-    if (client.credit5hLimit != null) parts.push(`<span class='small muted'>plafond 5 h : ${fmtUsd(client.credit5hLimit)}</span>`);
+    if (client.credit5hLimit != null) parts.push(`<span class='small muted'>5 h : ${fmtUsd(client.credit5hLimit)} · semaine : ${fmtUsd(client.creditWeeklyLimit ?? 0)}</span>`);
     if (parts.length === 0) return '<span class="muted small">Aucun quota (illimité)</span>';
     return parts.join('');
   }
@@ -567,6 +567,33 @@
         ${statCard('Crédit site consommé (30 jours)', fmtUsd(cost30), `${fmtUsd(data.today?.cost || 0)} aujourd'hui`)}
         ${statCard('Clés actives', `${fmtInt(counts.clientsEnabled || 0)} / ${fmtInt(counts.clientsTotal || 0)}`, `${fmtInt(counts.clientsExhausted || 0)} épuisée(s)`)}
       </section>
+
+      ${(data.creditLimits || []).length ? `
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Plafonds de crédit</h2>
+            <span class="hint">Fenêtre glissante 5 h et hebdomadaire (7 jours).</span>
+          </div>
+        </div>
+        <div class="credit-limits">
+          ${data.creditLimits.map((row) => `
+            <div class="credit-limit-row">
+              <div class="credit-limit-name">
+                <strong>${esc(row.name)}</strong>
+                <span class="small muted">${esc(row.planName || row.plan || 'sans pass')}</span>
+              </div>
+              <div class="credit-limit-bars">
+                ${row.limit5h != null
+                  ? quotaBar('5 h', row.used5h, row.limit5h, (v) => fmtUsd(v))
+                  : '<span class="small muted">5 h : non plafonné</span>'}
+                ${row.limitWeek != null
+                  ? quotaBar('Semaine', row.usedWeek, row.limitWeek, (v) => fmtUsd(v))
+                  : '<span class="small muted">semaine : non plafonné</span>'}
+              </div>
+            </div>`).join('')}
+        </div>
+      </section>` : ''}
 
       <section class="panel">
         <div class="panel-head">
@@ -1671,6 +1698,7 @@
 
   init();
 })();
+
 
 
 
