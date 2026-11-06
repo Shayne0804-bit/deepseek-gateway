@@ -638,20 +638,22 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 400, 'Adresse email invalide.', 'invalid_email');
           return;
         }
+        // Captcha obligatoire aussi pour la connexion par email.
+        await assertTurnstile(req, body.turnstileToken);
         const client = await findClientByEmail(db, email);
-        if (!client && !config.signupEnabled) {
-          // Reponse generique : ne revele pas l'absence de compte.
-          audit(req, 'portal.email.requested');
-          sendJson(res, 200, emailCodeMessage());
-          return;
-        }
         if (!client) {
-          await assertTurnstile(req, body.turnstileToken);
-          await enforceSignupPolicy(req, email, body.deviceId);
+          audit(req, 'portal.email.unknown');
+          portalError(
+            res,
+            404,
+            'Aucun compte n’existe pour cette adresse. Créez un compte avant de vous connecter.',
+            'account_not_found',
+          );
+          return;
         }
         const send = reserveEmailSend(email);
         if (!send.ok) {
-          audit(req, client ? 'portal.email.request.rate_limited' : 'portal.signup.rate_limited', client?.name ?? null);
+          audit(req, 'portal.email.request.rate_limited', client.name);
           sendRateLimited(
             res,
             `Un code a déjà été demandé. Patientez ${send.retryAfterSeconds} s avant de renvoyer.`,
@@ -672,13 +674,13 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           createdAt: now.toISOString(),
           expiresAt,
         });
-        audit(req, client ? 'portal.email.requested' : 'portal.signup.requested', client?.name ?? null);
+        audit(req, 'portal.email.requested', client.name);
         try {
           await mailer.sendPortalCode({ to: email, code, minutes: config.otpExpiresMinutes });
         } catch (err) {
           releaseEmailSend(email);
           await deletePortalEmailCodes(db, email);
-          audit(req, 'portal.email.send_failed', client?.name ?? null);
+          audit(req, 'portal.email.send_failed', client.name);
           log.error(`[${req.requestId ?? '-'}] Envoi email impossible : ${err.message}`);
           sendJson(res, 502, {
             error: {
@@ -690,14 +692,11 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           });
           return;
         }
-        log.info(`[${req.requestId ?? '-'}] Code de connexion email envoyé (${client?.name ?? 'nouveau compte'}).`);
+        log.info(`[${req.requestId ?? '-'}] Code de connexion email envoyé (${client.name}).`);
         sendJson(res, 200, {
           ok: true,
           sent: true,
-          signup: !client,
-          message: client
-            ? 'Code de connexion envoyé. Vérifiez votre boîte email.'
-            : 'Code envoyé. Le compte sera créé automatiquement après validation (pass d’essai).',
+          message: 'Code de connexion envoyé. Vérifiez votre boîte email.',
           expiresMinutes: config.otpExpiresMinutes,
           resend_in_seconds: send.retryAfterSeconds,
           sends_in_window: send.count,
@@ -731,14 +730,13 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 401, 'Code expiré ou déjà utilisé. Demandez un nouveau code.', 'expired_code');
           return;
         }
-        // Si l'inscription autonome est active, une adresse inconnue est acceptee :
-        // le compte sera cree apres validation du code.
+        // Connexion email reservee aux comptes existants.
         const client = await findClientByEmail(db, email);
-        if (!client && !config.signupEnabled) {
+        if (!client) {
           portalError(
             res,
             409,
-            'Aucun compte n’existe encore pour cette adresse. Utilisez « Créer un compte » pour finaliser l’inscription avec ce code.',
+            'Aucun compte n’existe encore pour cette adresse. Créez un compte pour continuer.',
             'account_not_found',
           );
           return;
@@ -757,14 +755,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           return;
         }
         await deletePortalEmailCode(db, record.id);
-        if (client) {
-          await createSession(req, res, client, 'email');
-          return;
-        }
-        const created = await createTrialClient(email, await enforceSignupPolicy(req, email, body.deviceId));
-        audit(req, 'portal.signup', created.name);
-        log.info(`[${req.requestId ?? '-'}] Nouveau compte email via connexion : ${created.name} (essai ${config.trialDays} j)`);
-        await createSession(req, res, created, 'signup');
+        await createSession(req, res, client, 'email');
         return;
       }
 
@@ -793,11 +784,19 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 400, 'Adresse email invalide.', 'invalid_email');
           return;
         }
+        // Captcha avant de reveler si le compte existe (anti-enumeration).
+        await assertTurnstile(req, body.turnstileToken);
         const existing = await findClientByEmail(db, email);
-        if (!existing) {
-          await assertTurnstile(req, body.turnstileToken);
-          await enforceSignupPolicy(req, email, body.deviceId);
+        if (existing) {
+          portalError(
+            res,
+            409,
+            'Un compte existe déjà pour cette adresse. Connectez-vous depuis la page de connexion.',
+            'account_exists',
+          );
+          return;
         }
+        await enforceSignupPolicy(req, email, body.deviceId);
         const send = reserveEmailSend(email);
         if (!send.ok) {
           audit(req, 'portal.signup.rate_limited');
@@ -888,10 +887,15 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         }
         await deletePortalEmailCode(db, record.id);
 
-        // Compte déjà existant : on connecte simplement (pas de doublon).
+        // Un compte existant ne doit jamais etre cree a nouveau depuis l'inscription.
         const existing = await findClientByEmail(db, email);
         if (existing) {
-          await createSession(req, res, existing, 'email');
+          portalError(
+            res,
+            409,
+            'Un compte existe déjà pour cette adresse. Connectez-vous depuis la page de connexion.',
+            'account_exists',
+          );
           return;
         }
 

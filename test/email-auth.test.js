@@ -89,10 +89,10 @@ test('email OTP : demande générique, vérification, session et audit', async (
     const client = (await created.json()).client;
     assert.equal(client.email, 'user@example.com');
 
-    // Adresse inconnue : réponse générique, aucun envoi.
+    // Adresse inconnue : refus explicite, aucun envoi.
     const unknown = await portalPost(started.url, '/email/request', { email: 'inconnu@example.com' });
-    assert.equal(unknown.status, 200);
-    assert.match((await unknown.json()).message, /Si un compte existe/);
+    assert.equal(unknown.status, 404);
+    assert.equal((await unknown.json()).error.code, 'account_not_found');
     assert.equal(mailer.sent.length, 0);
 
     // Adresse connue : même réponse, un code envoyé.

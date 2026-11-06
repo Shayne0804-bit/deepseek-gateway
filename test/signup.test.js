@@ -105,14 +105,14 @@ test('inscription autonome : code email, compte, clé API et double connexion', 
     assert.ok(me2.client.keyPrefix.startsWith('sk-dsk-'));
 
     // Connexion par email (code) même compte.
-    const request2 = await portalPost(started.url, '/signup/request', { email: 'nouveau@gmail.com' });
+    const request2 = await portalPost(started.url, '/email/request', { email: 'nouveau@gmail.com' });
     assert.equal(request2.status, 200);
     await fetch(`${started.url}/portal/api/logout`, {
       method: 'POST',
       headers: { cookie, 'x-requested-with': 'dsk-portal' },
     });
     const code2 = mailer.sent.at(-1).code;
-    const loginEmail = await portalPost(started.url, '/signup/verify', { email: 'nouveau@gmail.com', code: code2 });
+    const loginEmail = await portalPost(started.url, '/email/verify', { email: 'nouveau@gmail.com', code: code2 });
     assert.equal(loginEmail.status, 200);
     assert.equal((await loginEmail.json()).method, 'email');
 
@@ -177,46 +177,76 @@ test('pas de plafond d envois par email (cooldown court en test)', async () => {
   }
 });
 
-test('code demande en inscription mais saisi en connexion : compte cree automatiquement', async () => {
+test('code inscription saisi en connexion : refuse sans consommer le code', async () => {
   const { started, mailer } = await startServer();
   try {
     await portalPost(started.url, '/signup/request', { email: 'mauvais-onglet@gmail.com' });
     const code = mailer.sent.at(-1).code;
 
     const login = await portalPost(started.url, '/email/verify', { email: 'mauvais-onglet@gmail.com', code });
-    assert.equal(login.status, 200);
-    assert.equal((await login.json()).method, 'signup');
+    assert.equal(login.status, 409);
+    assert.equal((await login.json()).error.code, 'account_not_found');
 
-    const cookie = login.headers.getSetCookie()[0].split(';')[0];
-    const me = await (await fetch(`${started.url}/portal/api/me`, { headers: { cookie } })).json();
-    assert.equal(me.client.email, 'mauvais-onglet@gmail.com');
-    assert.equal(me.client.hasKey, false);
+    // Le code n'a pas ete consomme : l'inscription reste possible.
+    const signup = await portalPost(started.url, '/signup/verify', { email: 'mauvais-onglet@gmail.com', code });
+    assert.equal(signup.status, 200);
+    assert.equal((await signup.json()).method, 'signup');
   } finally {
     await started.close();
   }
 });
 
-test('connexion email inconnue : un code est envoye et le compte est cree', async () => {
+test('connexion email inconnue : refusee sans envoi', async () => {
   const { started, mailer } = await startServer();
   try {
     const request = await portalPost(started.url, '/email/request', { email: 'inconnu@gmail.com' });
-    assert.equal(request.status, 200);
-    const requestData = await request.json();
-    assert.equal(requestData.sent, true);
-    assert.equal(requestData.signup, true);
-    assert.equal(mailer.sent.length, 1);
-
-    const verify = await portalPost(started.url, '/email/verify', { email: 'inconnu@gmail.com', code: mailer.sent[0].code });
-    assert.equal(verify.status, 200);
-    assert.equal((await verify.json()).method, 'signup');
-
-    const adminCookie = await adminLogin(started.url);
-    const clients = await (await fetch(`${started.url}/admin/api/clients`, { headers: { cookie: adminCookie } })).json();
-    const account = clients.clients.find((c) => c.email === 'inconnu@gmail.com');
-    assert.ok(account, 'le compte doit apparaître côté admin');
-    assert.equal(account.hasKey, false);
+    assert.equal(request.status, 404);
+    assert.equal((await request.json()).error.code, 'account_not_found');
+    assert.equal(mailer.sent.length, 0);
   } finally {
     await started.close();
+  }
+});
+
+test('captcha requis aussi pour la connexion email', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    if (String(url).startsWith('https://turnstile.test/')) {
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    return originalFetch(url, options);
+  };
+  const { started, mailer } = await startServer({
+    turnstileSiteKey: 'site-key',
+    turnstileSecretKey: 'secret-key',
+    turnstileRequired: true,
+    turnstileVerifyUrl: 'https://turnstile.test/verify',
+  });
+  try {
+    const admin = await adminLogin(started.url);
+    const created = await fetch(`${started.url}/admin/api/clients`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-requested-with': 'dsk-admin', cookie: admin },
+      body: JSON.stringify({ name: 'Captcha Login', email: 'captcha-login@gmail.com', period: 'total' }),
+    });
+    assert.equal(created.status, 201);
+
+    const noToken = await portalPost(started.url, '/email/request', { email: 'captcha-login@gmail.com' });
+    assert.equal(noToken.status, 403);
+    assert.equal((await noToken.json()).error.code, 'turnstile_failed');
+
+    const withToken = await portalPost(started.url, '/email/request', {
+      email: 'captcha-login@gmail.com',
+      turnstileToken: 'ok-token',
+    });
+    assert.equal(withToken.status, 200);
+    assert.equal(mailer.sent.length, 1);
+  } finally {
+    await started.close();
+    globalThis.fetch = originalFetch;
   }
 });
 

@@ -355,8 +355,10 @@ Une liste locale de domaines et un cookie d'appareil ne suffisent pas : ils se c
 En production, activez la couche externe :
 
 1. **Cloudflare Turnstile** (gratuit) : créez un widget dans Cloudflare → Turnstile, puis
-   `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY`. Le serveur vérifie chaque token ; en cas
-   d'échec du service, l'inscription est **refusée** (fail-closed).
+   `TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY`. Le captcha s'affiche automatiquement dans les
+   onglets **Code email** et **Créer un compte** ; le serveur vérifie le token pour **toute demande
+   de code email (connexion ou inscription)**. En cas d'échec du service, la demande est **refusée**
+   (fail-closed). La connexion par clé API n'est pas concernée.
 2. **IPQualityScore** (offre gratuite limitée) : `IPQS_API_KEY`. Détecte VPN/proxy/Tor,
    hébergement/datacenter, score de fraude, et (selon le plan) les emails jetables/invalides.
    Activez `EMAIL_VALIDATION_ENABLED=1` si votre plan inclut la validation email.
@@ -1076,7 +1078,7 @@ Serveur arrêté, copiez le dossier `data/` (ou au minimum `gateway.db`). À cha
 node --test test
 ```
 
-La suite (95 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
+La suite (96 tests) couvre : tarification (heures pleines/creuses, cache), calcul des coûts,
 normalisation `usage` OpenAI/Anthropic, quotas (tokens, requêtes, coût, reset de période),
 limites de débit et de concurrence, authentification admin (hash scrypt, sessions),
 chiffrement/hachage des clés dérivées, proxy JSON et **streaming SSE** avec comptage,
@@ -1225,6 +1227,7 @@ et **Vue d'ensemble** (graphique 30 jours, top consommateurs).
 ---
 
 **Bonne discussion avec votre ami — et gardez votre clé originale pour vous.**
+
 
 
 
