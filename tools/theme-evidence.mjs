@@ -300,6 +300,15 @@ async function main() {
   })()`) };
   await screenshot('22-public-steps-desktop.png', 'Etapes de branchement en 1440x900 : numero a gauche, texte et bloc de code sur toute la largeur disponible (aucune colonne de texte etroite).', viewport.label, { keepScroll: true });
 
+  await navigate(`${URL_A}/signup`);
+  await waitFor("document.querySelector('.signup-card') !== null");
+  await sleep(350);
+  await screenshot('24-signup-desktop.png', 'Creation de compte en 1440x900 : intro a gauche, formulaire aligne en haut a droite, sans carte flottante centree.');
+  await navigate(`${URL_A}/device`);
+  await waitFor("document.querySelector('.device-card') !== null");
+  await sleep(350);
+  await screenshot('25-device-desktop.png', 'Autorisation appareil en 1440x900 : explication a gauche, formulaire en haut a droite, sans centrage vertical.');
+
   await setViewport(MOBILE);
   await navigate(`${URL_A}/`);
   await waitFor("document.querySelector('.hero h1') !== null");

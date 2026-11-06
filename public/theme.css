@@ -1973,3 +1973,134 @@ body.portal-authenticated #portal-app > main { position: relative; z-index: 1; }
 .landing-v2 .hero-facts dt { color: #4e6156; }
 .landing-v2 .site-footer { color: #4e6156; }
 .landing-v2 .site-footer a { color: #3f5548; }
+
+/* ==================================================================
+   Cohérence thème : landing sombre, graphite vert et signaux jade
+   ================================================================== */
+.landing-v2 {
+  --bg: #09110d;
+  --bg-soft: #0d1812;
+  --text: #edf7f0;
+  --text-2: #c9dfd0;
+  --muted: #a0b7a9;
+  --muted-2: #91a99a;
+  --border: #213a2c;
+  --border-strong: #315443;
+  --accent: #8ceab8;
+  --accent-2: #6edaa3;
+  --accent-soft: rgba(127, 227, 170, 0.10);
+  --amber: #f0c674;
+  background: var(--bg);
+  color: var(--text);
+}
+.landing-v2 .landing-bg,
+.landing-v2 .site-bg {
+  background:
+    radial-gradient(1000px 560px at 6% -10%, rgba(74, 190, 125, 0.16), transparent 66%),
+    radial-gradient(860px 500px at 96% 10%, rgba(240, 198, 116, 0.09), transparent 68%),
+    radial-gradient(1100px 700px at 55% 112%, rgba(61, 160, 106, 0.10), transparent 70%),
+    #09110d;
+}
+.landing-v2 .landing-bg::before {
+  background-image:
+    linear-gradient(to right, rgba(232, 247, 237, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(232, 247, 237, 0.045) 1px, transparent 1px);
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,.65), transparent 72%);
+}
+.landing-v2 .landing-bg::after { border-color: rgba(140, 234, 184, 0.13); box-shadow: 0 0 0 80px rgba(140,234,184,.02), 0 0 0 160px rgba(140,234,184,.015); }
+.landing-v2 .site-header {
+  background: rgba(9, 17, 13, 0.86);
+  border-bottom-color: rgba(232, 247, 237, 0.09);
+}
+.landing-v2 .site-brand .brand-name { color: #edf7f0; }
+.landing-v2 .site-nav a { color: #9db5a6; }
+.landing-v2 .site-nav a:hover, .landing-v2 .site-nav a:focus-visible { color: #8ceab8; }
+.landing-v2 .site-status { color: #a8c0b1; background: rgba(255,255,255,.045); border-color: #294434; }
+.landing-v2 .site-status .dot { background: #8ceab8; }
+.landing-v2 .site-status .dot.ok { box-shadow: 0 0 0 3px rgba(140,234,184,.12); }
+.landing-v2 .hero h1 { color: #eef8f1; }
+.landing-v2 .hero h1 span { color: #8ceab8; }
+.landing-v2 .hero-lede { color: #a8bfb0; }
+.landing-v2 .hero-kicker, .landing-v2 .eyebrow { color: #8ceab8; }
+.landing-v2 .btn-ghost { color: #d4e8da; border-color: #355745; background: rgba(255,255,255,.04); }
+.landing-v2 .btn-ghost:hover { color: #edf7f0; border-color: #8ceab8; background: rgba(140,234,184,.08); }
+.landing-v2 .btn-primary { color: #08140e; background: linear-gradient(180deg, #9cf2c3, #6edaa3); box-shadow: 0 12px 30px rgba(110, 218, 163, 0.14), inset 0 1px 0 rgba(255,255,255,.42); }
+.landing-v2 .btn-primary:hover { background: linear-gradient(180deg, #b0f7cf, #7fe3aa); }
+.landing-v2 .install-inline { background: #0d1812; border-color: #294534; box-shadow: 0 1px 0 rgba(255,255,255,.04) inset; }
+.landing-v2 .install-inline code { color: #c5e9d2; }
+.landing-v2 .install-inline .icon-btn { color: #9fe8bb; border-color: #2b4b39; background: rgba(255,255,255,.035); }
+.landing-v2 .hero-facts { border-top-color: #213a2c; }
+.landing-v2 .hero-facts > div { border-right-color: #213a2c; }
+.landing-v2 .hero-facts dt { color: #91a99a; }
+.landing-v2 .hero-facts dd { color: #d0e5d6; }
+.landing-v2 .signal-strip { border-top-color: #213a2c; border-bottom-color: #213a2c; color: #9db5a6; }
+.landing-v2 .signal-label { color: #8ceab8; }
+.landing-v2 .signal-strip > span:not(.signal-label) { border-color: #294434; background: rgba(255,255,255,.035); }
+.landing-v2 .section { border-top-color: #1d3427; }
+.landing-v2 .section-head h2, .landing-v2 .section h2 { color: #eef8f1; }
+.landing-v2 .section-lede { color: #a0b7a9; }
+.landing-v2 .surface-card { background: rgba(255,255,255,.035); border-color: #2a4736; box-shadow: 0 1px 0 rgba(255,255,255,.045) inset; }
+.landing-v2 .surface-card h3 { color: #eef8f1; }
+.landing-v2 .surface-card > p { color: #a5bdae; }
+.landing-v2 .surface-icon { background: rgba(127,227,170,.12); color: #9fe8bb; }
+.landing-v2 .badge-soft { border-color: #2c4a38; color: #a2b9aa; background: rgba(255,255,255,.035); }
+.landing-v2 .surface-list { color: #c6ddce; }
+.landing-v2 .surface-list li::before { color: #8ceab8; }
+.landing-v2 .surface-cli { border-color: #315443; background: #07100b; }
+.landing-v2 .surface-cli h3 { color: #f0faf3; }
+.landing-v2 .surface-cli > p, .landing-v2 .surface-cli .surface-list { color: #a6c0ae; }
+.landing-v2 .mini-command { background: #0c1812; border-color: #2a4736; }
+.landing-v2 .mini-command code { color: #c5e9d2; }
+.landing-v2 .mini-command .icon-btn { color: #9fe8bb; border-color: #2b4b39; background: rgba(255,255,255,.035); }
+.landing-v2 .text-link { color: #9fe8bb; }
+.landing-v2 .section-capabilities { background: #0b1410; border-top-color: #213a2c; border-bottom-color: #213a2c; }
+.landing-v2 .capability-grid { border-top-color: #213a2c; border-left-color: #213a2c; }
+.landing-v2 .capability { background: rgba(255,255,255,.025); border-right-color: #213a2c; border-bottom-color: #213a2c; }
+.landing-v2 .capability:hover { background: rgba(127,227,170,.045); }
+.landing-v2 .capability h3 { color: #e8f4ec; }
+.landing-v2 .capability p { color: #9db5a6; }
+.landing-v2 .capability-index, .landing-v2 .capability-tag { color: #8ceab8; }
+.landing-v2 .cli-band { background: #07110c; border-top: 1px solid #1d3427; border-bottom: 1px solid #1d3427; }
+.landing-v2 .cli-band h2 { color: #f2fbf4; }
+.landing-v2 .cli-band-lede { color: #9ebba8; }
+.landing-v2 .site-steps { border-top-color: #213a2c; }
+.landing-v2 .site-steps li { border-right-color: #213a2c; }
+.landing-v2 .site-steps h3 { color: #eef8f1; }
+.landing-v2 .site-steps p { color: #a0b7a9; }
+.landing-v2 .site-steps .mini-code { background: #07100b; border-color: #294434; color: #c2e1cc; }
+.landing-v2 .control-band { background: #0b1510; border-top-color: #213a2c; border-bottom-color: #213a2c; }
+.landing-v2 .control-band h2 { color: #edf7f0; }
+.landing-v2 .control-points div { border-left-color: #315443; }
+.landing-v2 .control-points strong { color: #d7ebdd; }
+.landing-v2 .control-points span { color: #9db5a6; }
+.landing-v2 .site-cta { border-top-color: #213a2c; }
+.landing-v2 .site-cta h2 { color: #edf7f0; }
+.landing-v2 .site-cta > p:not(.eyebrow) { color: #a0b7a9; }
+.landing-v2 .site-footer { border-top-color: #213a2c; color: #91a99a; }
+.landing-v2 .site-footer a { color: #a0b7a9; }
+.landing-v2 .site-footer a:hover { color: #8ceab8; }
+.landing-v2 .hero-facts dt { color: #91a99a; }
+.landing-v2 .site-footer { color: #91a99a; }
+
+/* Pages d’authentification en desktop : alignées en haut, pas de carte flottante centrée. */
+@media (min-width: 961px) {
+  .signup-page .site-header,
+  .signup-page .site-footer,
+  .signup-page main,
+  .device-page .site-header,
+  .device-page .site-footer,
+  .device-page main {
+    width: min(1320px, calc(100% - 64px));
+  }
+  .signup-page .portal-login,
+  .device-page .portal-login,
+  .portal-login {
+    align-items: start;
+    min-height: auto;
+    padding-top: clamp(52px, 6vw, 82px);
+    padding-bottom: 78px;
+  }
+  .signup-page .portal-login-form,
+  .device-page .portal-login-form,
+  .portal-login-form { position: sticky; top: 102px; align-self: start; }
+}
