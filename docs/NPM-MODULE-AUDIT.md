@@ -361,11 +361,13 @@ Implémenté :
 - page `/device` avec connexion au portail et conservation du code ;
 - section **Appareils connectés** dans `/portal` ;
 - acceptation des jetons `vlt_…` par le proxy `/v1` et `/portal/api/me` ;
-- package `packages/valaria-code` version `0.4.0` :
-  - `valaria login` device flow, puis choix **Claude / Codex** et du modèle ;
+- package `packages/valaria-code` version `0.5.0` :
+  - `valaria login` device flow, puis choix **Claude / Codex / DeepSeek** et du modèle ;
   - agent par défaut : un message naturel lit, modifie et teste avec approbation ;
   - TUI plein écran avec trois interfaces **Focus / Studio / Compact** ;
+  - Focus organisé comme la démo Freebuff : titre projet, transcript, saisie, ligne modèle/aide ;
   - compte, pass, quotas et crédit consultables via `/account` ou `Ctrl+O` ;
+  - parcours `/interview`, `/plan`, `/review` et suggestions `1/2/3` après réponse ;
   - client API SSE ;
   - chat, `/files`, `/read`, `/edit`, `/run`, `/models`, `/usage` ;
   - `/agent <tâche>` : boucle agentique multi-étapes (lecture → patch → commande)
@@ -377,11 +379,10 @@ Implémenté :
 Publication :
 
 - **`valaria-code@0.4.0` est publié sur npm** (dernière version : `latest`) ;
+- `0.5.0` est prête et testée, mais sa publication interactive attend la validation 2FA ;
 - propriétaire : `ducky12` ;
-- installation depuis le registre vérifiée (`npm install valaria-code@0.4.0`) ;
-- binaire vérifié : `valaria --version` → `0.4.0` ;
-- npm a créé le placeholder temporaire `0.0.0-stage` pendant la publication
-  staged ; `latest` pointe bien sur `0.4.0`.
+- installation de la 0.4.0 depuis le registre vérifiée ;
+- binaire vérifié : `valaria --version` → `0.4.0`.
 
 Le parcours `valaria login` réel nécessite une approbation humaine sur `/device` ;
 le flux complet (démarrage → approbation → jeton → `/v1/models` → révocation) a
