@@ -185,6 +185,32 @@ test('TUI layouts : focus épuré, studio avec compte, overlay compte', () => {
   assert.match(overlay, /REQUÊTES/);
 });
 
+test('TUI accueil : écran vide avec marque et actions', () => {
+  const chunks = [];
+  const original = process.stdout.write;
+  process.stdout.write = (chunk) => { chunks.push(String(chunk)); return true; };
+  try {
+    renderScreen({
+      messages: [],
+      input: '',
+      status: 'prêt',
+      streaming: false,
+      approval: null,
+      model: 'gpt-5',
+      version: '0.6.0',
+      mode: 'agent',
+      layout: 'focus',
+      account: { client: { name: 'Test' }, plan: { name: 'Essai' }, quota: {} },
+    }, { client: {}, config: {}, color: false });
+  } finally {
+    process.stdout.write = original;
+  }
+  const output = chunks.join('');
+  assert.match(output, /VALARIA CODE/);
+  assert.match(output, /Décrivez une tâche/);
+  assert.match(output, /planifier/);
+});
+
 test('assets et splash animé', async () => {
   assert.ok(LOGO_LINES.length >= 4);
   assert.equal(MARK, '◈');

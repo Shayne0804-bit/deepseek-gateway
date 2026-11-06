@@ -19,6 +19,7 @@ import {
 } from '../src/config.js';
 import { runTui, renderScreen } from '../src/tui.js';
 import { chooseModel } from '../src/onboarding.js';
+import { playSplash } from '../src/splash.js';
 import { supportsColor } from '../src/theme.js';
 
 const PACKAGE_ROOT = path.resolve(import.meta.dirname, '..');
@@ -57,6 +58,7 @@ function help() {
     valaria models               lister les modèles autorisés
     valaria chat "..."           envoyer un message sans TUI
     valaria preview              aperçu statique de l'interface
+    valaria preview --splash     aperçu avec l'animation de démarrage
     valaria --version | --help
 
   OPTIONS
@@ -200,6 +202,7 @@ async function commandChat(flags) {
 }
 
 async function commandPreview(flags = {}) {
+  if (flags.splash) await playSplash({ color: supportsColor(), version: PKG.version });
   renderScreen({
     messages: [
       { role: 'user', content: 'Ajoute un test pour la fonction de calcul.' },

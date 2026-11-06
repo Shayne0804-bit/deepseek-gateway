@@ -6,7 +6,7 @@
 import readline from 'node:readline';
 import { COLORS, bold, dim, paint, rule, stripAnsi, truncate, visibleLength, wrap, supportsColor } from './theme.js';
 import { runAgent } from './agent.js';
-import { MARK, PULSE, SPINNER } from './assets.js';
+import { MARK, PULSE, SPINNER, TAGLINE, WORDMARK } from './assets.js';
 import { playSplash } from './splash.js';
 import { diffText, extractCode, listFiles, readFile, runCommand, writeFile } from './tools.js';
 
@@ -599,7 +599,6 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
   const start = () => {
     if (state.closed) return;
     state.ready = true;
-    systemMessage(`⚙ VALARIA Code prête · projet ${root}\nDécrivez votre tâche : l’agent lit, propose et modifie avec votre approbation. /help · Ctrl+O compte · Ctrl+P interface.`);
     draw();
   };
   if (state.animations) playSplash({ color, version: state.version }).catch(() => {}).finally(start);
@@ -618,7 +617,7 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
 }
 
 export function renderScreen(state, { client, config, color = true, root = process.cwd() } = {}) {
-  const cols = Math.max(60, Math.min(Number(process.stdout.columns) || 96, 120));
+  const cols = Math.max(60, Math.min(Number(process.stdout.columns) || 96, 220));
   const rows = Math.max(18, Number(process.stdout.rows) || 28);
   const layout = ['focus', 'studio', 'compact'].includes(state.layout) ? state.layout : 'focus';
   const c = (text, hex) => paint(text, hex, color);
@@ -690,6 +689,18 @@ export function renderScreen(state, { client, config, color = true, root = proce
   }
 
   const conversation = [];
+  const hasConversation = state.messages.some((message) => ['user', 'assistant', 'tool'].includes(message.role));
+  if (!hasConversation) {
+    const center = (text) => `${' '.repeat(Math.max(0, Math.floor((mainWidth - visibleLength(text)) / 2)))}${text}`;
+    conversation.push('');
+    conversation.push(center(`${c(MARK, COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}`));
+    conversation.push(center(d(TAGLINE)));
+    conversation.push('');
+    conversation.push(center(d('Décrivez une tâche, ou tapez / pour les commandes.')));
+    conversation.push('');
+    conversation.push(center(`${c('/plan', COLORS.accent)} planifier   ${c('/review', COLORS.accent)} relire   ${c('/account', COLORS.accent)} compte   ${c('?', COLORS.accent)} aide`));
+    conversation.push('');
+  }
   for (const message of state.messages) {
     if (message.role === 'tool') {
       conversation.push(`${c('›', COLORS.accent)} ${message.content || ''}`);

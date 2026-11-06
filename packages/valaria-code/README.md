@@ -33,6 +33,7 @@ valaria status          # compte, pass, quotas
 valaria models          # modèles disponibles
 valaria chat "Bonjour"  # réponse simple sans TUI
 valaria preview         # aperçu statique de l'interface
+valaria preview --splash # revoir l'animation de démarrage
 valaria logout          # oublier cet appareil
 ```
 

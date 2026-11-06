@@ -7,14 +7,14 @@ import { LOGO_LINES, SPLASH_PALETTE, TAGLINE } from './assets.js';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function playSplash({ output = process.stdout, color = true, reduced = false, frameMs = 80, version = '0.5.0' } = {}) {
+export async function playSplash({ output = process.stdout, color = true, reduced = false, frameMs = 220, version = '0.6.0' } = {}) {
   if (reduced || !output.isTTY || process.env.VALARIA_NO_ANIMATION || process.env.TERM === 'dumb') return;
-  const cols = Math.max(54, Math.min(Number(output.columns) || 96, 120));
+  const cols = Math.max(54, Math.min(Number(output.columns) || 96, 220));
   const rows = Math.max(16, Number(output.rows) || 28);
   const logoWidth = Math.max(...LOGO_LINES.map((line) => line.length));
   const left = Math.max(0, Math.floor((cols - logoWidth) / 2));
   const top = Math.max(2, Math.floor((rows - 12) / 2));
-  const frameCount = 5;
+  const frameCount = 6;
 
   for (let frame = 0; frame < frameCount; frame += 1) {
     const lines = [];
@@ -45,5 +45,5 @@ export async function playSplash({ output = process.stdout, color = true, reduce
     output.write(`\x1b[H\x1b[2J${lines.join('\n')}\x1b[?25l`);
     await sleep(frameMs);
   }
-  await sleep(90);
+  await sleep(400);
 }
