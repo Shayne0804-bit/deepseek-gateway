@@ -1540,3 +1540,58 @@ body.portal-authenticated #portal-app > main { position: relative; z-index: 1; }
 
 .device-code-preview { margin: 0 0 14px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; color: var(--muted); }
 .device-code-preview strong { color: var(--accent); font-size: 16px; letter-spacing: 0.18em; }
+
+/* --- page d'accueil : VALARIA Code --- */
+.cli-section { padding-top: 30px; }
+.cli-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 48px; align-items: center; }
+.cli-copy h2 { margin: 10px 0 14px; font-size: clamp(30px, 3.4vw, 46px); line-height: 1.06; letter-spacing: -0.045em; }
+.cli-points { display: flex; flex-direction: column; margin: 22px 0 22px; padding: 0; list-style: none; }
+.cli-points li { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 13px; padding: 13px 0; border-top: 1px solid var(--border); }
+.cli-points li:last-child { border-bottom: 1px solid var(--border); }
+.cli-points > li > span { font-family: var(--mono); font-size: 10px; color: var(--accent); padding-top: 2px; letter-spacing: 0.06em; }
+.cli-points strong { display: block; font-size: 13.5px; color: var(--text); margin-bottom: 3px; }
+.cli-points p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; text-wrap: pretty; }
+.cli-points kbd { padding: 1px 5px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--bg-soft); font-family: var(--mono); font-size: 10px; color: var(--text-2); }
+.cli-install { display: flex; align-items: center; gap: 8px; margin: 0 0 18px; padding: 9px 10px 9px 13px; border: 1px solid var(--border); border-radius: 8px; background: #050b07; max-width: 430px; }
+.cli-install code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-family: var(--mono); font-size: 11px; color: #b9dcc4; }
+.cli-install .icon-btn { flex: none; width: auto; min-width: 46px; padding: 4px 8px; font-size: 10px; }
+.cli-shot { margin: 0; border: 1px solid var(--border-strong); border-radius: 13px; overflow: hidden; background: #080c0a; box-shadow: 0 26px 60px rgba(0,0,0,0.32); }
+.cli-shot-bar { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.025); color: var(--muted-2); font-family: var(--mono); font-size: 10px; }
+.cli-shot-bar > span:nth-child(2) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cli-shot-status { color: var(--accent); white-space: nowrap; }
+.cli-shot img { display: block; width: 100%; height: auto; aspect-ratio: 1491 / 970; object-fit: cover; object-position: top left; }
+.cli-shot figcaption { padding: 10px 13px; border-top: 1px solid var(--border); color: var(--muted); font-size: 11px; line-height: 1.5; }
+.terminal-dots { display: inline-flex; gap: 4px; }
+.terminal-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--border-strong); }
+@media (max-width: 900px) {
+  .cli-grid { grid-template-columns: 1fr; gap: 26px; }
+  .cli-shot { order: 2; }
+  .cli-copy h2 { font-size: 31px; }
+}
+
+/* --- guide : section VALARIA Code --- */
+.guide-cli-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr); gap: 14px; align-items: stretch; }
+.guide-cli-card { border: 1px solid var(--border); border-radius: 12px; background: rgba(255,255,255,0.018); overflow: hidden; }
+.guide-cli-card-head { display: flex; align-items: flex-start; gap: 10px; padding: 15px 16px; border-bottom: 1px solid var(--border); background: rgba(62,233,127,0.025); }
+.guide-cli-card-head h3 { margin: 0 0 3px; font-size: 14px; }
+.guide-cli-card-head p { margin: 0; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
+.guide-cli-steps { padding: 4px 16px 16px; }
+.guide-cli-step { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 9px; padding: 12px 0; border-top: 1px solid rgba(125,225,166,0.07); }
+.guide-cli-step:first-child { border-top: 0; }
+.guide-cli-step h4 { margin: 1px 0 6px; font-size: 11.5px; color: var(--text-2); }
+.guide-cli-step p { margin: 6px 0 0; color: var(--muted-2); font-size: 10px; line-height: 1.5; }
+.guide-cli-shot { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #080c0a; }
+.guide-cli-shot img { display: block; width: 100%; height: auto; aspect-ratio: 1491 / 970; object-fit: cover; object-position: top left; }
+.guide-cli-shot figcaption { padding: 10px 13px; border-top: 1px solid var(--border); color: var(--muted); font-size: 10.5px; line-height: 1.5; }
+.guide-cli-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 10px; }
+.guide-cli-mode { padding: 9px; border: 1px solid var(--border); border-radius: 7px; background: rgba(255,255,255,0.018); }
+.guide-cli-mode strong { display: block; margin-bottom: 3px; font-family: var(--mono); font-size: 9px; color: var(--accent); }
+.guide-cli-mode span { color: var(--muted); font-size: 9.5px; line-height: 1.45; }
+@media (max-width: 900px) {
+  .guide-cli-grid { grid-template-columns: 1fr; }
+  .guide-cli-modes { grid-template-columns: 1fr; }
+}
+
+/* La capture CLI doit rester lisible dans le guide : pleine largeur sous les étapes. */
+.guide-cli-grid { grid-template-columns: 1fr; }
+.guide-cli-shot img { max-height: none; object-fit: contain; }

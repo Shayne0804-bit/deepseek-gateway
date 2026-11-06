@@ -86,6 +86,7 @@ const ASSETS = {
   '/assets/fonts/plus-jakarta-sans-latin-var.woff2': { file: 'fonts/plus-jakarta-sans-latin-var.woff2', type: 'font/woff2' },
   '/assets/fonts/jetbrains-mono-latin.woff2': { file: 'fonts/jetbrains-mono-latin.woff2', type: 'font/woff2' },
   '/assets/logo-mark.svg': { file: 'logo-mark.svg', type: 'image/svg+xml' },
+  '/assets/valaria-code.png': { file: 'valaria-code.png', type: 'image/png' },
   '/favicon.svg': { file: 'favicon.svg', type: 'image/svg+xml' },
 };
 

@@ -2,6 +2,21 @@
 (() => {
   'use strict';
 
+  const copyButtons = document.querySelectorAll('[data-copy]');
+  for (const button of copyButtons) {
+    button.addEventListener('click', async () => {
+      const value = button.getAttribute('data-copy') || '';
+      try {
+        await navigator.clipboard.writeText(value);
+        const old = button.textContent;
+        button.textContent = 'Copié';
+        setTimeout(() => { button.textContent = old; }, 1600);
+      } catch {
+        button.textContent = 'Copier manuellement';
+      }
+    });
+  }
+
   const badge = document.querySelector('#site-status');
   if (!badge) return;
   const dot = badge.querySelector('.dot');

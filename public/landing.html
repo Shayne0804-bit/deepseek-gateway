@@ -6,8 +6,8 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#0a0e0c">
   <meta name="app-version" content="{{APP_VERSION}}">
-  <meta name="description" content="VALARIA Gateway API : partagez un accès API avec des clés individuelles, quotas, crédit et suivi des requêtes. Compatible OpenAI et Anthropic.">
-  <title>VALARIA Gateway API — l'accès API, sans partager votre clé</title>
+  <meta name="description" content="VALARIA Gateway : API compatible OpenAI/Anthropic et VALARIA Code, l’agent de code dans le terminal. Clés individuelles, quotas, crédit et suivi des requêtes.">
+  <title>VALARIA Gateway — API et agent de code dans le terminal</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/styles.css?v={{APP_VERSION}}">
   <link rel="stylesheet" href="/assets/theme.css?v={{APP_VERSION}}">
@@ -23,6 +23,7 @@
     </a>
     <nav class="site-nav" aria-label="Navigation principale">
       <a href="#capacites">Fonctionnalités</a>
+      <a href="#cli">VALARIA Code</a>
       <a href="#brancher">Intégration</a>
       <a href="/portal">Mon espace</a>
     </nav>
@@ -67,6 +68,55 @@
 {"id":"chatcmpl-…","usage":{"total_tokens":118}}</pre>
         <figcaption class="transcript-foot">La clé fournisseur ne quitte jamais le serveur.</figcaption>
       </figure>
+    </section>
+
+    <section class="site-section cli-section" id="cli" aria-labelledby="cli-title">
+      <div class="cli-grid">
+        <div class="cli-copy">
+          <p class="eyebrow">Nouveau · VALARIA Code</p>
+          <h2 id="cli-title">Votre agent de code,<br><span class="accent-word">dans le terminal.</span></h2>
+          <p class="section-lede">
+            Une connexion par appareil, sans coller de clé API dans le terminal.
+            Choisissez Claude, Codex ou DeepSeek, puis laissez l’agent lire, modifier
+            et tester votre projet avec votre validation.
+          </p>
+          <ul class="cli-points">
+            <li>
+              <span>01</span>
+              <div><strong>Connexion appareil</strong><p>Le navigateur approuve le terminal. Jeton révocable, stocké localement.</p></div>
+            </li>
+            <li>
+              <span>02</span>
+              <div><strong>Diff permanent</strong><p>Les fichiers modifiés restent visibles à droite, avec les lignes ajoutées et supprimées.</p></div>
+            </li>
+            <li>
+              <span>03</span>
+              <div><strong>Trois niveaux de contrôle</strong><p>Strict, Sécurisé ou Accès total, changement immédiat avec <kbd>Ctrl+G</kbd>.</p></div>
+            </li>
+            <li>
+              <span>04</span>
+              <div><strong>Focus, Studio, Compact</strong><p>Une interface qui s’adapte à votre façon de travailler, sans dashboard imposé.</p></div>
+            </li>
+          </ul>
+          <div class="cli-install">
+            <code id="cli-install-command">npm install -g valaria-code</code>
+            <button type="button" class="icon-btn" data-copy="npm install -g valaria-code" aria-label="Copier la commande d’installation">Copier</button>
+          </div>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="/portal">Ouvrir mon espace</a>
+            <a class="btn btn-ghost" href="#brancher">Voir l’intégration API</a>
+          </div>
+        </div>
+        <figure class="cli-shot">
+          <div class="cli-shot-bar">
+            <span class="terminal-dots"><i></i><i></i><i></i></span>
+            <span>valaria-code — terminal</span>
+            <span class="cli-shot-status">en ligne</span>
+          </div>
+          <img src="/assets/valaria-code.png?v={{APP_VERSION}}" alt="Interface VALARIA Code : conversation de l’agent à gauche, fichiers modifiés et diff à droite." loading="lazy">
+          <figcaption>Conversation, fichiers modifiés et diff réunis dans une seule vue.</figcaption>
+        </figure>
+      </div>
     </section>
 
     <section class="site-section" id="capacites" aria-labelledby="capacites-title">
@@ -147,6 +197,7 @@ ANTHROPIC_AUTH_TOKEN=sk-dsk-…</pre>
     <span>VALARIA Gateway API</span>
     <span class="site-footer-links">
       <a href="/portal">Mon espace</a>
+      <a href="#cli">VALARIA Code</a>
       <a href="#brancher">Intégration</a>
     </span>
   </footer>

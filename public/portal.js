@@ -870,18 +870,19 @@
       <section class="panel guide-hero">
         <div class="guide-hero-copy">
           <p class="hero-kicker">Guide d'intégration</p>
-          <h2>De la clé au premier appel,<br><span class="accent-word">en quelques minutes.</span></h2>
-          <p class="guide-lede">Une API compatible OpenAI, des guides d'installation pour Codex CLI et Claude Code, et un endpoint Anthropic. Choisissez votre client, collez votre clé, c'est parti.</p>
+          <h2>VALARIA Code,<br><span class="accent-word">ou l'API en quelques minutes.</span></h2>
+          <p class="guide-lede">Le CLI VALARIA Code se connecte par appareil, sans clé collée dans le terminal. Pour vos scripts, l'API reste compatible OpenAI et Anthropic. Choisissez votre parcours : CLI, SDK, Codex CLI ou Claude Code.</p>
           <div class="guide-hero-actions">
-            <button type="button" class="btn btn-primary" data-guide-copy-target="guide-base-url">${icon('copy')}Copier l'URL de base</button>
+            <button type="button" class="btn btn-primary" data-guide-copy-target="guide-cli-install">${icon('copy')}Installer VALARIA Code</button>
+            <button type="button" class="btn btn-ghost" data-guide-copy-target="guide-base-url">${icon('copy')}Copier l'URL de base</button>
             <button type="button" class="btn btn-ghost" data-guide-view="keys">${icon('key')}${hasKey ? 'Gérer ma clé' : 'Créer ma clé'}</button>
           </div>
           <div class="guide-hero-meta">
+            <span class="chip">${icon('terminal')}VALARIA Code</span>
             <span class="chip">${icon('check')}OpenAI SDK</span>
             <span class="chip">${icon('terminal')}Codex CLI</span>
             <span class="chip">${icon('code')}cURL</span>
             <span class="chip">${icon('layers')}Streaming SSE</span>
-            <span class="chip">${icon('shield')}Clé dérivée</span>
           </div>
         </div>
         <div class="guide-terminal" aria-label="Aperçu d'une requête API">
@@ -931,15 +932,85 @@
         </article>
       </div>
 
+      <section class="panel guide-section guide-valaria-code" id="guide-valaria-code">
+        <div class="panel-head">
+          <div>
+            <span class="guide-eyebrow">01 · VALARIA Code</span>
+            <h2>L’agent de code, dans le terminal</h2>
+            <span class="hint">Connexion par appareil, sans clé API collée dans le terminal.</span>
+          </div>
+          <span class="badge badge-ok">${icon('check')}nouveau</span>
+        </div>
+        <div class="guide-cli-grid">
+          <div class="guide-cli-card">
+            <div class="guide-cli-card-head">
+              <span class="guide-client-icon">${icon('terminal')}</span>
+              <div><h3>Installer et connecter</h3><p>Node.js 20+ · approuvez l’appareil depuis ce navigateur.</p></div>
+            </div>
+            <div class="guide-cli-steps">
+              <div class="guide-cli-step">
+                <span class="guide-client-num">1</span>
+                <div>
+                  <h4>Installer le CLI</h4>
+                  <div class="guide-command-row">
+                    <code id="guide-cli-install">npm install -g valaria-code</code>
+                    <button type="button" class="icon-btn" data-guide-copy-target="guide-cli-install" aria-label="Copier la commande d’installation">${icon('copy')}</button>
+                  </div>
+                </div>
+              </div>
+              <div class="guide-cli-step">
+                <span class="guide-client-num">2</span>
+                <div>
+                  <h4>Connecter l’appareil</h4>
+                  <div class="guide-command-row">
+                    <code id="guide-cli-login">valaria login</code>
+                    <button type="button" class="icon-btn" data-guide-copy-target="guide-cli-login" aria-label="Copier valaria login">${icon('copy')}</button>
+                  </div>
+                  <p>Le terminal affiche un code et ouvre <code>/device</code>. Connectez-vous, approuvez, puis choisissez Claude, Codex ou DeepSeek.</p>
+                </div>
+              </div>
+              <div class="guide-cli-step">
+                <span class="guide-client-num">3</span>
+                <div>
+                  <h4>Lancer l’agent</h4>
+                  <div class="guide-command-row">
+                    <code id="guide-cli-launch">valaria</code>
+                    <button type="button" class="icon-btn" data-guide-copy-target="guide-cli-launch" aria-label="Copier valaria">${icon('copy')}</button>
+                  </div>
+                  <p>Décrivez une tâche : l’agent lit, propose un patch, puis attend votre validation avant d’écrire ou de lancer une commande.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <figure class="guide-cli-shot">
+            <img src="/assets/valaria-code.png" alt="Interface VALARIA Code avec conversation, liste des fichiers modifiés et diff." loading="lazy">
+            <figcaption>Focus : conversation et diff permanent. Les messages restent visibles pendant les approbations.</figcaption>
+          </figure>
+        </div>
+        <div class="guide-cli-modes">
+          <div class="guide-cli-mode"><strong>Strict</strong><span>Chaque écriture et commande demandent une approbation.</span></div>
+          <div class="guide-cli-mode"><strong>Sécurisé</strong><span>Approbation seulement pour les fichiers sensibles et commandes dangereuses.</span></div>
+          <div class="guide-cli-mode"><strong>Accès total</strong><span>Aucune approbation ; à utiliser en connaissance de cause.</span></div>
+        </div>
+        <div class="guide-note">${icon('shield')}<span><strong>Ctrl+G</strong> ou <strong>Alt+M</strong> change de mode. <strong>PgUp/PgDn</strong> parcourt la conversation. <code>/diff off</code> masque le diff ; <code>/diff</code> le réaffiche.</span></div>
+      </section>
+
       <section class="panel guide-section" id="guide-cases">
         <div class="panel-head">
           <div>
-            <span class="guide-eyebrow">01 · Cas d'usage</span>
+            <span class="guide-eyebrow">02 · Cas d'usage</span>
             <h2>Quel guide pour votre usage ?</h2>
             <span class="hint">Le bon endpoint et le bon modèle, sans mauvaise surprise.</span>
           </div>
         </div>
         <div class="guide-use-grid">
+          <article class="guide-use-card">
+            <span class="guide-use-icon">${icon('terminal')}</span>
+            <h3>VALARIA Code</h3>
+            <p>L’agent de code dans le terminal : lecture, patch, tests, diff et approbations.</p>
+            <div class="guide-use-meta"><code>npm install -g valaria-code</code></div>
+            <a class="btn btn-ghost btn-sm" href="#guide-valaria-code">${icon('arrow')}Voir le guide</a>
+          </article>
           <article class="guide-use-card">
             <span class="guide-use-icon">${icon('spark')}</span>
             <h3>Chat & assistants</h3>
@@ -967,7 +1038,7 @@
       <section class="panel guide-section guide-install" id="guide-install">
         <div class="panel-head">
           <div>
-            <span class="guide-eyebrow">02 · Installation</span>
+            <span class="guide-eyebrow">03 · Installation</span>
             <h2>Installer et lancer un client CLI</h2>
             <span class="hint">Du <code>npm install</code> au premier prompt, pour Claude Code et Codex CLI.</span>
           </div>
@@ -1055,6 +1126,7 @@ codex</code></pre>
         <aside class="panel guide-toc-panel">
           <p class="guide-toc-title">Sommaire</p>
           <nav class="guide-toc" aria-label="Sommaire du guide">
+            <a href="#guide-valaria-code">${icon('terminal')}VALARIA Code</a>
             <a href="#guide-cases">${icon('spark')}Cas d'usage</a>
             <a href="#guide-install">${icon('terminal')}Installer un client</a>
             <a href="#guide-endpoints">${icon('globe')}Points d'accès</a>
@@ -1074,7 +1146,7 @@ codex</code></pre>
           <section class="panel guide-section" id="guide-endpoints">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">03 · Connexion</span>
+                <span class="guide-eyebrow">04 · Connexion</span>
                 <h2>Points d'accès</h2>
                 <span class="hint">Deux formats compatibles, une seule clé.</span>
               </div>
@@ -1115,7 +1187,7 @@ codex</code></pre>
           <section class="panel guide-section" id="guide-examples">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">04 · Premier appel</span>
+                <span class="guide-eyebrow">05 · Premier appel</span>
                 <h2>Exemples prêts à copier</h2>
                 <span class="hint">Remplacez <code>VOTRE_CLE_API</code> par votre clé.</span>
               </div>
@@ -1160,7 +1232,7 @@ codex</code></pre>
           <section class="panel guide-section" id="guide-models">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">05 · Modèles</span>
+                <span class="guide-eyebrow">06 · Modèles</span>
                 <h2>Modèles disponibles</h2>
                 <span class="hint">Les modèles disponibles pour votre compte.</span>
               </div>
@@ -1179,7 +1251,7 @@ codex</code></pre>
           <section class="panel guide-section" id="guide-params">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">06 · Requête</span>
+                <span class="guide-eyebrow">07 · Requête</span>
                 <h2>Paramètres utiles</h2>
                 <span class="hint">Les clés que vous utiliserez le plus souvent.</span>
               </div>
@@ -1197,7 +1269,7 @@ codex</code></pre>
           <section class="panel guide-section" id="guide-errors">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">07 · Diagnostic</span>
+                <span class="guide-eyebrow">08 · Diagnostic</span>
                 <h2>Erreurs & quotas</h2>
                 <span class="hint">Les réponses à connaître avant de déboguer.</span>
               </div>
@@ -1217,7 +1289,7 @@ codex</code></pre>
           <section class="panel guide-section" id="guide-faq">
             <div class="panel-head">
               <div>
-                <span class="guide-eyebrow">08 · Aide</span>
+                <span class="guide-eyebrow">09 · Aide</span>
                 <h2>Questions fréquentes</h2>
                 <span class="hint">Les réponses aux blocages les plus courants.</span>
               </div>

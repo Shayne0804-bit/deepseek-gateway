@@ -282,6 +282,9 @@ async function main() {
   const landingContrast = await evaluate(contrastScript.replace('SEL', JSON.stringify(landingSelectors)));
   checks.contrast.push(...landingContrast.map((item) => ({ ...item, page: 'public-landing' })));
   await screenshot('16-public-landing-desktop.png', 'Site public en 1440x900 : promesse produit, exemple reel d\'echange API, statut de la passerelle, navigation vers l\'espace utilisateur.');
+  await evaluate("document.querySelector('#cli').scrollIntoView({ block: 'start' })");
+  await sleep(450);
+  await screenshot('16b-public-landing-cli-desktop.png', 'Page d\'accueil : section VALARIA Code, commande d\'installation, interface capturee, diff permanent et modes d\'approbation.', viewport.label, { keepScroll: true });
 
   // Section sous la ligne de flottaison : etapes de branchement (texte + code).
   await evaluate("document.querySelector('#brancher').scrollIntoView({ block: 'start' })");
@@ -307,6 +310,9 @@ async function main() {
     tablesContained: true,
   }))()`);
   await screenshot('17-public-landing-mobile.png', 'Site public en 390x844 : navigation repliee, hero lisible, CTAs empiles, aucun debordement horizontal.', MOBILE.label);
+  await evaluate("document.querySelector('#cli').scrollIntoView({ block: 'start' })");
+  await sleep(450);
+  await screenshot('17b-public-landing-cli-mobile.png', 'Page d\'accueil mobile : section VALARIA Code, commande installable et aperçu de la TUI sans debordement.', MOBILE.label, { keepScroll: true });
   await evaluate("document.querySelector('#brancher').scrollIntoView({ block: 'start' })");
   await sleep(400);
   checks.steps.mobile = await evaluate(`(() => {
@@ -364,7 +370,10 @@ async function main() {
   await screenshot('19b-public-portal-pass-desktop.png', 'Section Mon pass : pass actif et niveaux Decouverte, Createur, Equipe et Business.');
   await evaluate("document.querySelector('[data-user-view=\\\"guide\\\"]').click()");
   await sleep(500);
-  await screenshot('19c-public-portal-guide-desktop.png', 'Nouveau guide d integration : parcours en 3 etapes, endpoints OpenAI/Anthropic, exemples de code, modeles, parametres et erreurs.');
+  await screenshot('19c-public-portal-guide-desktop.png', 'Guide d integration : parcours VALARIA Code, endpoints OpenAI/Anthropic, exemples de code, modeles et parametres.');
+  await evaluate("document.getElementById('guide-valaria-code').scrollIntoView({block:'start'})");
+  await sleep(350);
+  await screenshot('19j-public-portal-guide-cli-desktop.png', 'Guide : section VALARIA Code avec installation npm, connexion par appareil, choix du modele, apercu de la TUI et modes d approbation.', viewport.label, { keepScroll: true });
   await evaluate("document.getElementById('guide-cases').scrollIntoView({block:'start'})");
   await sleep(300);
   await screenshot('19g-public-portal-guide-usecases-desktop.png', 'Guide : choix par cas d usage (chat, Codex, Claude Code) et note de capacite texte/code uniquement.', viewport.label, { keepScroll: true });
