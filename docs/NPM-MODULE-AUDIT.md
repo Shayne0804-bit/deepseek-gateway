@@ -368,7 +368,9 @@ Implémenté :
   - Focus organisé comme la démo Freebuff : titre projet, transcript, saisie, ligne modèle/aide ;
   - revue de diff en une seule colonne : liste des fichiers en haut, diff du fichier
     sélectionné en bas ; en Studio, compte + conversation + revue restent visibles
-    côte à côte ;
+    côte à côte ; diff ouvert avec `/diff` ou pendant une approbation, jamais en permanence ;
+  - trois modes d’agent : **Strict**, **Sécurisé**, **Accès total** ;
+  - conversation défilable avec `PgUp/PgDn` ;
   - assets de marque : logo ASCII, `◈`, spinner, pulse, splash animé ;
   - compte, pass, quotas et crédit consultables via `/account` ou `Ctrl+O` ;
   - parcours `/interview`, `/plan`, `/review`, `/diff` et suggestions `1/2/3` après réponse ;

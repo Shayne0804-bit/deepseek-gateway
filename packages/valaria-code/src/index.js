@@ -14,6 +14,7 @@ export {
 } from './config.js';
 export { runTui } from './tui.js';
 export { runAgent } from './agent.js';
+export { APPROVAL_LABELS, APPROVAL_MODES, approvalRequired, isDangerousCommand, isSensitivePath } from './approval.js';
 export { chooseModel } from './onboarding.js';
 export { playSplash } from './splash.js';
 export { LOGO_LINES, MARK, TAGLINE, WORDMARK } from './assets.js';

@@ -11,6 +11,8 @@ export const DEFAULT_BASE_URL = process.env.VALARIA_GATEWAY_URL || 'https://api.
 export const DEFAULT_MODEL = 'gpt-5';
 export const DEFAULT_LAYOUT = 'focus';
 export const LAYOUTS = ['focus', 'studio', 'compact'];
+export const DEFAULT_APPROVAL_MODE = 'strict';
+export const APPROVAL_MODES = ['strict', 'safe', 'full'];
 
 export function homeDir() {
   return path.resolve(process.env.VALARIA_HOME || path.join(os.homedir(), '.valaria'));
@@ -40,6 +42,7 @@ export function loadConfig() {
       clientName: data.clientName || null,
       model: data.model || DEFAULT_MODEL,
       layout: LAYOUTS.includes(data.layout) ? data.layout : DEFAULT_LAYOUT,
+      approvalMode: APPROVAL_MODES.includes(data.approvalMode) ? data.approvalMode : DEFAULT_APPROVAL_MODE,
     };
   } catch {
     return null;
@@ -58,6 +61,7 @@ export function saveConfig(config) {
     clientName: config.clientName || null,
     model: config.model || DEFAULT_MODEL,
     layout: LAYOUTS.includes(config.layout) ? config.layout : DEFAULT_LAYOUT,
+    approvalMode: APPROVAL_MODES.includes(config.approvalMode) ? config.approvalMode : DEFAULT_APPROVAL_MODE,
     savedAt: new Date().toISOString(),
   };
   fs.writeFileSync(file, `${JSON.stringify(payload, null, 2)}\n`, { mode: 0o600 });
@@ -81,5 +85,6 @@ export function resolveAuthConfig(options = {}) {
     config: stored,
     model: options.model || stored?.model || DEFAULT_MODEL,
     layout: LAYOUTS.includes(options.layout) ? options.layout : (stored?.layout || DEFAULT_LAYOUT),
+    approvalMode: APPROVAL_MODES.includes(options.approval) ? options.approval : (stored?.approvalMode || DEFAULT_APPROVAL_MODE),
   };
 }

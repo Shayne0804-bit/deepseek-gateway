@@ -6,6 +6,7 @@
 import readline from 'node:readline';
 import { COLORS, bold, dim, paint, rule, stripAnsi, truncate, visibleLength, wrap, supportsColor } from './theme.js';
 import { runAgent } from './agent.js';
+import { APPROVAL_LABELS, approvalRequired } from './approval.js';
 import { MARK, PULSE, SPINNER, TAGLINE, WORDMARK } from './assets.js';
 import { collectWorkspaceDiff, summarize } from './diff-view.js';
 import { playSplash } from './splash.js';
@@ -28,7 +29,7 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function createTui({ client, config, model, layout = 'focus', version = '0.7.0', color = supportsColor(), animations = true, account = null, onModelChange = null, onPreferencesChange = null } = {}) {
+export function createTui({ client, config, model, layout = 'focus', approvalMode = 'strict', version = '0.7.0', color = supportsColor(), animations = true, account = null, onModelChange = null, onPreferencesChange = null } = {}) {
   const state = {
     messages: [],
     input: '',
@@ -40,6 +41,7 @@ export function createTui({ client, config, model, layout = 'focus', version = '
     agentAbort: null,
     mode: 'agent',
     layout: ['focus', 'studio', 'compact'].includes(layout) ? layout : 'focus',
+    approvalMode: ['strict', 'safe', 'full'].includes(approvalMode) ? approvalMode : 'strict',
     overlay: null,
     diffReview: null,
     approval: null,
@@ -47,6 +49,7 @@ export function createTui({ client, config, model, layout = 'focus', version = '
     closed: false,
     ready: false,
     animations,
+    scrollBack: 0,
     model,
     version,
     account,
@@ -77,6 +80,7 @@ export function createTui({ client, config, model, layout = 'focus', version = '
   function addMessage(role, content) {
     state.messages.push({ role, content: String(content), at: Date.now() });
     if (state.messages.length > 80) state.messages.splice(0, state.messages.length - 80);
+    if (role === 'user') state.scrollBack = 0;
   }
 
   function systemMessage(content) {
@@ -210,15 +214,22 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
         task,
         model: state.model,
         signal: state.agentAbort.signal,
-        approve: (request) => new Promise((resolve) => {
-          state.approval = { ...request, resolve };
-          state.status = 'approbation demandée par l’agent';
-          draw();
-          if (request.type === 'write') {
-            const content = request.content || '';
-            openDiffReview({ path: request.file, content, diff: request.diff, status: 'M' }).catch(() => {});
+        approve: (request) => {
+          if (!approvalRequired(state.approvalMode, request)) {
+            state.status = `auto · ${request.type === 'run' ? request.command : request.file || 'action'} autorisé`;
+            scheduleRender();
+            return Promise.resolve(true);
           }
-        }),
+          return new Promise((resolve) => {
+            state.approval = { ...request, resolve };
+            state.status = 'approbation demandée par l’agent';
+            draw();
+            if (request.type === 'write') {
+              const content = request.content || '';
+              openDiffReview({ path: request.file, content, diff: request.diff, status: 'M' }).catch(() => {});
+            }
+          });
+        },
         onEvent: (event) => {
           if (event.type === 'assistant' && event.content) addMessage('assistant', event.content);
           else if (event.type === 'tool') {
@@ -332,7 +343,7 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
     const argument = rest.join(' ').trim();
     switch (command) {
       case 'help':
-        systemMessage('⚙ Votre message est exécuté par l’agent (lecture/patch/tests, avec approbations).\n/chat <message> · /agent <tâche> · /interview · /plan <objectif> · /review · /diff\n/files [dossier] · /read <fichier> · /edit <fichier> <instruction> · /run <commande>\n/models · /model <nom> · /account · /layout focus|studio|compact · /animations on|off · /mode agent|chat · /usage · /clear · /quit\n\nCtrl+O : compte · Ctrl+P : interface · Ctrl+C : annuler · 1/2/3 : suggestion');
+        systemMessage('⚙ Votre message est exécuté par l’agent (lecture/patch/tests, avec approbations).\n/chat <message> · /agent <tâche> · /interview · /plan <objectif> · /review · /diff\n/files [dossier] · /read <fichier> · /edit <fichier> <instruction> · /run <commande>\n/models · /model <nom> · /account · /layout focus|studio|compact · /approval strict|safe|full · /animations on|off · /mode agent|chat · /usage · /clear · /quit\n\nCtrl+O : compte · Ctrl+P : interface · PgUp/PgDn : historique · Ctrl+C : annuler · 1/2/3 : suggestion');
         break;
       case 'agent': {
         await runAgentTask(argument, { explicit: true });
@@ -381,6 +392,15 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
       case 'anim': {
         state.animations = argument === 'off' ? false : argument === 'on' ? true : !state.animations;
         systemMessage(`⚙ Animations : ${state.animations ? 'activées' : 'désactivées'}.`);
+        break;
+      }
+      case 'approval':
+      case 'approbation': {
+        const order = ['strict', 'safe', 'full'];
+        const next = order.includes(argument) ? argument : order[(order.indexOf(state.approvalMode) + 1) % order.length];
+        state.approvalMode = next;
+        if (onPreferencesChange) onPreferencesChange({ approvalMode: next });
+        systemMessage(`⚙ Agent : ${APPROVAL_LABELS[next]}. ${next === 'strict' ? 'Chaque écriture/commande est approuvée.' : next === 'safe' ? 'Seules les actions dangereuses sont approuvées.' : 'Aucune approbation.'}`);
         break;
       }
       case 'account':
@@ -607,6 +627,16 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
       executeCommand('/help');
       return;
     }
+    if (key === '\x1b[5~') {
+      state.scrollBack += 8;
+      draw();
+      return;
+    }
+    if (key === '\x1b[6~') {
+      state.scrollBack = Math.max(0, state.scrollBack - 8);
+      draw();
+      return;
+    }
     if (key === '\u0003') { // Ctrl+C
       if (state.agentRunning) {
         if (typeof state.approval?.resolve === 'function') state.approval.resolve(false);
@@ -769,7 +799,7 @@ export function renderScreen(state, { client, config, color = true, root = proce
     left.push(c('MODÈLE', COLORS.muted));
     left.push(` ${c(truncate(model, sidebar - 2), COLORS.amber)}`);
     left.push(c('MODE', COLORS.muted));
-    left.push(` ${d(mode)}`);
+    left.push(` ${d(mode)}:${APPROVAL_LABELS[state.approvalMode || 'strict'] || 'Strict'}`);
   }
 
   const conversation = [];
@@ -818,6 +848,13 @@ export function renderScreen(state, { client, config, color = true, root = proce
   if (!hasConversation) {
     const offset = Math.max(0, Math.floor((bodyHeight - main.length) / 2));
     main = Array(offset).fill('').concat(main);
+  } else {
+    const bodyLines = Math.max(2, bodyHeight - approvalLines.length);
+    const maxScroll = Math.max(0, conversation.length - bodyLines);
+    state.scrollBack = Math.max(0, Math.min(Number(state.scrollBack) || 0, maxScroll));
+    const end = conversation.length - state.scrollBack;
+    const start = Math.max(0, end - bodyLines);
+    main = conversation.slice(start, end).concat(approvalLines);
   }
   while (main.length < bodyHeight) main.push('');
   for (let index = 0; index < bodyHeight; index += 1) {
@@ -831,9 +868,11 @@ export function renderScreen(state, { client, config, color = true, root = proce
   add(`  ${state.approval ? `${c('y', COLORS.accent)} / ${c('n', COLORS.danger)}` : `${c('>', COLORS.accent)} ${truncate(state.input || placeholder, cols - 6)}${active ? c('▌', COLORS.accent) : ''}`}`);
   if (layout === 'focus') {
     const usage = `${nf.format(req.used || 0)}/${req.limit ? nf.format(req.limit) : '∞'}`;
-    add(`  ${d(`${truncate(model, 24)} · ${mode} · ${truncate(planName, 14)} · ${usage} req · /model · /account · ? aide`)}`);
+    const approval = APPROVAL_LABELS[state.approvalMode || 'strict'] || 'Strict';
+    const scroll = state.scrollBack > 0 ? ` · ↑ ${state.scrollBack}` : '';
+    add(`  ${d(`${truncate(model, 22)} · ${mode}:${approval} · ${truncate(planName, 12)} · ${usage} req${scroll} · /model · /account · ? aide`)}`);
   } else {
-    add(`  ${d(truncate(state.status || 'prêt', Math.max(12, cols - 42)))} ${d(`· ${mode} · Ctrl+O compte · Ctrl+P interface · /help`)}`);
+    add(`  ${d(truncate(state.status || 'prêt', Math.max(12, cols - 58)))} ${d(`· ${mode}:${APPROVAL_LABELS[state.approvalMode || 'strict'] || 'Strict'} · PgUp historique · Ctrl+O compte · Ctrl+P interface · /help`)}`);
   }
   process.stdout.write(`\x1b[H\x1b[2J${lines.join('\n')}\x1b[?25l`);
 
@@ -936,7 +975,7 @@ function renderDiffOverlay(state, { color = true, cols = 96, rows = 28 } = {}) {
     accountLines.push(c('MODÈLE', COLORS.muted));
     accountLines.push(` ${c(truncate(state.model || '—', accountWidth - 2), COLORS.amber)}`);
     accountLines.push(c('MODE', COLORS.muted));
-    accountLines.push(` ${state.mode === 'chat' ? 'conversation' : 'agent'}`);
+    accountLines.push(` ${state.mode === 'chat' ? 'conversation' : 'agent'} · ${APPROVAL_LABELS[state.approvalMode || 'strict'] || 'Strict'}`);
   }
 
   const conversationLines = [c('CONVERSATION', COLORS.muted)];

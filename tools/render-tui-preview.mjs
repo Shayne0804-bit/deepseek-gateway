@@ -134,6 +134,7 @@ const base = {
   streaming: false,
   agentRunning: false,
   approval: null,
+  approvalMode: 'safe',
   model: 'claude-opus-5.5',
   version: '0.7.0',
   mode: 'agent',

@@ -57,6 +57,28 @@ Dans la TUI :
 - `Ctrl+O` ou `/account` ouvre l’écran compte et quotas ;
 - `Échap`/`Entrée` ferme cet écran.
 
+## Modes d’agent
+
+```text
+/approval strict   approbation pour chaque écriture et commande
+/approval safe     approbation seulement pour les actions dangereuses
+/approval full     accès total, aucune approbation
+```
+
+En mode **safe**, les écritures de code ordinaires et les commandes de test sont
+autorisées automatiquement ; les fichiers sensibles (`.env`, secrets, lockfiles,
+`.github`, Docker) et les commandes destructrices (`rm -rf`, `git reset --hard`,
+`git push --force`, `sudo`, `npm publish`…) demandent toujours une approbation.
+
+Le mode est affiché dans la ligne d’état et enregistré avec la configuration.
+
+## Conversation
+
+- `PgUp` / `PgDn` font défiler l’historique de la conversation ;
+- l’envoi d’un nouveau message revient automatiquement en bas ;
+- le diff n’est pas affiché en permanence : il s’ouvre avec `/diff` ou pendant
+  une approbation, puis se ferme après la décision.
+
 ## Revue de diff
 
 `/diff` ouvre une revue compacte :

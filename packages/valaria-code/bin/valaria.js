@@ -69,6 +69,7 @@ function help() {
     --no-onboarding              ne pas demander Claude/Codex/DeepSeek au premier login
     --no-anim                    désactiver le splash et les animations
     --layout <focus|studio|compact>  interface au démarrage
+    --approval <strict|safe|full>    mode d'approbation de l'agent
     --home <dir>                 dossier de configuration
 
   VARIABLES
@@ -249,16 +250,25 @@ async function commandTui(flags) {
       config,
       model: auth.model,
       layout: auth.layout,
+      approvalMode: auth.approvalMode,
       version: PKG.version,
       animations: !flags['no-anim'],
       account: me,
       onModelChange: (model) => {
         const current = loadConfig() || {};
-        saveConfig({ ...current, url: auth.url, token: auth.token, model, layout: current.layout || auth.layout, deviceName: current.deviceName || 'VALARIA Code' });
+        saveConfig({ ...current, url: auth.url, token: auth.token, model, layout: current.layout || auth.layout, approvalMode: current.approvalMode || auth.approvalMode, deviceName: current.deviceName || 'VALARIA Code' });
       },
-      onPreferencesChange: ({ layout }) => {
+      onPreferencesChange: ({ layout, approvalMode }) => {
         const current = loadConfig() || {};
-        saveConfig({ ...current, url: auth.url, token: auth.token, model: auth.model, layout, deviceName: current.deviceName || 'VALARIA Code' });
+        saveConfig({
+          ...current,
+          url: auth.url,
+          token: auth.token,
+          model: auth.model,
+          layout: layout || current.layout || auth.layout,
+          approvalMode: approvalMode || current.approvalMode || auth.approvalMode,
+          deviceName: current.deviceName || 'VALARIA Code',
+        });
       },
     });
     return 0;

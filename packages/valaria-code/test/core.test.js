@@ -10,6 +10,7 @@ import { createClient } from '../src/api.js';
 import { runAgent } from '../src/agent.js';
 import { clearConfig, loadConfig, saveConfig } from '../src/config.js';
 import { groupModels } from '../src/onboarding.js';
+import { APPROVAL_LABELS, approvalRequired, isDangerousCommand, isSensitivePath } from '../src/approval.js';
 import { LOGO_LINES, MARK, SPINNER } from '../src/assets.js';
 import { playSplash } from '../src/splash.js';
 import { collectWorkspaceDiff } from '../src/diff-view.js';
@@ -34,12 +35,13 @@ test('configuration locale : sauvegarde, relecture et oubli', () => {
   const home = tmpDir();
   process.env.VALARIA_HOME = home;
   try {
-    saveConfig({ url: 'http://127.0.0.1:1234/v1', token: 'vlt_test', model: 'gpt-5', layout: 'studio' });
+    saveConfig({ url: 'http://127.0.0.1:1234/v1', token: 'vlt_test', model: 'gpt-5', layout: 'studio', approvalMode: 'safe' });
     const config = loadConfig();
     assert.equal(config.url, 'http://127.0.0.1:1234');
     assert.equal(config.token, 'vlt_test');
     assert.equal(config.model, 'gpt-5');
     assert.equal(config.layout, 'studio');
+    assert.equal(config.approvalMode, 'safe');
     clearConfig();
     assert.equal(loadConfig(), null);
   } finally {
@@ -264,6 +266,53 @@ test('diff view : lecture des changements git', async (t) => {
   assert.equal(files['a.js'].deletions, 1);
   assert.equal(files['b.js'].status, 'A');
   assert.match(files['b.js'].diff, /\+export const b = 3/);
+});
+
+test('approbation : modes strict, sécurisé et accès total', () => {
+  assert.equal(APPROVAL_LABELS.safe, 'Sécurisé');
+  assert.equal(approvalRequired('strict', { type: 'write', file: 'src/a.js' }), true);
+  assert.equal(approvalRequired('strict', { type: 'run', command: 'npm test' }), true);
+  assert.equal(approvalRequired('safe', { type: 'write', file: 'src/a.js' }), false);
+  assert.equal(approvalRequired('safe', { type: 'write', file: '.env' }), true);
+  assert.equal(approvalRequired('safe', { type: 'run', command: 'npm test' }), false);
+  assert.equal(approvalRequired('safe', { type: 'run', command: 'rm -rf build' }), true);
+  assert.equal(approvalRequired('full', { type: 'run', command: 'rm -rf build' }), false);
+  assert.equal(isDangerousCommand('git reset --hard'), true);
+  assert.equal(isSensitivePath('config/.env.local'), true);
+  assert.equal(isSensitivePath('src/app.js'), false);
+});
+
+test('TUI conversation : défilement de l’historique', () => {
+  const capture = (scrollBack) => {
+    const chunks = [];
+    const original = process.stdout.write;
+    process.stdout.write = (chunk) => { chunks.push(String(chunk)); return true; };
+    try {
+      renderScreen({
+        messages: Array.from({ length: 40 }, (_, index) => ({ role: 'user', content: `message-${index}` })),
+        input: '',
+        status: 'prêt',
+        streaming: false,
+        approval: null,
+        model: 'gpt-5',
+        version: '0.7.0',
+        mode: 'agent',
+        approvalMode: 'strict',
+        layout: 'focus',
+        scrollBack,
+        account: null,
+      }, { client: {}, config: {}, color: false });
+    } finally {
+      process.stdout.write = original;
+    }
+    return chunks.join('');
+  };
+  const latest = capture(0);
+  const earlier = capture(58);
+  assert.match(latest, /message-39/);
+  assert.doesNotMatch(latest, /message-10/);
+  assert.match(earlier, /message-15/);
+  assert.doesNotMatch(earlier, /message-39/);
 });
 
 test('assets et splash animé', async () => {
