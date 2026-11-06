@@ -627,7 +627,7 @@ tbody tr:hover td { background: rgba(127, 227, 170, 0.035); }
 }
 .auth-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 3px;
   padding: 4px;
   border: 1px solid var(--border);
@@ -950,5 +950,19 @@ body.menu-open { overflow: hidden; }
   .user-main .topbar-title { align-items: flex-start; width: 100%; }
   .user-main .topbar-title > div { width: 100%; }
   .user-main .hero-kicker { text-align: left; }
+}
+
+
+/* --------------------------- inscription --------------------------- */
+
+.signup-page .portal-login { min-height: calc(100vh - 170px); }
+.signup-card h2 { margin: 0; font-size: 22px; font-weight: 750; letter-spacing: -0.03em; }
+.signup-card > p { margin: 0; }
+.signup-card #signup-request-form,
+.signup-card #signup-verify-form { display: grid; gap: 4px; }
+.signup-card .form-actions { margin-top: 4px; }
+.signup-login .portal-login-copy h1 { max-width: 15ch; }
+@media (max-width: 960px) {
+  .signup-page .portal-login { min-height: auto; }
 }
 

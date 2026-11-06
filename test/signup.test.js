@@ -104,6 +104,11 @@ test('inscription autonome : code email, compte, clé API et double connexion', 
     assert.equal(me2.client.hasKey, true);
     assert.ok(me2.client.keyPrefix.startsWith('sk-dsk-'));
 
+    // Un compte existant ne peut pas repasser par l'inscription.
+    const existingSignup = await portalPost(started.url, '/signup/request', { email: 'nouveau@gmail.com' });
+    assert.equal(existingSignup.status, 409);
+    assert.equal((await existingSignup.json()).error.code, 'account_exists');
+
     // Connexion par email (code) même compte.
     const request2 = await portalPost(started.url, '/email/request', { email: 'nouveau@gmail.com' });
     assert.equal(request2.status, 200);

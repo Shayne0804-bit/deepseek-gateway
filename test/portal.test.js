@@ -97,6 +97,12 @@ test('portail : trois surfaces + robots prives', async () => {
     assert.equal(portal.status, 200);
     assert.match(await portal.text(), /Mon espace/);
 
+    const signup = await fetch(`${started.url}/signup`);
+    assert.equal(signup.status, 200);
+    const signupHtml = await signup.text();
+    assert.match(signupHtml, /Créer un compte/);
+    assert.match(signupHtml, /signup-request-form/);
+
     const robots = await fetch(`${started.url}/robots.txt`);
     assert.equal(robots.status, 200);
     assert.match(await robots.text(), /Disallow: \//);

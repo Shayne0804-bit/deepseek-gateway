@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0a0e0c">
+  <meta name="app-version" content="{{APP_VERSION}}">
+  <meta name="description" content="Créer un compte VALARIA Gateway API : vérification par email, pass d'essai et clé API personnelle.">
+  <title>Créer un compte — VALARIA Gateway API</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/styles.css?v={{APP_VERSION}}">
+  <link rel="stylesheet" href="/assets/theme.css?v={{APP_VERSION}}">
+</head>
+<body class="public-page signup-page">
+  <div class="site-bg" aria-hidden="true"></div>
+  <a class="skip-link" href="#main">Aller au contenu</a>
+
+  <header class="site-header">
+    <a class="site-brand" href="/">
+      <img class="brand-logo" src="/assets/logo-mark.svg?v={{APP_VERSION}}" alt="" aria-hidden="true" width="34" height="34">
+      <span class="brand-name">VALARIA Gateway</span>
+    </a>
+    <nav class="site-nav" aria-label="Navigation principale">
+      <a href="/">Accueil</a>
+      <a href="/portal">Se connecter</a>
+    </nav>
+    <div class="site-status" id="site-status" aria-live="polite">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="status-text">vérification…</span>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="portal-login signup-login" aria-labelledby="signup-title">
+      <div class="portal-login-copy">
+        <p class="hero-kicker">Créer un compte</p>
+        <h1 id="signup-title">Votre espace, en quelques secondes.</h1>
+        <p>Un email, un code de vérification, puis votre clé API personnelle.</p>
+        <ul class="portal-points">
+          <li>Pass d'essai immédiat</li>
+          <li>Quotas, crédit et suivi inclus</li>
+          <li>Aucun prélèvement automatique</li>
+        </ul>
+        <p class="small muted">
+          Vous avez déjà un compte ? <a href="/portal">Se connecter</a>.
+        </p>
+      </div>
+
+      <div class="panel portal-login-form signup-card">
+        <h2>Créer un compte</h2>
+        <p class="small muted">Un code à usage unique sera envoyé à votre adresse email.</p>
+        <div id="signup-error" class="login-error" role="alert" aria-live="assertive"></div>
+
+        <form id="signup-request-form" novalidate>
+          <label class="field full">
+            <span>Adresse email</span>
+            <input type="email" id="signup-email" name="email" placeholder="vous@gmail.com" autocomplete="email" maxlength="254" required>
+            <small>Un pass d'essai est créé après validation. Utilisez une adresse que vous consultez.</small>
+          </label>
+          <div id="signup-turnstile" class="turnstile-slot hidden"></div>
+          <button type="submit" class="btn btn-primary btn-block" id="signup-request-btn">Recevoir mon code</button>
+        </form>
+
+        <form id="signup-verify-form" class="hidden" novalidate>
+          <p class="small muted email-sent-note" id="signup-sent-note"></p>
+          <label class="field full">
+            <span>Code à 6 chiffres</span>
+            <input type="text" id="signup-code" name="code" placeholder="000000" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="7" required>
+            <small>Utilisez le dernier code reçu : un nouveau code annule le précédent.</small>
+          </label>
+          <button type="submit" class="btn btn-primary btn-block" id="signup-verify-btn">Créer mon compte</button>
+          <div class="auth-links">
+            <button type="button" class="btn btn-ghost btn-sm" id="signup-resend">Renvoyer un code</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="signup-back">Changer d'adresse</button>
+          </div>
+          <p class="small muted resend-status" id="signup-resend-status" aria-live="polite"></p>
+        </form>
+
+        <p class="small muted" style="margin:14px 0 0">
+          Déjà inscrit ? <a href="/portal">Se connecter</a>.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span>VALARIA Gateway API</span>
+    <span class="site-footer-links">
+      <a href="/portal">Se connecter</a>
+      <a href="/">Accueil</a>
+    </span>
+  </footer>
+
+  <script src="/assets/signup.js?v={{APP_VERSION}}" defer></script>
+</body>
+</html>

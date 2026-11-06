@@ -107,7 +107,7 @@
     if (!siteKey) return;
     try {
       await loadTurnstileScript();
-      for (const kind of ['email', 'signup']) {
+      for (const kind of ['email']) {
         const slot = ensureTurnstileSlot(kind);
         slot.classList.remove('hidden');
         slot.innerHTML = '';
@@ -193,7 +193,6 @@
     $('#login-view').classList.remove('hidden');
     $('#portal-error').textContent = message;
     resetEmailFlow();
-    resetSignupFlow();
     setAuthTab('key');
     $('#portal-key').focus();
   }
@@ -202,7 +201,6 @@
     const entries = {
       key: ['#tab-key', '#panel-key'],
       email: ['#tab-email', '#panel-email'],
-      signup: ['#tab-signup', '#panel-signup'],
     };
     const normalized = entries[mode] ? mode : 'key';
     for (const [name, [tabSelector, panelSelector]] of Object.entries(entries)) {
@@ -215,9 +213,7 @@
       panel.classList.toggle('hidden', !active);
     }
     $('#email-error').textContent = '';
-    $('#signup-error').textContent = '';
     if (normalized === 'email') $('#email-address').focus();
-    else if (normalized === 'signup') $('#signup-email').focus();
     else $('#portal-key').focus();
   }
 
@@ -834,7 +830,6 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     const authTabs = [
       ['tab-key', 'key'],
       ['tab-email', 'email'],
-      ['tab-signup', 'signup'],
     ];
     for (const [id, mode] of authTabs) {
       $(`#${id}`).addEventListener('click', () => setAuthTab(mode));
@@ -861,19 +856,6 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     });
     $('#email-resend').addEventListener('click', requestEmailCode);
     $('#email-change').addEventListener('click', resetEmailFlow);
-    $('#email-signup-link').addEventListener('click', () => setAuthTab('signup'));
-    $('#signup-request-form').addEventListener('submit', (event) => {
-      event.preventDefault();
-      requestSignup();
-    });
-    $('#signup-verify-form').addEventListener('submit', (event) => {
-      event.preventDefault();
-      verifySignup();
-    });
-    $('#signup-resend').addEventListener('click', requestSignup);
-    $('#signup-back').addEventListener('click', resetSignupFlow);
-    $('#signup-login-link').addEventListener('click', () => setAuthTab('email'));
-    $('#signup-key-link').addEventListener('click', () => setAuthTab('key'));
     $('#create-key-btn').addEventListener('click', createApiKey);
     $('#rotate-key-btn').addEventListener('click', rotateApiKey);
     $('#dismiss-key-btn').addEventListener('click', () => {
@@ -907,16 +889,11 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
   async function detectEmailLogin() {
     try {
       const config = await api('/config');
-      let modes = 1;
       if (config.emailLoginEnabled) {
         $('#tab-email').classList.remove('hidden');
-        modes += 1;
+      } else {
+        document.querySelector('.auth-tabs').classList.add('hidden');
       }
-      if (config.signupEnabled) {
-        $('#tab-signup').classList.remove('hidden');
-        modes += 1;
-      }
-      if (modes === 1) document.querySelector('.auth-tabs').classList.add('hidden');
       await initTurnstile(config.turnstileSiteKey);
     } catch {
       /* pas bloquant : la connexion par clé reste disponible */

@@ -23,6 +23,7 @@
     </a>
     <nav class="site-nav" aria-label="Navigation principale">
       <a href="/">Accueil</a>
+      <a href="/signup">Créer un compte</a>
     </nav>
     <div class="site-status" id="site-status" aria-live="polite">
       <span class="dot" aria-hidden="true"></span>
@@ -37,8 +38,8 @@
         <p class="hero-kicker">Espace utilisateur</p>
         <h1 id="login-title">Vos accès, en un seul endroit.</h1>
         <p>
-          Connectez-vous par clé API ou par email. Nouveau ? Créez votre compte
-          en quelques secondes.
+          Connectez-vous par clé API ou par email. Nouveau ?
+          <a href="/signup">Créer un compte</a>.
         </p>
         <ul class="portal-points">
           <li>Quotas et crédit restants</li>
@@ -54,7 +55,6 @@
         <div class="auth-tabs" role="tablist" aria-label="Méthode de connexion">
           <button type="button" class="auth-tab active" id="tab-key" role="tab" aria-selected="true" aria-controls="panel-key">Clé API</button>
           <button type="button" class="auth-tab hidden" id="tab-email" role="tab" aria-selected="false" aria-controls="panel-email" tabindex="-1">Code email</button>
-          <button type="button" class="auth-tab hidden" id="tab-signup" role="tab" aria-selected="false" aria-controls="panel-signup" tabindex="-1">Créer un compte</button>
         </div>
 
         <div id="panel-key" role="tabpanel" aria-labelledby="tab-key">
@@ -63,7 +63,7 @@
             <label class="field full">
               <span>Clé API</span>
               <input type="password" id="portal-key" name="key" placeholder="sk-dsk-…" autocomplete="off" spellcheck="false" required>
-              <small>Votre clé commence par <code>sk-dsk-</code>. Vous pouvez aussi créer un compte avec l'onglet <strong>Créer un compte</strong>.</small>
+              <small>Votre clé commence par <code>sk-dsk-</code>. Besoin d'un compte ? <a href="/signup">Créer un compte</a>.</small>
             </label>
             <button type="submit" class="btn btn-primary btn-block">Ouvrir mon espace</button>
           </form>
@@ -94,38 +94,7 @@
             <p class="small muted resend-status" id="email-resend-status" aria-live="polite"></p>
           </form>
           <p class="small muted" style="margin:14px 0 0">
-            Pas encore de compte ? Il sera <strong>créé automatiquement</strong> après validation du code (pass d'essai).
-            Vous pouvez aussi utiliser <button type="button" class="link-btn" id="email-signup-link">Créer un compte</button>.
-          </p>
-        </div>
-
-        <div id="panel-signup" role="tabpanel" aria-labelledby="tab-signup" class="hidden">
-          <div id="signup-error" class="login-error" role="alert" aria-live="assertive"></div>
-          <form id="signup-request-form" novalidate>
-            <label class="field full">
-              <span>Créer un compte avec votre email</span>
-              <input type="email" id="signup-email" name="email" placeholder="vous@gmail.com" autocomplete="email" maxlength="254" required>
-              <small>Un code de vérification sera envoyé à cette adresse. Un pass d'essai est créé automatiquement (durée et quotas fixés par l'administrateur).</small>
-            </label>
-            <button type="submit" class="btn btn-primary btn-block" id="signup-request-btn">Créer mon compte</button>
-          </form>
-          <form id="signup-verify-form" class="hidden" novalidate>
-            <p class="small muted email-sent-note" id="signup-sent-note"></p>
-            <label class="field full">
-              <span>Code à 6 chiffres</span>
-              <input type="text" id="signup-code" name="code" placeholder="000000" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="7" required>
-              <small>Utilisez le <strong>dernier code reçu</strong> : demander un nouveau code annule le précédent. Valable quelques minutes.</small>
-            </label>
-            <button type="submit" class="btn btn-primary btn-block" id="signup-verify-btn">Vérifier et créer mon compte</button>
-            <div class="auth-links">
-              <button type="button" class="btn btn-ghost btn-sm" id="signup-resend">Renvoyer un code</button>
-              <button type="button" class="btn btn-ghost btn-sm" id="signup-back">Changer d'adresse</button>
-            </div>
-            <p class="small muted resend-status" id="signup-resend-status" aria-live="polite"></p>
-          </form>
-          <p class="small muted" style="margin:14px 0 0">
-            Déjà un compte ? <button type="button" class="link-btn" id="signup-login-link">Se connecter par email</button>
-            · <button type="button" class="link-btn" id="signup-key-link">Se connecter par clé API</button>
+            Pas encore de compte ? <a class="link-btn" href="/signup">Créer un compte</a>.
           </p>
         </div>
       </div>
