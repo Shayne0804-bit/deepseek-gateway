@@ -26,6 +26,10 @@
         <span>Mot de passe administrateur</span>
         <input type="password" name="password" id="login-password" placeholder="••••••••" autocomplete="current-password" required autofocus>
       </label>
+      <label class="field">
+        <span>Code 2FA <span class="small muted">(si activé)</span></span>
+        <input type="text" name="totp" id="login-totp" placeholder="123 456" inputmode="numeric" autocomplete="one-time-code" maxlength="7">
+      </label>
       <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
       <p class="small muted" style="margin:16px 0 0">
         Défini par <code>ADMIN_PASSWORD</code> (ou dans <code>data/admin-password.txt</code> au premier démarrage).

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '3.8.0';
+export const APP_VERSION = '3.9.0';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -130,6 +130,7 @@ export function loadConfig(overrides = {}) {
     providerBaseUrl: stripTrailingSlash(overrides.providerBaseUrl ?? raw('DEEPSEEK_BASE_URL') ?? ''),
     publicBaseUrl: stripTrailingSlash(overrides.publicBaseUrl ?? raw('PUBLIC_BASE_URL') ?? ''),
     adminPassword: overrides.adminPassword ?? raw('ADMIN_PASSWORD') ?? '',
+    adminTotpSecret: overrides.adminTotpSecret ?? raw('ADMIN_TOTP_SECRET') ?? '',
     sessionHours: intOr(raw('SESSION_HOURS'), 12),
     maxBodyBytes: overrides.maxBodyBytes ?? byteLimit(raw('MAX_BODY_BYTES'), DEFAULT_MAX_BODY_BYTES),
     upstreamTimeoutMs: intOr(raw('UPSTREAM_TIMEOUT_MS'), 30 * 60 * 1000),
@@ -352,6 +353,8 @@ export function loadConfig(overrides = {}) {
   config.signupEnabled = Boolean(config.signupEnabled);
   return config;
 }
+
+
 
 
 

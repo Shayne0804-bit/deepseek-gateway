@@ -296,13 +296,14 @@
 
   async function handleLogin(form) {
     const password = form.elements.password.value;
+    const totp = form.elements.totp?.value?.trim() || '';
     const errorEl = $('#login-error');
     errorEl.classList.remove('visible');
     try {
       const res = await fetch('/admin/api/login', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-requested-with': 'dsk-admin' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ password, totp }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -1698,6 +1699,7 @@
 
   init();
 })();
+
 
 
 

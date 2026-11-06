@@ -30,6 +30,7 @@ import {
   generateDerivedKey,
   hashApiKey,
   validateAdminSession,
+  verifyTotp,
 } from './auth.js';
 import {
   changeAdminPassword,
@@ -421,6 +422,13 @@ export function createAdminApi({ config, db, log, mailer }) {
           audit(req, 'admin.login.failed', 'admin');
           log.warn(`Echec de connexion admin depuis ${ip}`);
           adminError(res, 401, 'Mot de passe incorrect.', 'invalid_password');
+          return;
+        }
+        if (config.adminTotpSecret && !verifyTotp(config.adminTotpSecret, body.totp)) {
+          recordLoginFailure(ip);
+          audit(req, 'admin.login.totp_failed', 'admin');
+          log.warn(`Code TOTP invalide depuis ${ip}`);
+          adminError(res, 401, 'Code de verification a deux facteurs invalide.', 'invalid_totp');
           return;
         }
         clearLoginFailures(ip);

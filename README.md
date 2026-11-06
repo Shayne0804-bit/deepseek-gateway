@@ -1269,3 +1269,9 @@ et **Vue d'ensemble** (graphique 30 jours, top consommateurs).
 
 
 
+
+## 2FA administrateur (optionnel)
+
+Définissez `ADMIN_TOTP_SECRET` avec un secret TOTP base32 (Google Authenticator, Aegis, etc.).
+La connexion admin demandera alors le mot de passe + les 6 chiffres. Sans cette variable, le comportement reste inchangé.
+
