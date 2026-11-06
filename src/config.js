@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '3.3.1';
+export const APP_VERSION = '3.3.2';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -154,6 +154,7 @@ export function loadConfig(overrides = {}) {
     smtpUrl: overrides.smtpUrl ?? raw('SMTP_URL') ?? '',
     resendApiKey: overrides.resendApiKey ?? raw('RESEND_API_KEY') ?? '',
     resendApiBase: stripTrailingSlash(overrides.resendApiBase ?? raw('RESEND_API_BASE') ?? 'https://api.resend.com'),
+    exchangeRatesUrl: overrides.exchangeRatesUrl ?? raw('EXCHANGE_RATES_URL') ?? 'https://open.er-api.com/v6/latest/EUR',
     otpExpiresMinutes: intOr(raw('OTP_EXPIRES_MINUTES'), 10),
     otpCooldownSeconds: overrides.otpCooldownSeconds ?? intOr(raw('OTP_COOLDOWN_SECONDS'), 30),
     otpMaxPerEmail: overrides.otpMaxPerEmail ?? intOr(raw('OTP_MAX_PER_EMAIL'), 0),
@@ -331,6 +332,7 @@ export function loadConfig(overrides = {}) {
   config.signupEnabled = Boolean(config.signupEnabled);
   return config;
 }
+
 
 
 
