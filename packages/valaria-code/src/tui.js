@@ -27,7 +27,7 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function createTui({ client, config, model, layout = 'focus', version = '0.6.0', color = supportsColor(), animations = true, account = null, onModelChange = null, onPreferencesChange = null } = {}) {
+export function createTui({ client, config, model, layout = 'focus', version = '0.6.1', color = supportsColor(), animations = true, account = null, onModelChange = null, onPreferencesChange = null } = {}) {
   const state = {
     messages: [],
     input: '',
@@ -654,7 +654,7 @@ export function renderScreen(state, { client, config, color = true, root = proce
   const project = String(root).replace(/\\/g, '/').split('/').filter(Boolean).pop() || 'projet';
   const head = layout === 'focus'
     ? `  ${c(MARK, COLORS.accent)} ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${d('—')}   ${d(project)}   ${pulse} ${d(account ? 'en ligne' : 'hors ligne')}`
-    : `  ${c(MARK, COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${pulse} ${account ? 'en ligne' : 'hors ligne'}   ${d(LAYOUT_LABELS[layout])}   ${c(model, COLORS.amber)}   ${d(`v${state.version || '0.6.0'}`)}`;
+    : `  ${c(MARK, COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${pulse} ${account ? 'en ligne' : 'hors ligne'}   ${d(LAYOUT_LABELS[layout])}   ${c(model, COLORS.amber)}   ${d(`v${state.version || '0.6.1'}`)}`;
   add(head);
   add(`  ${d('─'.repeat(Math.max(0, cols - 4)))}`);
 
@@ -797,4 +797,5 @@ export async function runPlainChat({ client, messages, model, onDelta }) {
 }
 
 export const runTui = createTui;
+
 
