@@ -51,21 +51,37 @@ export class ValariaClient {
   }
 
   /**
-   * Chat non streamé. Retourne { content, usage, model }.
+   * Chat non streamé. Retourne { content, usage, model, tool_calls }.
    */
-  async chat(messages, { model = this.model, temperature = 0.3, maxTokens = 4096 } = {}) {
+  async complete(messages, { model = this.model, temperature = 0.3, maxTokens = 4096, tools = null, toolChoice = 'auto', signal = null } = {}) {
+    const body = { model, messages, temperature, max_tokens: maxTokens, stream: false };
+    if (tools) {
+      body.tools = tools;
+      body.tool_choice = toolChoice;
+    }
     const response = await this.fetch(`${this.baseUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: this.headers({ 'content-type': 'application/json' }),
-      body: JSON.stringify({ model, messages, temperature, max_tokens: maxTokens, stream: false }),
+      body: JSON.stringify(body),
+      signal,
     });
     if (!response.ok) throw await this.errorFrom(response);
     const data = await response.json();
+    const choice = data?.choices?.[0] || {};
+    const message = choice.message || {};
     return {
-      content: data?.choices?.[0]?.message?.content || '',
+      content: message.content || '',
+      tool_calls: message.tool_calls || (message.function_call ? [{ id: 'legacy', type: 'function', function: message.function_call }] : []),
       usage: data?.usage || null,
       model: data?.model || model,
+      finishReason: choice.finish_reason || null,
+      raw: data,
     };
+  }
+
+  async chat(messages, { model = this.model, temperature = 0.3, maxTokens = 4096 } = {}) {
+    const result = await this.complete(messages, { model, temperature, maxTokens });
+    return { content: result.content, usage: result.usage, model: result.model };
   }
 
   /**

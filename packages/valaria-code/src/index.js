@@ -13,4 +13,5 @@ export {
   saveConfig,
 } from './config.js';
 export { runTui } from './tui.js';
+export { runAgent } from './agent.js';
 export { diffText, extractCode, listFiles, readFile, runCommand, writeFile } from './tools.js';

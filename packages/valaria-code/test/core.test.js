@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { loginWithDevice } from '../src/auth.js';
 import { createClient } from '../src/api.js';
+import { runAgent } from '../src/agent.js';
 import { clearConfig, loadConfig, saveConfig } from '../src/config.js';
 import { renderScreen } from '../src/tui.js';
 import { diffText, listFiles, readFile, runCommand, writeFile } from '../src/tools.js';
@@ -129,6 +130,36 @@ test('TUI : en-tête de marque et composeur', () => {
   assert.match(output, /VALARIA/);
   assert.match(output, /CODE/);
   assert.match(output, /const a = 1/);
+});
+
+test('agent : lecture, proposition de patch, approbation et synthèse', async () => {
+  const root = tmpDir();
+  writeFile(root, 'hello.js', 'export const value = 1;\n');
+  let calls = 0;
+  const approvals = [];
+  const client = {
+    async complete() {
+      calls += 1;
+      if (calls === 1) {
+        return { content: '', tool_calls: [{ id: '1', type: 'function', function: { name: 'read_file', arguments: '{"path":"hello.js"}' } }] };
+      }
+      if (calls === 2) {
+        return { content: '', tool_calls: [{ id: '2', type: 'function', function: { name: 'write_file', arguments: '{"path":"hello.js","content":"export const value = 2;\\n"}' } }] };
+      }
+      return { content: 'Le fichier a été mis à jour.', tool_calls: [] };
+    },
+  };
+  const result = await runAgent({
+    client,
+    root,
+    task: 'Mets value à 2',
+    approve: async (request) => { approvals.push(request); return true; },
+  });
+  assert.equal(approvals.length, 1);
+  assert.equal(approvals[0].type, 'write');
+  assert.match(approvals[0].diff, /\+ export const value = 2/);
+  assert.match(readFile(root, 'hello.js'), /value = 2/);
+  assert.match(result.summary, /mis à jour/);
 });
 
 test('outils locaux : fichiers, diff, commande', async () => {

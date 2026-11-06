@@ -5,6 +5,7 @@
  */
 import readline from 'node:readline';
 import { COLORS, bold, dim, paint, rule, stripAnsi, truncate, visibleLength, wrap, supportsColor } from './theme.js';
+import { runAgent } from './agent.js';
 import { diffText, extractCode, listFiles, readFile, runCommand, writeFile } from './tools.js';
 
 const SYSTEM_PROMPT = `Tu es VALARIA Code, un agent de code dans le terminal.
@@ -26,6 +27,8 @@ export function createTui({ client, config, model, color = supportsColor(), onMo
     historyIndex: -1,
     status: 'prêt',
     streaming: false,
+    agentRunning: false,
+    agentAbort: null,
     approval: null,
     abort: null,
     closed: false,
@@ -129,13 +132,61 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
     draw();
   }
 
+  async function runAgentTask(task) {
+    if (!task) {
+      systemMessage('usage : /agent <tâche>');
+      return;
+    }
+    state.agentRunning = true;
+    state.streaming = true;
+    state.agentAbort = new AbortController();
+    state.status = 'agent en cours…';
+    addMessage('user', `/agent ${task}`);
+    draw();
+    try {
+      const result = await runAgent({
+        client,
+        root,
+        task,
+        model: state.model,
+        signal: state.agentAbort.signal,
+        approve: (request) => new Promise((resolve) => {
+          state.approval = { ...request, resolve };
+          state.status = 'approbation demandée par l’agent';
+          draw();
+        }),
+        onEvent: (event) => {
+          if (event.type === 'assistant' && event.content) addMessage('assistant', event.content);
+          else if (event.type === 'tool') systemMessage(`⚙ outil : ${event.name}`);
+          else if (event.type === 'error') systemMessage(`✎ ${event.name} : ${event.message}`);
+          scheduleRender();
+        },
+      });
+      addMessage('assistant', `⚙ Agent terminé — ${result.summary}`);
+      state.status = 'prêt';
+    } catch (error) {
+      systemMessage(`✎ Agent : ${error.message}`);
+      state.status = `erreur : ${error.message}`;
+    } finally {
+      state.agentRunning = false;
+      state.streaming = false;
+      state.agentAbort = null;
+      state.approval = null;
+      draw();
+    }
+  }
+
   async function executeCommand(line) {
     const [command, ...rest] = line.slice(1).trim().split(/\s+/);
     const argument = rest.join(' ').trim();
     switch (command) {
       case 'help':
-        systemMessage('⚙ Commandes\n/help · /files [dossier] · /read <fichier> · /edit <fichier> <instruction>\n/models · /model <nom> · /usage · /run <commande> · /clear · /quit\n\nEntrée : envoyer · Ctrl+C : annuler · Ctrl+L : redessiner');
+        systemMessage('⚙ Commandes\n/help · /agent <tâche> · /files [dossier] · /read <fichier> · /edit <fichier> <instruction>\n/models · /model <nom> · /usage · /run <commande> · /clear · /quit\n\nEntrée : envoyer · Ctrl+C : annuler · Ctrl+L : redessiner');
         break;
+      case 'agent': {
+        await runAgentTask(argument);
+        return;
+      }
       case 'files': {
         try {
           const files = listFiles(root, argument || '.', 160);
@@ -207,6 +258,7 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
     if (state.approval) {
       if (/^y(es)?$/i.test(value)) approvePending();
       else if (/^n(o)?$/i.test(value)) {
+        if (typeof state.approval.resolve === 'function') state.approval.resolve(false);
         systemMessage('⚙ Action refusée.');
         state.approval = null;
         state.status = 'prêt';
@@ -219,6 +271,12 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
       return;
     }
     if (!value) return;
+    if (state.agentRunning) {
+      state.input = '';
+      state.status = 'agent en cours…';
+      draw();
+      return;
+    }
     state.input = '';
     if (value.startsWith('/')) { executeCommand(value); return; }
     sendChat(value);
@@ -228,6 +286,12 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
     const approval = state.approval;
     state.approval = null;
     if (!approval) return;
+    if (typeof approval.resolve === 'function') {
+      approval.resolve(true);
+      state.status = 'action autorisée par l’utilisateur';
+      draw();
+      return;
+    }
     if (approval.type === 'write') {
       try {
         writeFile(root, approval.file, approval.content);
@@ -254,6 +318,13 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
   function onKey(key) {
     if (state.closed) return;
     if (key === '\u0003') { // Ctrl+C
+      if (state.agentRunning) {
+        if (typeof state.approval?.resolve === 'function') state.approval.resolve(false);
+        state.approval = null;
+        state.agentAbort?.abort();
+        state.status = 'annulation de l’agent…';
+        return;
+      }
       if (state.streaming && state.abort) {
         state.abort.abort();
         state.status = 'annulation…';

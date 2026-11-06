@@ -55,6 +55,26 @@ export function readFile(root, relative) {
   return fs.readFileSync(file, 'utf8');
 }
 
+export function searchFiles(root, query, { limit = 40 } = {}) {
+  const needle = String(query || '').trim();
+  if (!needle) return [];
+  const results = [];
+  for (const relative of listFiles(root, '.', 500)) {
+    if (results.length >= limit) break;
+    let content;
+    try { content = readFile(root, relative); } catch { continue; }
+    if (!content.toLowerCase().includes(needle.toLowerCase())) continue;
+    const lines = content.split(/\r?\n/);
+    const lineIndex = lines.findIndex((line) => line.toLowerCase().includes(needle.toLowerCase()));
+    results.push({
+      file: relative,
+      line: lineIndex + 1,
+      excerpt: lines.slice(Math.max(0, lineIndex - 1), lineIndex + 2).join('\n'),
+    });
+  }
+  return results;
+}
+
 export function writeFile(root, relative, content) {
   const file = resolveInside(root, relative);
   fs.mkdirSync(path.dirname(file), { recursive: true });

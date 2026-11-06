@@ -32,6 +32,8 @@ valaria logout          # oublier cet appareil
 
 - `Entrée` envoyer un message.
 - `/help` lister les commandes.
+- `/agent <tâche>` lancer l’agent autonome : il lit les fichiers, propose les
+  patchs et exécute les tests avec approbation.
 - `/files` explorer le projet.
 - `/read <fichier>` ajouter un fichier au contexte.
 - `/edit <fichier> <instruction>` préparer une modification, avec diff et
