@@ -184,6 +184,16 @@ export async function clientCreditWindows(db, since5hIso, since7dIso) {
     ? mongo.clientCreditWindows(db, since5hIso, since7dIso)
     : sqlite.clientCreditWindows(db, since5hIso, since7dIso);
 }
+export async function reserveCreditSlot(db, options) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.reserveCreditSlot(db, options)
+    : sqlite.reserveCreditSlot(db, options);
+}
+export async function releaseCreditSlot(db, id) {
+  return dbDriver(db) === 'mongo'
+    ? mongo.releaseCreditSlot(db, id)
+    : sqlite.releaseCreditSlot(db, id);
+}
 export async function clearTrialRequestQuotas(db) {
   return dbDriver(db) === 'mongo'
     ? mongo.clearTrialRequestQuotas(db)
@@ -285,5 +295,6 @@ export async function recordAdminAudit(db, entry) {
 export async function listAdminAudit(db, options) {
   return dbDriver(db) === 'mongo' ? mongo.listAdminAudit(db, options) : sqlite.listAdminAudit(db, options);
 }
+
 
 

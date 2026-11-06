@@ -1275,3 +1275,8 @@ et **Vue d'ensemble** (graphique 30 jours, top consommateurs).
 Définissez `ADMIN_TOTP_SECRET` avec un secret TOTP base32 (Google Authenticator, Aegis, etc.).
 La connexion admin demandera alors le mot de passe + les 6 chiffres. Sans cette variable, le comportement reste inchangé.
 
+
+## Securite des credits
+
+Les reservations de credit sont persistees en base (table/collection `credit_reservations`) en micro-USD entiers. En MongoDB Atlas, la reservation utilise une transaction : plusieurs instances ne peuvent pas franchir le meme plafond simultanement. Les reservations expirent automatiquement si un processus s'arrete.
+

@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { computeCost, canonicalModelName, loadPricing, normalizeUsage } from './pricing.js';
 import { loadModelAliases, resolveModelAlias } from './model-aliases.js';
 import {
@@ -13,9 +14,10 @@ import {
   recordUsage,
   remainingFor,
 } from './quota.js';
-import { getSetting, clientCreditWindowSince } from './db.js';
+import { getSetting, clientCreditWindowSince, reserveCreditSlot, releaseCreditSlot } from './db.js';
 import { globalBudgetStatus } from './settings.js';
-import { CreditReservationBook, Semaphore } from './limits.js';
+import { Semaphore } from './limits.js';
+import { toMicroUsd } from './money.js';
 import { getPassPlan } from './plans.js';
 import {
   bearerToken,
@@ -170,7 +172,6 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
   const limiter = new RateLimiter();
   const concurrency = new ConcurrencyTracker();
   const globalConcurrency = new Semaphore(config.maxConcurrentRequests);
-  const creditReservations = new CreditReservationBook();
 
   function accessLog(req, client, status, tokens, cost, ms, pathname, modelLabel = null) {
     const modele = modelLabel ? ` | ${modelLabel}` : '';
@@ -327,12 +328,13 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
     const modelAliases = loadModelAliases(() => aliasesValue);
 
     let recorded = false;
-    let reservedCredit = 0;
-    const releaseReserved = () => {
-      if (reservedCredit > 0) {
-        creditReservations.release(client.id, reservedCredit);
-        reservedCredit = 0;
-      }
+    let reservedCreditId = null;
+    let reservedCreditMicro = 0;
+    const releaseReserved = async () => {
+      const id = reservedCreditId;
+      reservedCreditId = null;
+      reservedCreditMicro = 0;
+      if (id) await releaseCreditSlot(db, id);
     };
     // Nom de modele demande par le client quand il differe du modele facture
     // (ex. fable-5.1 -> deepseek-flash), pour un journal de facturation reel.
@@ -357,7 +359,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
       } catch (err) {
         log.error(`[${req.requestId ?? '-'}] Ecriture du journal impossible : ${err.message}`);
       } finally {
-        releaseReserved();
+        await releaseReserved();
       }
     };
 
@@ -503,7 +505,11 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           );
           return;
         }
-        if (!creditReservations.tryReserve(client.id, creditEstimate, room)) {
+        const amountMicro = toMicroUsd(creditEstimate);
+        const availableMicro = room === Infinity ? Number.MAX_SAFE_INTEGER : Math.max(0, toMicroUsd(room));
+        const reservationId = crypto.randomUUID();
+        const reserved = await reserveCreditSlot(db, { id: reservationId, clientId: client.id, amountMicroUsd: amountMicro, availableMicroUsd: availableMicro, ttlMs: config.upstreamTimeoutMs + 60_000 });
+        if (!reserved) {
           release();
           sendApiError(
             res,
@@ -515,7 +521,8 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           );
           return;
         }
-        reservedCredit = creditEstimate;
+        reservedCreditId = reservationId;
+        reservedCreditMicro = amountMicro;
       }
 
       const provider = await resolveProvider(db, config);
@@ -791,12 +798,13 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
         responseHeaders,
       );
     } finally {
-      releaseReserved();
+      await releaseReserved();
       releaseAll();
     }
   }
 
   return handleProxy;
 }
+
 
 

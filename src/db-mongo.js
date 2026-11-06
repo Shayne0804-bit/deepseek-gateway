@@ -30,6 +30,7 @@ const COLLECTION_NAMES = [
   'portal_sessions',
   'admin_audit',
   'signup_identities',
+  'credit_reservations',
   'counters',
 ];
 
@@ -1028,4 +1029,38 @@ export async function clientCreditWindows(handle, since5hIso, since7dIso) {
     },
   ]).toArray();
   return new Map(rows.map((row) => [row._id, { used5h: Number(row.used5h || 0), used7d: Number(row.used7d || 0) }]));
+}
+
+
+/** Reserve atomiquement un montant micro-USD (transaction MongoDB Atlas). */
+export async function reserveCreditSlot(handle, { id, clientId, amountMicroUsd, availableMicroUsd, ttlMs = 30 * 60 * 1000 }) {
+  const collection = getCollection(handle, 'credit_reservations');
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const expiresAt = new Date(now.getTime() + ttlMs).toISOString();
+  const session = handle.client.startSession();
+  try {
+    let reserved = false;
+    await session.withTransaction(async () => {
+      await collection.deleteMany({ expires_at: { $lte: nowIso } }, { session });
+      const rows = await collection.aggregate([
+        { $match: { client_id: clientId, expires_at: { $gt: nowIso } } },
+        { $group: { _id: null, total: { $sum: '$amount_micro_usd' } } },
+      ], { session }).toArray();
+      if (Number(rows[0]?.total ?? 0) + amountMicroUsd > availableMicroUsd) return;
+      await collection.insertOne({ id, client_id: clientId, amount_micro_usd: amountMicroUsd, created_at: nowIso, expires_at: expiresAt }, { session });
+      reserved = true;
+    });
+    return reserved;
+  } finally {
+    await session.endSession();
+  }
+}
+
+export async function releaseCreditSlot(handle, id) {
+  try {
+    await getCollection(handle, 'credit_reservations').deleteOne({ id });
+  } catch {
+    /* ignore */
+  }
 }

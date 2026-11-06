@@ -5,7 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { PASS_PLANS, getPassPlan, passPlanFields } from '../src/plans.js';
 import { openDb, closeDb, insertUsageLog, clientCreditWindowSince } from '../src/db.js';
-import { CreditReservationBook } from '../src/limits.js';
+import { reserveCreditSlot, releaseCreditSlot } from '../src/db.js';
+import { toMicroUsd, fromMicroUsd } from '../src/money.js';
 
 test('plans : durees, credit site et plafond 5 h', () => {
   const byId = Object.fromEntries(PASS_PLANS.map((plan) => [plan.id, plan]));
@@ -65,12 +66,25 @@ test('credit site : fenetre glissante de 5 h', async () => {
 });
 
 
-test('reservations de credit : empeche le depassement concurrent', () => {
-  const book = new CreditReservationBook();
-  assert.equal(book.tryReserve('c1', 0.4, 0.5), true);
-  assert.equal(book.tryReserve('c1', 0.2, 0.5), false, 'la deuxieme requete ne doit pas passer');
-  book.release('c1', 0.4);
-  assert.equal(book.tryReserve('c1', 0.2, 0.5), true);
-  book.release('c1', 0.2);
-  assert.equal(book.heldFor('c1'), 0);
+test('reservations de credit persistantes : empeche le depassement concurrent', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsg-reserve-'));
+  const db = await openDb(dir);
+  try {
+    const base = { clientId: 'c1', availableMicroUsd: 500000, ttlMs: 60000 };
+    assert.equal(await reserveCreditSlot(db, { ...base, id: 'r1', amountMicroUsd: 400000 }), true);
+    assert.equal(await reserveCreditSlot(db, { ...base, id: 'r2', amountMicroUsd: 200000 }), false);
+    await releaseCreditSlot(db, 'r1');
+    assert.equal(await reserveCreditSlot(db, { ...base, id: 'r3', amountMicroUsd: 200000 }), true);
+    await releaseCreditSlot(db, 'r3');
+  } finally {
+    await closeDb(db);
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+
+test('money : conversion micro-USD sans perte', () => {
+  assert.equal(toMicroUsd(0.123456), 123456);
+  assert.equal(fromMicroUsd(123456), 0.123456);
+  assert.equal(toMicroUsd(1.0000004), 1000000);
 });

@@ -126,6 +126,16 @@ CREATE TABLE IF NOT EXISTS signup_identities (
 );
 CREATE INDEX IF NOT EXISTS idx_signup_ip ON signup_identities (ip, created_at);
 CREATE INDEX IF NOT EXISTS idx_signup_device ON signup_identities (device_hash, created_at);
+
+-- Reservations de credit atomiques, en micro-USD entiers (multi-instances).
+CREATE TABLE IF NOT EXISTS credit_reservations (
+  id TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL,
+  amount_micro_usd INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_credit_res_client ON credit_reservations (client_id, expires_at);
 `;
 
 export function openDb(dataDir) {
@@ -829,4 +839,38 @@ export function clientCreditWindows(db, since5hIso, since7dIso) {
        FROM usage_logs WHERE created_at >= ? GROUP BY client_id`,
   ).all(since5hIso, since7dIso);
   return new Map(rows.map((row) => [row.client_id, { used5h: Number(row.used5h), used7d: Number(row.used7d) }]));
+}
+
+/** Reserve atomiquement un montant micro-USD pour un client (transaction SQLite). */
+export function reserveCreditSlot(db, { id, clientId, amountMicroUsd, availableMicroUsd, ttlMs = 30 * 60 * 1000 }) {
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const expiresAt = new Date(now.getTime() + ttlMs).toISOString();
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    db.prepare('DELETE FROM credit_reservations WHERE expires_at <= ?').run(nowIso);
+    const row = db.prepare(
+      'SELECT COALESCE(SUM(amount_micro_usd), 0) AS total FROM credit_reservations WHERE client_id = ? AND expires_at > ?',
+    ).get(clientId, nowIso);
+    if (Number(row?.total ?? 0) + amountMicroUsd > availableMicroUsd) {
+      db.exec('ROLLBACK');
+      return false;
+    }
+    db.prepare(
+      'INSERT INTO credit_reservations (id, client_id, amount_micro_usd, created_at, expires_at) VALUES (?, ?, ?, ?, ?)',
+    ).run(id, clientId, amountMicroUsd, nowIso, expiresAt);
+    db.exec('COMMIT');
+    return true;
+  } catch (err) {
+    try { db.exec('ROLLBACK'); } catch { /* ignore */ }
+    throw err;
+  }
+}
+
+export function releaseCreditSlot(db, id) {
+  try {
+    db.prepare('DELETE FROM credit_reservations WHERE id = ?').run(id);
+  } catch {
+    /* ignore */
+  }
 }
