@@ -191,10 +191,10 @@ export function applySecurityHeaders(res, { https = false } = {}) {
     [
       "default-src 'self'",
       "script-src 'self' https://challenges.cloudflare.com https://js.hcaptcha.com https://hcaptcha.com",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data:",
+      "style-src 'self' 'unsafe-inline' https://hcaptcha.com https://*.hcaptcha.com",
+      "img-src 'self' data: https://imgs.hcaptcha.com https://*.hcaptcha.com",
       "connect-src 'self' https://challenges.cloudflare.com https://hcaptcha.com https://*.hcaptcha.com",
-      "frame-src https://challenges.cloudflare.com https://hcaptcha.com https://*.hcaptcha.com",
+      "frame-src https://challenges.cloudflare.com https://hcaptcha.com https://*.hcaptcha.com https://newassets.hcaptcha.com",
       "object-src 'none'",
       "base-uri 'none'",
       "form-action 'self'",

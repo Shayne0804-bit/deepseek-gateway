@@ -10,7 +10,7 @@
   const DAY_LABEL = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit' });
 
   const $ = (selector) => document.querySelector(selector);
-  const state = { me: null, busy: false, emailBusy: false, newKey: null, userView: 'overview' };
+  const state = { me: null, busy: false, emailBusy: false, newKey: null, userView: 'overview', currency: null };
 
   function esc(value) {
     return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
@@ -113,29 +113,41 @@
     if (!siteKey || provider === 'none') return;
     try {
       await loadCaptchaScript(provider);
-      for (const kind of ['email', 'signup']) {
-        const slot = ensureCaptchaSlot(kind);
-        slot.classList.remove('hidden');
-        slot.innerHTML = '';
-        const callbacks = {
-          sitekey: siteKey,
-          theme: 'dark',
-          callback: (token) => { captcha.tokens[kind] = token; },
-          'expired-callback': () => { captcha.tokens[kind] = null; },
-          'error-callback': () => { captcha.tokens[kind] = null; },
-        };
-        if (provider === 'hcaptcha' && window.hcaptcha) {
-          captcha.widgets[kind] = window.hcaptcha.render(slot, callbacks);
-        } else if (window.turnstile) {
-          captcha.widgets[kind] = window.turnstile.render(slot, callbacks);
-        }
-      }
+      // Ne pas rendre dans un panneau masque (hCaptcha ne s'affiche pas).
+      if (!$('#panel-email').classList.contains('hidden')) renderCaptcha('email');
+      if (!$('#panel-signup').classList.contains('hidden')) renderCaptcha('signup');
     } catch (err) {
-      captcha.tokens.email = null;
-      captcha.tokens.signup = null;
       const message = err?.message || 'Vérification anti-bot indisponible.';
       showEmailError(message);
       showSignupError(message);
+    }
+  }
+
+  /** Rend le captcha au moment ou son onglet devient visible. */
+  async function renderCaptcha(kind) {
+    if (!captcha.siteKey || captcha.widgets[kind] != null) return;
+    try {
+      await loadCaptchaScript(captcha.provider);
+      const slot = ensureCaptchaSlot(kind);
+      if (!slot) return;
+      slot.classList.remove('hidden');
+      slot.innerHTML = '';
+      const callbacks = {
+        sitekey: captcha.siteKey,
+        theme: 'dark',
+        callback: (token) => { captcha.tokens[kind] = token; },
+        'expired-callback': () => { captcha.tokens[kind] = null; },
+        'error-callback': () => { captcha.tokens[kind] = null; },
+      };
+      if (captcha.provider === 'hcaptcha' && window.hcaptcha) {
+        captcha.widgets[kind] = window.hcaptcha.render(slot, callbacks);
+      } else if (window.turnstile) {
+        captcha.widgets[kind] = window.turnstile.render(slot, callbacks);
+      }
+    } catch (err) {
+      const message = err?.message || 'Vérification anti-bot indisponible.';
+      if (kind === 'email') showEmailError(message);
+      else showSignupError(message);
     }
   }
 
@@ -225,8 +237,12 @@
       panel.classList.toggle('hidden', !active);
     }
     $('#email-error').textContent = '';
-    if (normalized === 'email') $('#email-address').focus();
-    else $('#portal-key').focus();
+    if (normalized === 'email') {
+      renderCaptcha('email');
+      $('#email-address').focus();
+    } else {
+      $('#portal-key').focus();
+    }
   }
 
   function showEmailError(message = '') {
@@ -482,6 +498,39 @@
     document.body.classList.toggle('user-menu-open', open);
   }
 
+  const ZERO_DECIMAL_CURRENCIES = new Set(['XOF', 'XAF', 'JPY', 'KRW', 'CLP', 'VND', 'IDR', 'PYG', 'UGX', 'RWF', 'GNF', 'KMF', 'DJF']);
+
+  function formatPlanPrice(priceEur) {
+    const currency = state.currency;
+    if (!currency || currency.currency === 'EUR' || !Number.isFinite(Number(currency.rate))) {
+      return `${Number(priceEur).toFixed(2).replace('.', ',')} €`;
+    }
+    const amount = Number(priceEur) * Number(currency.rate);
+    const zero = ZERO_DECIMAL_CURRENCIES.has(currency.currency);
+    try {
+      return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: currency.currency,
+        maximumFractionDigits: zero ? 0 : 2,
+        minimumFractionDigits: zero ? 0 : 2,
+      }).format(amount);
+    } catch {
+      return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: zero ? 0 : 2 }).format(amount)} ${currency.currency}`;
+    }
+  }
+
+  function planCurrencyNote() {
+    const currency = state.currency;
+    if (!currency || currency.currency === 'EUR') return 'Prix affichés en euros (EUR).';
+    const country = currency.country
+      ? new Intl.DisplayNames(['fr'], { type: 'region' }).of(currency.country)
+      : null;
+    const updated = currency.updatedAt ? new Date(currency.updatedAt).toLocaleDateString('fr-FR') : null;
+    const rate = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(currency.rate);
+    const source = currency.fallback ? 'taux indicatif' : `taux ${currency.source || 'du marché'}`;
+    return `Prix convertis en ${new Intl.DisplayNames(['fr'], { type: 'currency' }).of(currency.currency)}${country ? ` pour ${country}` : ''} · 1 € = ${rate} ${currency.currency}${updated ? ` · ${source} du ${updated}` : ''}.`;
+  }
+
   function planCurrentMarkup(me) {
     const plan = me.plan;
     if (!plan) {
@@ -522,7 +571,7 @@
           ${plan.id === currentId ? '<span class="badge badge-ok">actuel</span>' : ''}
         </div>
         <p class="plan-tagline">${esc(plan.tagline || '')}</p>
-        <p class="plan-price">${Number(plan.priceEur).toFixed(2).replace('.', ',')} <span>€ / 30 j</span></p>
+        <p class="plan-price">${formatPlanPrice(plan.priceEur)} <span>/ 30 j</span></p>
         <ul class="plan-features">
           ${(plan.features ?? []).map((feature) => `<li>${esc(feature)}</li>`).join('')}
           <li>${esc(plan.support || '')}</li>
@@ -789,6 +838,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     $('#portal-key-details').innerHTML = keyDetailsMarkup(me);
     $('#portal-plan-current').innerHTML = planCurrentMarkup(me);
     $('#portal-plan-grid').innerHTML = planGridMarkup(me);
+    $('#plan-currency-note').textContent = planCurrencyNote();
     $('#portal-account-details').innerHTML = accountDetailsMarkup(me);
     $('#portal-endpoints').innerHTML = endpointsMarkup(me);
     $('#portal-usage-table').innerHTML = usageTableMarkup(me);
@@ -818,6 +868,18 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
   async function loadMe() {
     const me = await api('/me');
     renderMe(me);
+  }
+
+  async function loadCurrency() {
+    try {
+      const params = new URLSearchParams({
+        locale: navigator.language || '',
+        tz: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+      });
+      state.currency = await api(`/currency?${params.toString()}`);
+    } catch {
+      state.currency = null;
+    }
   }
 
   async function saveProfile(event) {
@@ -991,6 +1053,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     refreshStatus();
     setInterval(refreshStatus, 60_000);
     await detectEmailLogin();
+    await loadCurrency();
     try {
       await loadMe();
     } catch (err) {
