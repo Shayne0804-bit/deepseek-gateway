@@ -206,6 +206,13 @@
     }, 1000);
   }
 
+  function showPortalError(message = '') {
+    const element = $('#portal-error');
+    if (!element) return;
+    element.textContent = message;
+    element.classList.toggle('visible', Boolean(message));
+  }
+
   function showLogin(message = '') {
     state.me = null;
     state.newKey = null;
@@ -213,7 +220,7 @@
     setUserMenu(false);
     $('#portal-app').classList.add('hidden');
     $('#login-view').classList.remove('hidden');
-    $('#portal-error').textContent = message;
+    showPortalError(message);
     resetEmailFlow();
     setAuthTab('key');
     $('#portal-key').focus();
@@ -235,6 +242,7 @@
       panel.classList.toggle('hidden', !active);
     }
     $('#email-error').textContent = '';
+    $('#email-error').classList.remove('visible');
     if (normalized === 'email') {
       renderCaptcha('email');
       $('#email-address').focus();
@@ -244,7 +252,10 @@
   }
 
   function showEmailError(message = '') {
-    $('#email-error').textContent = message;
+    const element = $('#email-error');
+    if (!element) return;
+    element.textContent = message;
+    element.classList.toggle('visible', Boolean(message));
   }
 
   function resetEmailFlow() {
@@ -906,9 +917,9 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     if (state.busy) return;
     const key = $('#portal-key').value.trim();
     const error = $('#portal-error');
-    error.textContent = '';
+    showPortalError('');
     if (!key) {
-      error.textContent = 'Entrez votre clé API.';
+      showPortalError('Entrez votre clé API.');
       $('#portal-key').focus();
       return;
     }
@@ -921,7 +932,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
       $('#portal-key').value = '';
       await loadMe();
     } catch (err) {
-      error.textContent = err.message;
+      showPortalError(err.message);
       $('#portal-key').focus();
     } finally {
       state.busy = false;

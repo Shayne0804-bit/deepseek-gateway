@@ -57,7 +57,10 @@
   }
 
   function showError(message = '') {
-    $('#signup-error').textContent = message;
+    const element = $('#signup-error');
+    if (!element) return;
+    element.textContent = message;
+    element.classList.toggle('visible', Boolean(message));
   }
 
   function setBusy(busy, button, label) {
