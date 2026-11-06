@@ -119,6 +119,7 @@
         slot.innerHTML = '';
         const callbacks = {
           sitekey: siteKey,
+          theme: 'dark',
           callback: (token) => { captcha.tokens[kind] = token; },
           'expired-callback': () => { captcha.tokens[kind] = null; },
           'error-callback': () => { captcha.tokens[kind] = null; },
