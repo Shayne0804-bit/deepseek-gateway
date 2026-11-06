@@ -73,12 +73,13 @@
   const captcha = { provider: null, siteKey: null, widgets: {}, tokens: {}, loading: null };
 
   function ensureCaptchaSlot(kind) {
-    const panel = $(kind === 'email' ? '#panel-email' : '#panel-signup');
+    if (kind !== 'email') return null;
+    const panel = $('#panel-email');
     if (!panel) return null;
-    let slot = panel.querySelector(`#${kind}-captcha`);
+    let slot = panel.querySelector('#email-captcha');
     if (!slot) {
       slot = document.createElement('div');
-      slot.id = `${kind}-captcha`;
+      slot.id = 'email-captcha';
       slot.className = 'turnstile-slot';
       const error = panel.querySelector('.login-error');
       if (error) error.after(slot);
@@ -115,11 +116,9 @@
       await loadCaptchaScript(provider);
       // Ne pas rendre dans un panneau masque (hCaptcha ne s'affiche pas).
       if (!$('#panel-email').classList.contains('hidden')) renderCaptcha('email');
-      if (!$('#panel-signup').classList.contains('hidden')) renderCaptcha('signup');
     } catch (err) {
       const message = err?.message || 'Vérification anti-bot indisponible.';
       showEmailError(message);
-      showSignupError(message);
     }
   }
 
@@ -147,7 +146,6 @@
     } catch (err) {
       const message = err?.message || 'Vérification anti-bot indisponible.';
       if (kind === 'email') showEmailError(message);
-      else showSignupError(message);
     }
   }
 
@@ -331,8 +329,8 @@
     }
   }
 
-  function showSignupError(message = '') {
-    $('#signup-error').textContent = message;
+  function showSignupError() {
+    /* Le parcours d'inscription vit sur /signup. */
   }
 
   function resetSignupFlow() {
@@ -1009,17 +1007,25 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
   }
 
   async function detectEmailLogin() {
+    let config;
     try {
-      const config = await api('/config');
-      if (config.emailLoginEnabled) {
-        $('#tab-email').classList.remove('hidden');
-      } else {
-        document.querySelector('.auth-tabs').classList.add('hidden');
-      }
-      await initCaptcha(config);
+      config = await api('/config');
     } catch {
       /* pas bloquant : la connexion par clé reste disponible */
       document.querySelector('.auth-tabs').classList.add('hidden');
+      return;
+    }
+    if (!config.emailLoginEnabled) {
+      document.querySelector('.auth-tabs').classList.add('hidden');
+      return;
+    }
+    // Afficher l'onglet avant le captcha : un chargement anti-bot en échec
+    // ne doit jamais faire disparaître la connexion par code email.
+    $('#tab-email').classList.remove('hidden');
+    try {
+      await initCaptcha(config);
+    } catch (err) {
+      showEmailError(err?.message || 'Vérification anti-bot indisponible.');
     }
   }
 
