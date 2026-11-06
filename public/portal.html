@@ -113,6 +113,7 @@
         </div>
         <nav class="nav" aria-label="Navigation de l'espace utilisateur">
           <button class="nav-item active" data-user-view="overview">Vue d'ensemble</button>
+          <button class="nav-item" data-user-view="pass">Mon pass</button>
           <button class="nav-item" data-user-view="keys">Mes clés API</button>
           <button class="nav-item" data-user-view="usage">Consommation</button>
           <button class="nav-item" data-user-view="requests">Requêtes</button>
@@ -192,6 +193,25 @@
               </div>
               <div id="portal-recent-logs"></div>
             </section>
+          </section>
+
+          <section class="user-panel hidden" data-user-panel="pass">
+            <section class="panel">
+              <div class="panel-head">
+                <div><h2>Mon pass</h2><span class="hint">Niveau actif et niveaux disponibles.</span></div>
+              </div>
+              <div id="portal-plan-current"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-head">
+                <div><h2>Niveaux de pass</h2><span class="hint">Tous les pass durent 30 jours, sans reconduction automatique.</span></div>
+              </div>
+              <div class="plan-grid" id="portal-plan-grid"></div>
+            </section>
+            <p class="small muted">
+              L’activation ou le changement de pass est réalisé par l’administrateur.
+              Un nouveau pass remet les compteurs à zéro et fixe la nouvelle date de fin.
+            </p>
           </section>
 
           <section class="user-panel hidden" data-user-panel="keys">

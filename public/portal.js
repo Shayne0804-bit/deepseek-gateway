@@ -446,6 +446,7 @@
 
   const USER_VIEWS = {
     overview: 'Vue d’ensemble',
+    pass: 'Mon pass',
     keys: 'Mes clés API',
     usage: 'Consommation',
     requests: 'Requêtes',
@@ -478,6 +479,54 @@
     if (toggle) toggle.setAttribute('aria-expanded', String(open));
     if (backdrop) backdrop.classList.toggle('hidden', !open);
     document.body.classList.toggle('user-menu-open', open);
+  }
+
+  function planCurrentMarkup(me) {
+    const plan = me.plan;
+    if (!plan) {
+      return `<div class="plan-current">
+        <div>
+          <p class="plan-kicker">Pass personnalisé</p>
+          <h3>Accès sur mesure</h3>
+          <p class="muted">Votre accès a été configuré directement par l'administrateur.</p>
+        </div>
+        <span class="badge badge-muted">personnalisé</span>
+      </div>
+      <dl class="spec-list" style="margin-top:18px">
+        <div class="spec-row"><dt>fin du pass</dt><dd>${me.client.expiresAt ? fmtDate(me.client.expiresAt) : 'sans date de fin'}</dd></div>
+        <div class="spec-row"><dt>quota</dt><dd>${fmtInt(me.quota.requests.limit || 0)} requêtes · ${fmtUsd(me.quota.usd.limit || 0)}</dd></div>
+      </dl>`;
+    }
+    const features = (plan.features ?? []).map((feature) => `<span class="chip">${esc(feature)}</span>`).join('');
+    return `<div class="plan-current">
+      <div>
+        <p class="plan-kicker">Pass actif</p>
+        <h3>${esc(plan.name)}</h3>
+        <p class="muted">${esc(plan.tagline || '')}</p>
+        <div class="chips plan-chips">${features}</div>
+        <p class="small muted" style="margin:14px 0 0">
+          ${esc(plan.support || '')} · ${me.client.expiresAt ? `fin le ${fmtDate(me.client.expiresAt)}` : 'sans date de fin'}
+        </p>
+      </div>
+      <span class="badge badge-ok">actif</span>
+    </div>`;
+  }
+
+  function planGridMarkup(me) {
+    const currentId = me.plan?.id || null;
+    return (me.plans ?? []).map((plan) => `
+      <article class="plan-card ${plan.id === currentId ? 'is-current' : ''}">
+        <div class="plan-card-head">
+          <h3>${esc(plan.name)}</h3>
+          ${plan.id === currentId ? '<span class="badge badge-ok">actuel</span>' : ''}
+        </div>
+        <p class="plan-tagline">${esc(plan.tagline || '')}</p>
+        <p class="plan-price">${Number(plan.priceEur).toFixed(2).replace('.', ',')} <span>€ / 30 j</span></p>
+        <ul class="plan-features">
+          ${(plan.features ?? []).map((feature) => `<li>${esc(feature)}</li>`).join('')}
+          <li>${esc(plan.support || '')}</li>
+        </ul>
+      </article>`).join('');
   }
 
   function keyDetailsMarkup(me) {
@@ -737,6 +786,8 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
 
     $('#portal-limits').innerHTML = limitsMarkup(me);
     $('#portal-key-details').innerHTML = keyDetailsMarkup(me);
+    $('#portal-plan-current').innerHTML = planCurrentMarkup(me);
+    $('#portal-plan-grid').innerHTML = planGridMarkup(me);
     $('#portal-account-details').innerHTML = accountDetailsMarkup(me);
     $('#portal-endpoints').innerHTML = endpointsMarkup(me);
     $('#portal-usage-table').innerHTML = usageTableMarkup(me);

@@ -48,6 +48,7 @@ import {
 } from './quota.js';
 import { loadPricing } from './pricing.js';
 import { loadModelAliases } from './model-aliases.js';
+import { PASS_PLANS, getPassPlan, publicPlan } from './plans.js';
 import { deviceHashFor, isDisposableEmail } from './abuse.js';
 import { lookupIpqsEmail, lookupIpqsIp, verifyHcaptcha, verifyTurnstile } from './fraud.js';
 import {
@@ -349,6 +350,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       id: crypto.randomUUID(),
       name: (localPart || 'Nouveau compte').slice(0, 80),
       email,
+      plan: 'essai',
       keyHash: sha256(`pending:${crypto.randomUUID()}`),
       keyPrefix: 'en attente',
       enabled: true,
@@ -563,6 +565,30 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           : null,
       },
       models: (await availableModelIds(db)).filter((id) => id !== 'deepseek-flash'),
+      plan: (() => {
+        if (client.plan === 'essai') {
+          return {
+            id: 'essai',
+            name: 'Essai',
+            tagline: 'Pass de découverte offert à l’inscription.',
+            durationDays: config.trialDays,
+            quotaRequests: config.trialQuotaRequests,
+            quotaUsd: config.trialQuotaUsd,
+            rpmLimit: config.trialRpmLimit,
+            concurrencyLimit: config.trialConcurrencyLimit,
+            maxOutputTokens: config.trialMaxOutputTokens,
+            support: 'Communauté',
+            features: [
+              `${config.trialQuotaRequests} requêtes`,
+              `${config.trialQuotaUsd} $ de crédit`,
+              `${config.trialDays} jours`,
+            ],
+          };
+        }
+        const plan = getPassPlan(client.plan);
+        return plan ? publicPlan(plan) : null;
+      })(),
+      plans: PASS_PLANS.map(publicPlan),
       baseUrl: `${origin}/v1`,
       anthropicBaseUrl: `${origin}/anthropic`,
       headers: [

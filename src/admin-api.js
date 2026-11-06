@@ -48,6 +48,7 @@ import {
   normalizePricing,
   peakWindowsLabel,
 } from './pricing.js';
+import { PASS_PLANS, getPassPlan, isPassPlanId, passPlanFields, publicPlan } from './plans.js';
 import {
   DEFAULT_MODEL_ALIASES,
   loadModelAliases,
@@ -87,6 +88,9 @@ function publicClient(client, today = null) {
     id: client.id,
     name: client.name,
     email: client.email ?? null,
+    plan: client.plan ?? null,
+    planName: getPassPlan(client.plan)?.name
+      ?? (client.plan === 'essai' ? 'Essai' : null),
     hasKey: Boolean(client.keyPrefix && String(client.keyPrefix).startsWith('sk-dsk-')),
     keyPrefix: client.keyPrefix,
     enabled: client.enabled,
@@ -151,6 +155,13 @@ function parseClientPayload(body, { partial = false } = {}) {
       }
       out.email = email;
     }
+  }
+
+  if (has('plan')) {
+    const raw = body.plan == null ? '' : String(body.plan).trim();
+    if (!raw) out.plan = null;
+    else if (isPassPlanId(raw)) out.plan = raw;
+    else throw new HttpError(400, 'Pass inconnu.', 'invalid_plan');
   }
 
   const intFields = [
@@ -508,6 +519,11 @@ export function createAdminApi({ config, db, log, mailer }) {
       }
 
       // ----------------------------- clients -----------------------------
+      if (route === '/plans' && method === 'GET') {
+        sendJson(res, 200, { plans: PASS_PLANS.map(publicPlan) });
+        return;
+      }
+
       if (route === '/clients' && method === 'GET') {
         const todayIso = utcStartOfToday();
         const todayByClient = await perClientUsageSince(db, todayIso);
@@ -528,27 +544,29 @@ export function createAdminApi({ config, db, log, mailer }) {
           return;
         }
         const now = new Date();
+        const preset = payload.plan ? passPlanFields(payload.plan, now) : null;
         const apiKey = generateDerivedKey();
         const client = {
           id: crypto.randomUUID(),
           name: payload.name,
           email: payload.email ?? null,
+          plan: payload.plan ?? null,
           keyHash: hashApiKey(apiKey),
           keyPrefix: displayKeyPrefix(apiKey),
           enabled: payload.enabled !== false,
-          quotaTokens: payload.quotaTokens ?? null,
-          quotaRequests: payload.quotaRequests ?? null,
-          quotaUsd: payload.quotaUsd ?? null,
+          quotaTokens: payload.quotaTokens ?? preset?.quotaTokens ?? null,
+          quotaRequests: payload.quotaRequests ?? preset?.quotaRequests ?? null,
+          quotaUsd: payload.quotaUsd ?? preset?.quotaUsd ?? null,
           usedTokens: 0,
           usedRequests: 0,
           usedUsd: 0,
-          period: payload.period ?? 'monthly',
-          periodStart: periodKeyFor(payload.period ?? 'monthly', now),
-          rpmLimit: payload.rpmLimit ?? null,
-          concurrencyLimit: payload.concurrencyLimit ?? null,
-          maxOutputTokens: payload.maxOutputTokens ?? null,
+          period: payload.period ?? preset?.period ?? 'monthly',
+          periodStart: periodKeyFor(payload.period ?? preset?.period ?? 'monthly', now),
+          rpmLimit: payload.rpmLimit ?? preset?.rpmLimit ?? null,
+          concurrencyLimit: payload.concurrencyLimit ?? preset?.concurrencyLimit ?? null,
+          maxOutputTokens: payload.maxOutputTokens ?? preset?.maxOutputTokens ?? null,
           allowedModels: payload.allowedModels ?? null,
-          expiresAt: payload.expiresAt ?? null,
+          expiresAt: payload.expiresAt ?? preset?.expiresAt ?? null,
           note: payload.note ?? null,
           createdAt: now.toISOString(),
         };
@@ -591,9 +609,12 @@ export function createAdminApi({ config, db, log, mailer }) {
               return;
             }
           }
-          await updateClientFields(db, clientId, payload);
-          if (payload.period && payload.period !== existing.period) {
-            await resetClientUsage(db, clientId, periodKeyFor(payload.period));
+          const preset = payload.plan ? passPlanFields(payload.plan) : null;
+          const changes = preset ? { ...preset, ...payload } : payload;
+          await updateClientFields(db, clientId, changes);
+          const planChanged = Boolean(payload.plan && payload.plan !== existing.plan);
+          if (planChanged || ((changes.period || payload.period) && (changes.period || payload.period) !== existing.period)) {
+            await resetClientUsage(db, clientId, periodKeyFor(changes.period ?? existing.period));
           }
           audit(req, 'client.update', existing.name, Object.keys(payload).join(','));
           log.info(`Cle "${existing.name}" mise a jour.`);

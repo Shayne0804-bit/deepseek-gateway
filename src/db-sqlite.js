@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS clients (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT,
+  plan TEXT,
   key_hash TEXT NOT NULL UNIQUE,
   key_prefix TEXT NOT NULL,
   enabled INTEGER NOT NULL DEFAULT 1,
@@ -124,6 +125,9 @@ function migrateDb(db) {
   if (!clientColumns.some((column) => column.name === 'email')) {
     db.exec('ALTER TABLE clients ADD COLUMN email TEXT');
   }
+  if (!clientColumns.some((column) => column.name === 'plan')) {
+    db.exec('ALTER TABLE clients ADD COLUMN plan TEXT');
+  }
   db.exec(
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_email ON clients (email COLLATE NOCASE) WHERE email IS NOT NULL",
   );
@@ -175,6 +179,7 @@ export function mapClientRow(row) {
     id: row.id,
     name: row.name,
     email: row.email ?? null,
+    plan: row.plan ?? null,
     keyHash: row.key_hash,
     keyPrefix: row.key_prefix,
     enabled: row.enabled === 1 || row.enabled === true,
@@ -293,8 +298,8 @@ export function insertClient(db, client) {
        quota_tokens, quota_requests, quota_usd,
        used_tokens, used_requests, used_usd,
        period, period_start, rpm_limit, concurrency_limit,
-       max_output_tokens, allowed_models, expires_at, note, created_at, email
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       max_output_tokens, allowed_models, expires_at, note, created_at, email, plan
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     client.id,
     client.name,
@@ -317,6 +322,7 @@ export function insertClient(db, client) {
     client.note,
     client.createdAt,
     client.email ?? null,
+    client.plan ?? null,
   );
 }
 
@@ -324,6 +330,7 @@ export function updateClientFields(db, id, fields) {
   const columns = {
     name: 'name',
     email: 'email',
+    plan: 'plan',
     enabled: 'enabled',
     quotaTokens: 'quota_tokens',
     quotaRequests: 'quota_requests',
@@ -687,4 +694,5 @@ export function insertUsageAndUpdateClient(db, logRow) {
     throw err;
   }
 }
+
 

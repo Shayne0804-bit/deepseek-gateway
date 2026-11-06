@@ -111,6 +111,45 @@ test('portail : trois surfaces + robots prives', async () => {
   }
 });
 
+test('catalogue des pass et pass applique au compte', async () => {
+  const started = await startServer();
+  try {
+    const admin = await adminLogin(started.url);
+    const plansRes = await fetch(`${started.url}/admin/api/plans`, {
+      headers: { cookie: admin.cookie, 'x-requested-with': 'dsk-admin' },
+    });
+    assert.equal(plansRes.status, 200);
+    const catalog = await plansRes.json();
+    assert.deepEqual(catalog.plans.map((plan) => plan.id), ['decouverte', 'createur', 'equipe', 'business']);
+
+    const created = await fetch(`${started.url}/admin/api/clients`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie: admin.cookie, 'x-requested-with': 'dsk-admin' },
+      body: JSON.stringify({ name: 'Client Createur', email: 'createur@example.com', plan: 'createur' }),
+    });
+    assert.equal(created.status, 201);
+    const data = await created.json();
+    assert.equal(data.client.plan, 'createur');
+    assert.equal(data.client.planName, 'Créateur');
+    assert.equal(data.client.quotaRequests, 4000);
+    assert.equal(data.client.quotaUsd, 8);
+    assert.equal(data.client.rpmLimit, 60);
+    assert.equal(data.client.concurrencyLimit, 3);
+    assert.ok(data.client.expiresAt, 'date de fin du pass automatique');
+
+    const login = await portalLogin(started.url, data.key);
+    assert.equal(login.status, 200);
+    const cookie = login.headers.getSetCookie()[0].split(';')[0];
+    const me = await (await fetch(`${started.url}/portal/api/me`, { headers: { cookie } })).json();
+    assert.equal(me.plan.id, 'createur');
+    assert.equal(me.plan.name, 'Créateur');
+    assert.equal(me.plans.length, 4);
+    assert.equal(me.quota.requests.limit, 4000);
+  } finally {
+    await started.close();
+  }
+});
+
 test('portail : login, session, quotas et deconnexion', async () => {
   const started = await startServer();
   try {

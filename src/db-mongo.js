@@ -430,6 +430,7 @@ export function mapClientRow(row) {
     id: row.id,
     name: row.name,
     email: row.email ?? null,
+    plan: row.plan ?? null,
     keyHash: row.key_hash,
     keyPrefix: row.key_prefix,
     enabled: row.enabled === 1 || row.enabled === true,
@@ -568,6 +569,7 @@ export async function insertClient(handle, client) {
     id: client.id,
     name: client.name,
     email: client.email ?? null,
+    plan: client.plan ?? null,
     key_hash: client.keyHash,
     key_prefix: client.keyPrefix,
     enabled: client.enabled ? 1 : 0,
@@ -593,6 +595,7 @@ export async function insertClient(handle, client) {
 const CLIENT_COLUMNS = {
   name: 'name',
   email: 'email',
+  plan: 'plan',
   enabled: 'enabled',
   quotaTokens: 'quota_tokens',
   quotaRequests: 'quota_requests',
@@ -893,3 +896,4 @@ export async function clientUsageSeriesSince(handle, clientId, sinceIso) {
   if (clientId == null || sinceIso == null) return [];
   return seriesUsage(handle, { client_id: clientId, created_at: { $gte: sinceIso } }, true);
 }
+

@@ -33,6 +33,7 @@
     view: 'overview',
     session: null,
     clients: [],
+    plans: [],
     overview: null,
     settings: null,
     audit: null,
@@ -266,10 +267,20 @@
     setView(state.view || 'overview');
   }
 
+  async function loadPlans() {
+    try {
+      const data = await api('/plans');
+      state.plans = data.plans ?? [];
+    } catch {
+      state.plans = [];
+    }
+  }
+
   async function init() {
     try {
       const session = await api('/session');
       state.session = session;
+      await loadPlans();
       const pageVersion = document.querySelector('meta[name="app-version"]')?.content || null;
       if (pageVersion && session.server?.version && pageVersion !== session.server.version) {
         location.reload();
@@ -662,7 +673,7 @@
       <tr>
         <td>
           <div class="client-name">${esc(client.name)}</div>
-          <div class="client-meta">${client.email ? `${esc(client.email)} · ` : ''}${esc(client.note || '')}${client.note ? ' · ' : ''}créée le ${fmtDate(client.createdAt)}${client.lastUsedAt ? ` · dernier appel ${fmtDate(client.lastUsedAt)}` : ' · jamais utilisée'}</div>
+          <div class="client-meta">${client.planName ? `pass ${esc(client.planName)} · ` : ''}${client.email ? `${esc(client.email)} · ` : ''}${esc(client.note || '')}${client.note ? ' · ' : ''}créée le ${fmtDate(client.createdAt)}${client.lastUsedAt ? ` · dernier appel ${fmtDate(client.lastUsedAt)}` : ' · jamais utilisée'}</div>
         </td>
         <td class="nowrap"><span class="mono small" title="Empreinte de la clé">${esc(client.keyPrefix)}</span></td>
         <td>${statusBadge(client)}</td>
@@ -716,6 +727,14 @@
         <label class="field full"><span>Email (connexion portail)</span>
           <input type="email" name="email" maxlength="254" value="${esc(client?.email || '')}" placeholder="ex : ami@example.com">
           <small>Permet à l'utilisateur de se connecter à <code>/portal</code> par code email, sans utiliser sa clé API. Laisser vide pour désactiver.</small>
+        </label>
+        <label class="field full"><span>Pass d'abonnement</span>
+          <select name="plan">
+            <option value="">Personnalisé (aucun pass)</option>
+            ${(state.plans || []).map((plan) =>
+              `<option value="${esc(plan.id)}" ${client?.plan === plan.id ? 'selected' : ''}>${esc(plan.name)} — ${plan.priceEur} € / ${plan.durationDays} j</option>`).join('')}
+          </select>
+          <small>Choisir un pass préremplit les quotas, le débit et la date de fin (+30 jours). Les champs restent modifiables.</small>
         </label>
         <label class="field"><span>Quota de tokens</span>
           <input type="number" name="quotaTokens" min="0" step="1000" value="${client?.quotaTokens ?? ''}" placeholder="ex : 5 000 000">
@@ -773,6 +792,22 @@
         : ''}`;
   }
 
+  function applyPlanToForm(form, planId) {
+    const plan = (state.plans || []).find((item) => item.id === planId);
+    if (!plan) return;
+    form.elements.quotaTokens.value = '';
+    form.elements.quotaRequests.value = String(plan.quotaRequests);
+    form.elements.quotaUsd.value = String(plan.quotaUsd);
+    form.elements.rpmLimit.value = String(plan.rpmLimit);
+    form.elements.concurrencyLimit.value = String(plan.concurrencyLimit);
+    form.elements.maxOutputTokens.value = String(plan.maxOutputTokens);
+    form.elements.period.value = 'total';
+    form.elements.expiresAt.value = toLocalInput(
+      new Date(Date.now() + plan.durationDays * 86_400_000).toISOString(),
+    );
+    toast(`Pass ${plan.name} prérempli : ${plan.quotaRequests} requêtes, ${plan.quotaUsd} $, ${plan.durationDays} jours.`, 'info');
+  }
+
   function openClientModal(client) {
     const isEdit = Boolean(client);
     openModal({
@@ -782,6 +817,9 @@
       submitLabel: isEdit ? 'Enregistrer' : 'Créer la clé',
       size: 'modal-wide',
     });
+    const form = document.querySelector('#modal-root form[data-form]');
+    const planSelect = form?.querySelector('select[name="plan"]');
+    planSelect?.addEventListener('change', () => applyPlanToForm(form, planSelect.value));
   }
 
   function clientPayloadFromForm(form) {
@@ -794,6 +832,7 @@
     const payload = {
       name: value('name'),
       email: value('email') || null,
+      plan: value('plan') || null,
       quotaTokens: num('quotaTokens'),
       quotaRequests: num('quotaRequests'),
       quotaUsd: num('quotaUsd'),
