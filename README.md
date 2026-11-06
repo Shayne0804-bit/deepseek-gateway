@@ -332,7 +332,8 @@ ensuite modifier ses quotas, sa date de fin ou la désactiver dans le panneau.
 ```env
 SIGNUP_ENABLED=1            # 0 pour fermer les inscriptions
 TRIAL_DAYS=7                # durée du pass d'essai
-TRIAL_QUOTA_USD=1           # crédit d'essai (USD)
+TRIAL_CREDIT_SITE_USD=1.125 # crédit site du pass gratuit (équivalent de 0,30 $ réel)
+# Ancienne TRIAL_QUOTA_USD (coût réel) : convertie automatiquement ×3,75.
 TRIAL_QUOTA_REQUESTS=200    # requêtes incluses
 TRIAL_RPM_LIMIT=20
 TRIAL_CONCURRENCY_LIMIT=2

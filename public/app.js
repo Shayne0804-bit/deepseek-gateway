@@ -1082,7 +1082,7 @@
           ${s.signup?.enabled
             ? `Un nouvel inscrit reçoit un pass d'essai : <strong>${fmtInt(s.signup.trialDays)} jours</strong>,
                <strong>${fmtInt(s.signup.trialQuotaRequests)} requêtes</strong>,
-               crédit <strong>${fmtUsd(s.signup.trialQuotaUsd)}</strong>.
+               crédit site <strong>${fmtUsd(s.signup.trialQuotaUsd)}</strong>.
                Il crée ensuite sa propre clé API depuis son espace.`
             : 'Activez <code>SIGNUP_ENABLED=1</code> (avec un transport email configuré) pour permettre la création de compte par email.'}
         </div>

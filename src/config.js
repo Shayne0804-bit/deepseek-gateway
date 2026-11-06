@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '3.6.1';
+export const APP_VERSION = '3.6.3';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -163,7 +163,13 @@ export function loadConfig(overrides = {}) {
     // Inscription autonome par email + pass d'essai cree automatiquement.
     signupEnabled: overrides.signupEnabled ?? boolOr(raw('SIGNUP_ENABLED'), true),
     trialDays: overrides.trialDays ?? intOr(raw('TRIAL_DAYS'), 7),
-    trialQuotaUsd: overrides.trialQuotaUsd ?? Number(raw('TRIAL_QUOTA_USD') ?? 1),
+    // Credit site du pass gratuit. L'ancienne variable TRIAL_QUOTA_USD etait
+    // exprimee en cout reel : on la convertit une fois via SITE_CREDIT_RATE.
+    trialQuotaUsd: overrides.trialQuotaUsd
+      ?? Number(raw('TRIAL_CREDIT_SITE_USD') ?? raw('TRIAL_QUOTA_USD') ?? 1.125),
+    trialQuotaLegacy: overrides.trialQuotaUsd === undefined
+      && raw('TRIAL_CREDIT_SITE_USD') === undefined
+      && raw('TRIAL_QUOTA_USD') !== undefined,
     trialQuotaRequests: overrides.trialQuotaRequests ?? intOr(raw('TRIAL_QUOTA_REQUESTS'), 200),
     trialRpmLimit: overrides.trialRpmLimit ?? intOr(raw('TRIAL_RPM_LIMIT'), 20),
     trialConcurrencyLimit: overrides.trialConcurrencyLimit ?? intOr(raw('TRIAL_CONCURRENCY_LIMIT'), 2),
@@ -327,13 +333,16 @@ export function loadConfig(overrides = {}) {
     && (config.mailTransport === 'console' || Boolean(config.mailFrom));
   // Valeurs d'essai coherentes (un pass d'essai ne doit jamais etre infini par accident).
   if (!Number.isFinite(config.trialDays) || config.trialDays < 1 || config.trialDays > 90) config.trialDays = 7;
-  if (!Number.isFinite(config.trialQuotaUsd) || config.trialQuotaUsd < 0) config.trialQuotaUsd = 1;
+  if (!Number.isFinite(config.trialQuotaUsd) || config.trialQuotaUsd < 0) config.trialQuotaUsd = 1.125;
   if (!Number.isFinite(config.trialQuotaRequests) || config.trialQuotaRequests < 0) config.trialQuotaRequests = 200;
   if (!Number.isFinite(config.trialRpmLimit) || config.trialRpmLimit < 1) config.trialRpmLimit = 20;
   if (!Number.isFinite(config.trialConcurrencyLimit) || config.trialConcurrencyLimit < 1) config.trialConcurrencyLimit = 2;
   if (!Number.isFinite(config.trialMaxOutputTokens) || config.trialMaxOutputTokens < 1) config.trialMaxOutputTokens = 4096;
   if (!Number.isFinite(config.siteCreditRate) || config.siteCreditRate <= 0 || config.siteCreditRate > 50) {
     config.siteCreditRate = 3.75;
+  }
+  if (config.trialQuotaLegacy) {
+    config.trialQuotaUsd = Math.round(config.trialQuotaUsd * config.siteCreditRate * 1e6) / 1e6;
   }
   if (!Number.isFinite(config.siteCreditWindowHours) || config.siteCreditWindowHours < 1 || config.siteCreditWindowHours > 24) {
     config.siteCreditWindowHours = 5;
@@ -342,6 +351,8 @@ export function loadConfig(overrides = {}) {
   config.signupEnabled = Boolean(config.signupEnabled);
   return config;
 }
+
+
 
 
 
