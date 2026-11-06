@@ -13,6 +13,8 @@ test('plans : durees, credit site et plafond 5 h', () => {
   assert.equal(byId.equipe.durationDays, 30);
   assert.equal(byId.business.durationDays, 30);
   assert.equal(byId.decouverte.quotaUsd, 5);
+  assert.equal(byId.decouverte.quotaRequests, null);
+  assert.equal(byId.createur.quotaRequests, null);
   assert.equal(byId.decouverte.credit5hLimit, 0.45);
   assert.equal(byId.createur.credit5hLimit, 0.7);
   assert.equal(byId.equipe.credit5hLimit, 0.9);
@@ -60,3 +62,4 @@ test('credit site : fenetre glissante de 5 h', async () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+

@@ -735,7 +735,7 @@
             ${(state.plans || []).map((plan) =>
               `<option value="${esc(plan.id)}" ${client?.plan === plan.id ? 'selected' : ''}>${esc(plan.name)} — ${plan.priceEur} € / ${plan.durationDays} j</option>`).join('')}
           </select>
-          <small>Choisir un pass préremplit les quotas, le débit et la date de fin (+30 jours). Les champs restent modifiables.</small>
+          <small>Choisir un pass préremplit le crédit site, le débit et la date de fin selon sa durée. Les champs restent modifiables.</small>
         </label>
         <label class="field"><span>Quota de tokens</span>
           <input type="number" name="quotaTokens" min="0" step="1000" value="${client?.quotaTokens ?? ''}" placeholder="ex : 5 000 000">
@@ -745,7 +745,7 @@
           <input type="number" name="quotaRequests" min="0" step="1" value="${client?.quotaRequests ?? ''}" placeholder="ex : 500">
           <small>Vide = aucune limite de requêtes.</small>
         </label>
-        <label class="field"><span>Quota de coût (USD)</span>
+        <label class="field"><span>Quota de crédit site (USD)</span>
           <input type="number" name="quotaUsd" min="0" step="0.01" value="${client?.quotaUsd ?? ''}" placeholder="ex : 3.50">
           <small>Vide = aucun quota de crédit site.</small>
         </label>
@@ -797,7 +797,7 @@
     const plan = (state.plans || []).find((item) => item.id === planId);
     if (!plan) return;
     form.elements.quotaTokens.value = '';
-    form.elements.quotaRequests.value = String(plan.quotaRequests);
+    form.elements.quotaRequests.value = plan.quotaRequests == null ? '' : String(plan.quotaRequests);
     form.elements.quotaUsd.value = String(plan.quotaUsd);
     form.elements.rpmLimit.value = String(plan.rpmLimit);
     form.elements.concurrencyLimit.value = String(plan.concurrencyLimit);
@@ -806,7 +806,7 @@
     form.elements.expiresAt.value = toLocalInput(
       new Date(Date.now() + plan.durationDays * 86_400_000).toISOString(),
     );
-    toast(`Pass ${plan.name} prérempli : ${plan.quotaRequests} requêtes, ${plan.quotaUsd} $, ${plan.durationDays} jours.`, 'info');
+    toast(`Pass ${plan.name} prérempli : ${plan.quotaUsd} $ de crédit site, ${plan.durationDays} jours.`, 'info');
   }
 
   function openClientModal(client) {
@@ -1672,5 +1672,7 @@
 
   init();
 })();
+
+
 
 

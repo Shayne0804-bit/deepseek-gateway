@@ -12,7 +12,7 @@ export const PASS_PLANS = Object.freeze([
     tagline: 'Pour tester et partager un premier accès.',
     priceEur: 3.9,
     durationDays: 7,
-    quotaRequests: 1000,
+    quotaRequests: null,
     quotaUsd: 5,
     credit5hLimit: 0.45,
     rpmLimit: 20,
@@ -20,7 +20,7 @@ export const PASS_PLANS = Object.freeze([
     maxOutputTokens: 4096,
     keys: 1,
     support: 'Email sous 72 h',
-    features: ['7 jours', '1 000 requêtes', '5 $ de crédit site', '0,45 $ max / 5 h'],
+    features: ['7 jours renouvelables', '5 $ de crédit site', '0,45 $ max / 5 h'],
   },
   {
     id: 'createur',
@@ -28,7 +28,7 @@ export const PASS_PLANS = Object.freeze([
     tagline: 'Pour un usage régulier, projets et prototypes.',
     priceEur: 11.9,
     durationDays: 14,
-    quotaRequests: 4000,
+    quotaRequests: null,
     quotaUsd: 15,
     credit5hLimit: 0.7,
     rpmLimit: 60,
@@ -36,7 +36,7 @@ export const PASS_PLANS = Object.freeze([
     maxOutputTokens: 8192,
     keys: 3,
     support: 'Email sous 48 h',
-    features: ['14 jours', '4 000 requêtes', '15 $ de crédit site', '0,70 $ max / 5 h'],
+    features: ['14 jours renouvelables', '15 $ de crédit site', '0,70 $ max / 5 h'],
   },
   {
     id: 'equipe',
@@ -44,7 +44,7 @@ export const PASS_PLANS = Object.freeze([
     tagline: 'Pour plusieurs personnes sur un même projet.',
     priceEur: 29.9,
     durationDays: 30,
-    quotaRequests: 10000,
+    quotaRequests: null,
     quotaUsd: 40,
     credit5hLimit: 0.9,
     rpmLimit: 150,
@@ -52,7 +52,7 @@ export const PASS_PLANS = Object.freeze([
     maxOutputTokens: 16384,
     keys: 8,
     support: 'Support prioritaire 24 h',
-    features: ['30 jours', '10 000 requêtes', '40 $ de crédit site', '0,90 $ max / 5 h'],
+    features: ['30 jours renouvelables', '40 $ de crédit site', '0,90 $ max / 5 h'],
   },
   {
     id: 'business',
@@ -60,7 +60,7 @@ export const PASS_PLANS = Object.freeze([
     tagline: 'Pour une utilisation intensive avec engagement.',
     priceEur: 79,
     durationDays: 30,
-    quotaRequests: 25000,
+    quotaRequests: null,
     quotaUsd: 100,
     credit5hLimit: 2.1,
     rpmLimit: 400,
@@ -68,7 +68,7 @@ export const PASS_PLANS = Object.freeze([
     maxOutputTokens: 32768,
     keys: 25,
     support: 'Support dédié + SLA 99,5 %',
-    features: ['30 jours', '25 000 requêtes', '100 $ de crédit site', '2,10 $ max / 5 h'],
+    features: ['30 jours renouvelables', '100 $ de crédit site', '2,10 $ max / 5 h'],
   },
 ]);
 
@@ -104,3 +104,5 @@ export function passPlanFields(id, now = new Date()) {
 export function publicPlan(plan) {
   return { ...plan, features: [...plan.features] };
 }
+
+

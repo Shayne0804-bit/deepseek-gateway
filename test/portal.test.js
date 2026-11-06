@@ -131,7 +131,7 @@ test('catalogue des pass et pass applique au compte', async () => {
     const data = await created.json();
     assert.equal(data.client.plan, 'createur');
     assert.equal(data.client.planName, 'Créateur');
-    assert.equal(data.client.quotaRequests, 4000);
+    assert.equal(data.client.quotaRequests, null);
     assert.equal(data.client.quotaUsd, 15);
     assert.equal(data.client.rpmLimit, 60);
     assert.equal(data.client.concurrencyLimit, 3);
@@ -150,7 +150,7 @@ test('catalogue des pass et pass applique au compte', async () => {
     assert.equal(me.plan.id, 'createur');
     assert.equal(me.plan.name, 'Créateur');
     assert.equal(me.plans.length, 4);
-    assert.equal(me.quota.requests.limit, 4000);
+    assert.equal(me.quota.requests.limit, null);
   } finally {
     await started.close();
   }
@@ -259,6 +259,7 @@ test('portail : isolation des donnees entre deux cles', async () => {
     await started.close();
   }
 });
+
 
 
 

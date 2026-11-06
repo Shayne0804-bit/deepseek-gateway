@@ -624,7 +624,7 @@
           ${plan.id === currentId ? '<span class="badge badge-ok">actuel</span>' : ''}
         </div>
         <p class="plan-tagline">${esc(plan.tagline || '')}</p>
-        <p class="plan-price">${formatPlanPrice(plan.priceEur)} <span class="plan-period">/ 30 j</span></p>
+        <p class="plan-price">${formatPlanPrice(plan.priceEur)} <span class="plan-period">/ ${plan.durationDays} j</span></p>
         <ul class="plan-features">
           ${(plan.features ?? []).map((feature) => `<li>${esc(feature)}</li>`).join('')}
           <li>${esc(plan.support || '')}</li>
@@ -1494,6 +1494,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
 
   init();
 })();
+
 
 
 

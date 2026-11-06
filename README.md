@@ -613,20 +613,22 @@ Les tarifs publics DeepSeek (2026, USD par million de tokens) sont préchargés 
 ### Crédit site et fin des pass
 
 Le crédit site est la seule unité visible côté client. Un pass s'arrête **au premier** de ces
-événements : date de fin, crédit site épuisé, ou quota de requêtes atteint.
+événements : date de fin ou crédit site épuisé. Les quotas de requêtes ne sont plus appliqués aux pass : le crédit site suffit.
 
-| Pass | Durée | Crédit site | Requêtes | Plafond glissant 5 h |
-|---|---:|---:|---:|---:|
-| Découverte | 7 jours | 5 $ | 1 000 | 0,45 $ |
-| Créateur | 14 jours | 15 $ | 4 000 | 0,70 $ |
-| Équipe | 30 jours | 40 $ | 10 000 | 0,90 $ |
-| Business | 30 jours | 100 $ | 25 000 | 2,10 $ |
+| Pass | Durée | Crédit site | Plafond 5 h | Prix public | Coût réel max | Bénéfice brut |
+|---|---:|---:|---:|---:|---:|---:|
+| Découverte | 7 j, renouvelable | 5 $ | 0,45 $ | 2 558 FCFA | 810 FCFA | 1 748 FCFA |
+| Créateur | 14 j, renouvelable | 15 $ | 0,70 $ | 7 806 FCFA | 2 429 FCFA | 5 376 FCFA |
+| Équipe | 30 j, renouvelable | 40 $ | 0,90 $ | 19 613 FCFA | 6 479 FCFA | 13 135 FCFA |
+| Business | 30 j, renouvelable | 100 $ | 2,10 $ | 51 821 FCFA | 16 196 FCFA | 35 624 FCFA |
+
+Les bénéfices sont bruts, avant frais de paiement, pour un pass consommé à 100 % de son crédit.
 
 - Le plafond 5 h empêche de consommer tout le crédit d'un coup ; il est **glissant** et
   contrôlé côté serveur (aucun réglage client).
 - Un dépassement renvoie **429 `credit_window_exceeded`** avec `retry-after`.
 - Le plan est appliqué depuis l'admin (création ou modification d'une clé) : il remplace date,
-  crédit, requêtes, RPM, concurrence et plafond 5 h.
+  crédit site, RPM, concurrence et plafond 5 h. Le pass se renouvelle manuellement.
 - Variables : `SITE_CREDIT_RATE=3.75`, `SITE_CREDIT_WINDOW_HOURS=5`.
 
 
@@ -1257,6 +1259,7 @@ et **Vue d'ensemble** (graphique 30 jours, top consommateurs).
 ---
 
 **Bonne discussion avec votre ami — et gardez votre clé originale pour vous.**
+
 
 
 
