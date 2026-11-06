@@ -214,7 +214,8 @@ test('les trois surfaces web sont servies : site public, console admin, espace u
   assert.match(landing.headers.get('content-type'), /text\/html/);
   const landingHtml = await landing.text();
   assert.match(landingHtml, /VALARIA Gateway API/);
-  assert.match(landingHtml, /sans partager votre clé/);
+  assert.match(landingHtml, /Une clé/);
+  assert.match(landingHtml, /VALARIA Code/);
 
   const admin = await fetch(`${base}/admin`);
   assert.equal(admin.status, 200);
@@ -441,6 +442,8 @@ test('decouverte de modeles : /v1/models et /anthropic/v1/models servis localeme
   assert.equal(openaiBody.object, 'list');
   const openaiIds = openaiBody.data.map((model) => model.id);
   assert.ok(openaiIds.includes('deepseek-flash'), `modeles: ${openaiIds.join(', ')}`);
+  assert.ok(!openaiIds.some((id) => id.startsWith('alias:')), `aucun identifiant interne alias: ne doit apparaitre: ${openaiIds.join(', ')}`);
+  assert.equal(new Set(openaiIds.map((id) => id.toLowerCase())).size, openaiIds.length, `modeles en double: ${openaiIds.join(', ')}`);
   assert.ok(openaiIds.includes('claude-opus-5'), 'les alias doivent apparaitre dans la liste');
   assert.ok(openaiIds.includes('claude-opus-5.5'), 'claude-opus-5.5 doit apparaitre dans la liste');
   assert.ok(openaiIds.includes('fable-5'), 'fable-5 doit apparaitre dans la liste');

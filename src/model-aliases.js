@@ -32,6 +32,24 @@ export function isRetiredModelAlias(name) {
   return RETIRED_MODEL_ALIAS_PATTERN.test(String(name ?? ''));
 }
 
+/**
+ * Liste publique des modeles : masque les identifiants internes `alias:*`
+ * et supprime les doublons (comparaison insensible a la casse).
+ */
+export function publicModelIds(input) {
+  const seen = new Set();
+  const out = [];
+  for (const raw of Array.isArray(input) ? input : []) {
+    const id = String(raw ?? '').trim();
+    if (!id || /^alias:/i.test(id)) continue;
+    const key = id.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(id);
+  }
+  return out;
+}
+
 export const DEFAULT_MODEL_ALIASES = Object.freeze({
   'claude-opus-5*': 'deepseek-flash',
   'claude-opus-5.5': 'deepseek-flash',

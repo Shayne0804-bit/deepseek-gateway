@@ -59,7 +59,7 @@ import {
   remainingFor,
 } from './quota.js';
 import { loadPricing } from './pricing.js';
-import { loadModelAliases } from './model-aliases.js';
+import { loadModelAliases, publicModelIds } from './model-aliases.js';
 import { PASS_PLANS, getPassPlan, publicPlan } from './plans.js';
 import { currencyContext } from './currency.js';
 import { deviceHashFor, isDisposableEmail } from './abuse.js';
@@ -132,7 +132,7 @@ async function availableModelIds(db) {
   for (const pattern of Object.keys(aliases ?? {})) {
     ids.add(pattern.endsWith('*') ? pattern.slice(0, -1) : pattern);
   }
-  return [...ids].filter(Boolean);
+  return publicModelIds([...ids]);
 }
 
 function requestOrigin(req, config) {

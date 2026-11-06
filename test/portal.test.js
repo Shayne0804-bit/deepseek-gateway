@@ -87,7 +87,8 @@ test('portail : trois surfaces + robots prives', async () => {
     assert.equal(landing.status, 200);
     const html = await landing.text();
     assert.match(html, /VALARIA Gateway API/);
-    assert.match(html, /sans partager votre clé/);
+    assert.match(html, /Une clé/);
+  assert.match(html, /VALARIA Code/);
 
     const admin = await fetch(`${started.url}/admin`);
     assert.equal(admin.status, 200);

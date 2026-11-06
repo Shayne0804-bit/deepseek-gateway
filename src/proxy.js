@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { computeCost, canonicalModelName, creditPricingModelFor, loadPricing, normalizeUsage } from './pricing.js';
-import { loadModelAliases, resolveModelAlias } from './model-aliases.js';
+import { loadModelAliases, publicModelIds, resolveModelAlias } from './model-aliases.js';
 import {
   checkClientAccess,
   clampOutputTokens,
@@ -80,7 +80,7 @@ function buildModelsPayload(pathname, req, pricing, aliases) {
   for (const pattern of Object.keys(aliases ?? {})) {
     ids.add(pattern.endsWith('*') ? pattern.slice(0, -1) : pattern);
   }
-  const modelIds = [...ids].filter(Boolean);
+  const modelIds = publicModelIds([...ids]);
   const nowSeconds = Math.floor(Date.now() / 1000);
 
   const anthropicFormat =
