@@ -2199,3 +2199,17 @@ body.portal-authenticated #portal-app > main { position: relative; z-index: 1; }
   .landing-v2 .cta-layout { grid-template-columns: 1fr; gap: 28px; align-items: start; }
   .landing-v2 .cta-side { min-height: 0; }
 }
+
+/* Sections larges : annule les marges full-bleed qui provoquaient le débordement à 1919px. */
+.landing-v2 .section-capabilities,
+.landing-v2 .cli-band,
+.landing-v2 .control-band {
+  width: auto;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+.landing-v2 .cli-band { padding-top: clamp(56px, 6vw, 84px); padding-bottom: clamp(56px, 6vw, 84px); }
+.landing-v2 .cli-band-inner { max-width: none; }
+.landing-v2 .control-band { padding-top: 8px; padding-bottom: 8px; }

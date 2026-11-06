@@ -31,6 +31,7 @@ const ADMIN_PASSWORD = 'evidence-password-2026';
 const URL_A = `http://127.0.0.1:${PORT_A}`;
 const URL_B = `http://127.0.0.1:${PORT_B}`;
 const DESKTOP = { width: 1440, height: 900, label: '1440x900' };
+const WIDE = { width: 1919, height: 947, label: '1919x947' };
 const MOBILE = { width: 390, height: 844, label: '390x844' };
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -285,6 +286,19 @@ async function main() {
   await evaluate("document.querySelector('#cli').scrollIntoView({ block: 'start' })");
   await sleep(450);
   await screenshot('16b-public-landing-cli-desktop.png', 'Page d\'accueil : section VALARIA Code, commande d\'installation, interface capturee, diff permanent et modes d\'approbation.', viewport.label, { keepScroll: true });
+
+  await setViewport(WIDE);
+  await navigate(`${URL_A}/#capacites`);
+  await waitFor("document.querySelector('#capacites') !== null");
+  await sleep(450);
+  await screenshot('16c-public-landing-wide.png', 'Landing en 1919x947 : sections alignees sur la largeur utile, aucun contenu coupe, capacites et CTA contenues.', WIDE.label);
+  await evaluate("document.querySelector('#capacites').scrollIntoView({ block: 'start' })");
+  await sleep(350);
+  await screenshot('16d-public-landing-capabilities-wide.png', 'Capacites en 1919x947 : grille contenue dans la largeur utile, texte non coupe, cartes alignees.', WIDE.label, { keepScroll: true });
+  await setViewport(DESKTOP);
+  await navigate(`${URL_A}/`);
+  await waitFor("document.querySelector('.hero h1') !== null");
+  await sleep(400);
 
   // Section sous la ligne de flottaison : etapes de branchement (texte + code).
   await evaluate("document.querySelector('#brancher').scrollIntoView({ block: 'start' })");
