@@ -185,7 +185,7 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
       return;
     }
     const selected = extra?.path ? review.files.findIndex((file) => file.path === extra.path) : 0;
-    state.diffReview = { ...review, selected: Math.max(0, selected), scroll: 0, canApprove: Boolean(state.approval) };
+    state.diffReview = { ...review, selected: Math.max(0, selected), scroll: 0, wide: false, canApprove: Boolean(state.approval) };
     state.overlay = 'diff';
     state.status = state.approval ? 'revue du diff · y autoriser / n refuser' : 'revue du diff';
     draw();
@@ -557,6 +557,13 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
           }
           return;
         }
+        if (key === 'd') {
+          if (review) {
+            review.wide = !review.wide;
+            draw();
+          }
+          return;
+        }
         if (state.approval && (/^y$/i.test(key) || /^n$/i.test(key))) {
           if (key.toLowerCase() === 'y') approvePending();
           else denyPending();
@@ -883,15 +890,16 @@ function renderDiffOverlay(state, { color = true, cols = 96, rows = 28 } = {}) {
   const selectedIndex = Math.max(0, Math.min(files.length - 1, Number(review.selected) || 0));
   const selected = files[selectedIndex] || null;
   const stats = summarize(files);
+  const wide = Boolean(review.wide);
   const header = `  ${c('◈', COLORS.accent)} ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${d('revue du diff')}   ${d(`${stats.files} fichier(s)`)}   ${c(`+${stats.additions}`, COLORS.accent)} ${c(`−${stats.deletions}`, COLORS.danger)}`;
   const footer = state.approval
-    ? '  ↑↓ fichier   PgUp/PgDn lignes   y autoriser   n refuser   Échap annuler'
-    : '  ↑↓ fichier   PgUp/PgDn lignes   Échap fermer';
+    ? `  ↑↓ fichier   PgUp/PgDn lignes   d ${wide ? 'réduire' : 'agrandir'} le diff   y autoriser   n refuser   Échap annuler`
+    : `  ↑↓ fichier   PgUp/PgDn lignes   d ${wide ? 'réduire' : 'agrandir'} le diff   Échap fermer`;
   const bodyHeight = Math.max(6, rows - 4);
   const showAccount = state.layout === 'studio' && cols >= 136;
   const accountWidth = 22;
-  const conversationWidth = Math.max(28, Math.min(44, Math.floor(cols * 0.27)));
-  const filesWidth = Math.max(20, Math.min(32, Math.floor(cols * 0.18)));
+  const conversationWidth = Math.max(28, Math.min(wide ? 48 : 72, Math.floor(cols * (wide ? 0.30 : 0.43))));
+  const filesWidth = Math.max(22, Math.min(28, Math.floor(cols * 0.16)));
   const separators = showAccount ? 12 : 9;
   const diffWidth = Math.max(24, cols - 2 - conversationWidth - filesWidth - separators - (showAccount ? accountWidth : 0));
 
@@ -956,7 +964,7 @@ function renderDiffOverlay(state, { color = true, cols = 96, rows = 28 } = {}) {
     const selectedFile = index === selectedIndex;
     const marker = selectedFile ? c('›', COLORS.accent) : ' ';
     const tone = file.status === 'A' ? COLORS.accent : file.status === 'D' ? COLORS.danger : COLORS.amber;
-    const label = `${marker} ${c(file.status, tone)} ${truncate(file.path, filesWidth - 9)}`;
+    const label = `${marker} ${c(file.status, tone)} ${truncate(file.path, filesWidth - 5)}`;
     fileLines.push(selectedFile ? b(label) : label);
     fileLines.push(`   ${c(`+${file.additions || 0}`, COLORS.accent)} ${c(`−${file.deletions || 0}`, COLORS.danger)}`);
   }

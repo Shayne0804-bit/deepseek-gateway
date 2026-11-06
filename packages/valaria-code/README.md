@@ -68,7 +68,8 @@ En mode **Studio**, la colonne compte reste à gauche, puis viennent la liste de
 fichiers et le diff : tout ce qui concerne les changements est donc à droite.
 
 Une proposition d’écriture de l’agent ouvre automatiquement cette revue ;
-`y` autorise, `n` refuse, `↑↓` change de fichier et `PgUp/PgDn` fait défiler.
+`y` autorise, `n` refuse, `↑↓` change de fichier, `d` agrandit/réduit le diff et
+`PgUp/PgDn` fait défiler.
 
 ## Assets et animations
 
