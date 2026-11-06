@@ -367,9 +367,10 @@ Implémenté :
   - TUI plein écran avec trois interfaces **Focus / Studio / Compact** ;
   - Focus organisé comme la démo Freebuff : titre projet, transcript, saisie, ligne modèle/aide ;
   - revue de diff en une seule colonne : liste des fichiers en haut, diff du fichier
-    sélectionné en bas ; en Studio, compte + conversation + revue restent visibles
-    côte à côte ; diff ouvert avec `/diff` ou pendant une approbation, jamais en permanence ;
-  - trois modes d’agent : **Strict**, **Sécurisé**, **Accès total** ;
+    sélectionné en bas ; panneau à droite, visible en permanence et rafraîchi, avec
+    conversation visible ; `/diff off` pour le masquer ;
+  - trois modes d’agent : **Strict**, **Sécurisé**, **Accès total** ; raccourcis
+    `/1`, `/2`, `/3`, `Ctrl+G` et `Alt+M` ;
   - conversation défilable avec `PgUp/PgDn` ;
   - assets de marque : logo ASCII, `◈`, spinner, pulse, splash animé ;
   - compte, pass, quotas et crédit consultables via `/account` ou `Ctrl+O` ;

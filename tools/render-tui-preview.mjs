@@ -140,6 +140,28 @@ const base = {
   mode: 'agent',
   tick: 0,
   account,
+  diffVisible: true,
+  diffReview: {
+    repo: 'C:/Users/ADMIN/Projets/valaria',
+    selected: 0,
+    scroll: 0,
+    files: [
+      {
+        path: 'tests/login.test.js',
+        status: 'M',
+        additions: 2,
+        deletions: 1,
+        diff: '--- a/tests/login.test.js\n+++ b/tests/login.test.js\n@@ -1,4 +1,5 @@\n- await page.waitForTimeout(250)\n+ await page.waitForCookie("session")\n   await expect(page).toHaveURL("/dashboard")',
+      },
+      {
+        path: 'src/session.js',
+        status: 'A',
+        additions: 12,
+        deletions: 0,
+        diff: '--- /dev/null\n+++ b/src/session.js\n@@ -0,0 +1,3 @@\n+export const sessionCookie = "session"\n+export const sessionTtl = 86400\n',
+      },
+    ],
+  },
 };
 
 const focus = screenshot('focus', captureScreen({ ...base, layout: 'focus' }));

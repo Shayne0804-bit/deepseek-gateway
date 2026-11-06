@@ -65,6 +65,15 @@ Dans la TUI :
 /approval full     accès total, aucune approbation
 ```
 
+Raccourcis :
+
+```text
+/1   mode Strict
+/2   mode Sécurisé
+/3   mode Accès total
+Ctrl+G ou Alt+M   cycle entre les trois modes
+```
+
 En mode **safe**, les écritures de code ordinaires et les commandes de test sont
 autorisées automatiquement ; les fichiers sensibles (`.env`, secrets, lockfiles,
 `.github`, Docker) et les commandes destructrices (`rm -rf`, `git reset --hard`,
@@ -76,8 +85,9 @@ Le mode est affiché dans la ligne d’état et enregistré avec la configuratio
 
 - `PgUp` / `PgDn` font défiler l’historique de la conversation ;
 - l’envoi d’un nouveau message revient automatiquement en bas ;
-- le diff n’est pas affiché en permanence : il s’ouvre avec `/diff` ou pendant
-  une approbation, puis se ferme après la décision.
+- le diff est **visible en permanence** dans la colonne de droite par défaut ;
+- `/diff` l’actualise, `/diff off` le masque, `/diff on` le réaffiche ;
+- pendant une approbation, le diff reste visible à droite.
 
 ## Revue de diff
 
@@ -89,7 +99,8 @@ Le mode est affiché dans la ligne d’état et enregistré avec la configuratio
 
 En mode **Studio**, la conversation reste au centre et la revue occupe une seule
 colonne à droite : liste des fichiers en haut, diff en bas. Les messages
-utilisateur et agent restent donc visibles.
+utilisateur et agent restent donc visibles. La revue est visible en permanence
+par défaut et se rafraîchit automatiquement.
 
 Une proposition d’écriture de l’agent ouvre automatiquement cette revue ;
 `y` autorise, `n` refuse, `↑↓` change de fichier, `d` agrandit/réduit la revue et
