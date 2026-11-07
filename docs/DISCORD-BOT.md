@@ -9,14 +9,14 @@ Catégorie **｜💠｜𝐕𝐀𝐋𝐀𝐑𝐈𝐀 𝐆𝐀𝐓𝐄𝐖𝐀𝐘
 
 | Salon | Rôle |
 |---|---|
-| `｜💠｜𝐛𝐢𝐞𝐧𝐯𝐞𝐧𝐮𝐞` | accueil, liens vers le site et l’espace |
-| `｜📢｜𝐚𝐧𝐧𝐨𝐧𝐜𝐞𝐬` | annonces officielles, lecture seule |
-| `｜📡｜𝐬𝐭𝐚𝐭𝐮𝐭` | panneau de statut actualisé toutes les 5 minutes |
-| `｜💬｜𝐠𝐞𝐧𝐞𝐫𝐚𝐥` | discussion générale |
-| `｜🛟｜𝐬𝐮𝐩𝐩𝐨𝐫𝐭` | entraide et questions |
-| `｜🔌｜𝐚𝐩𝐢` | documentation API OpenAI / Anthropic |
-| `｜⌨️｜𝐯𝐚𝐥𝐚𝐫𝐢𝐚-𝐜𝐨𝐝𝐞` | documentation complète du CLI |
-| `｜🚨｜𝐬𝐢𝐠𝐧𝐚𝐥𝐞𝐦𝐞𝐧𝐭𝐬` | incidents, abus, facturation |
+| `｜💠｜𝐖𝐄𝐋𝐂𝐎𝐌𝐄` | accueil, liens vers le site et l’espace |
+| `｜📢｜𝐀𝐍𝐍𝐎𝐔𝐍𝐂𝐄𝐌𝐄𝐍𝐓𝐒` | annonces officielles, lecture seule |
+| `｜📡｜𝐒𝐓𝐀𝐓𝐔𝐒` | panneau de statut actualisé toutes les 5 minutes |
+| `｜💬｜𝐆𝐄𝐍𝐄𝐑𝐀𝐋` | discussion générale |
+| `｜🛟｜𝐒𝐔𝐏𝐏𝐎𝐑𝐓` | entraide et questions |
+| `｜🔌｜𝐀𝐏𝐈` | documentation API OpenAI / Anthropic |
+| `｜⌨️｜𝐕𝐀𝐋𝐀𝐑𝐈𝐀-𝐂𝐎𝐃𝐄` | documentation complète du CLI |
+| `｜🚨｜𝐑𝐄𝐏𝐎𝐑𝐓𝐒` | incidents, abus, facturation |
 
 Les salons existants sont conservés. Le bot renomme les anciens noms simples vers
 les noms stylés, met à jour les sujets et permissions, puis publie ou met à jour
@@ -27,16 +27,16 @@ identifiés par un marqueur pour éviter les doublons au redémarrage.
 
 | Salon | Contenu |
 |---|---|
-| `#bienvenue` | présentation, liens, règles |
-| `#annonces` | annonce de lancement |
-| `#statut` | panneau live + endpoint `/healthz` |
-| `#général` | règles de discussion |
-| `#support` | procédure de support et diagnostic |
-| `#api` | URLs, auth, cURL, Node.js, Python, endpoints, modèles, quotas et erreurs |
-| `#valaria-code` | installation, login appareil, interfaces, commandes, diff et modes d’approbation |
-| `#signalements` | modèle de signalement et sécurité |
+| `｜💠｜𝐖𝐄𝐋𝐂𝐎𝐌𝐄` | présentation, liens, règles |
+| `｜📢｜𝐀𝐍𝐍𝐎𝐔𝐍𝐂𝐄𝐌𝐄𝐍𝐓𝐒` | annonce de lancement |
+| `｜📡｜𝐒𝐓𝐀𝐓𝐔𝐒` | panneau live + endpoint `/healthz` |
+| `｜💬｜𝐆𝐄𝐍𝐄𝐑𝐀𝐋` | règles de discussion |
+| `｜🛟｜𝐒𝐔𝐏𝐏𝐎𝐑𝐓` | procédure de support et diagnostic |
+| `｜🔌｜𝐀𝐏𝐈` | URLs, auth, cURL, Node.js, Python, endpoints, modèles, quotas et erreurs |
+| `｜⌨️｜𝐕𝐀𝐋𝐀𝐑𝐈𝐀-𝐂𝐎𝐃𝐄` | installation, login appareil, interfaces, commandes, diff et modes d’approbation |
+| `｜🚨｜𝐑𝐄𝐏𝐎𝐑𝐓𝐒` | modèle de signalement et sécurité |
 
-Les messages sont mis à jour lorsque leur contenu change, sans être dupliqués.
+Les messages sont en anglais, illustrés par les captures VALARIA Code, et mis à jour lorsque leur contenu change, sans être dupliqués.
 
 ## Configuration
 
@@ -70,7 +70,7 @@ Aucun intent privilégié (`Message Content`, `Members`) n’est requis.
 /status         état, version et base de données de la passerelle
 /api            URL OpenAI et Anthropic
 /valaria-code   installation et commandes du CLI
-/aide           liens et commandes
+/help           liens et commandes
 /ping           latence
 ```
 

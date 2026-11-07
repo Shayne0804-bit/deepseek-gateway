@@ -20,8 +20,8 @@ test('templates Discord VALARIA : catégorie, salons et sujets', () => {
   }
   assert.equal(templateByKey('status').readOnly, true);
   assert.equal(templateByKey('api').readOnly, false);
-  assert.equal(templateByKey('api').name, '｜🔌｜𝐚𝐩𝐢');
-  assert.equal(templateByKey('welcome').name, '｜💠｜𝐛𝐢𝐞𝐧𝐯𝐞𝐧𝐮𝐞');
+  assert.equal(templateByKey('api').name, '｜🔌｜𝐀𝐏𝐈');
+  assert.equal(templateByKey('welcome').name, '｜💠｜𝐖𝐄𝐋𝐂𝐎𝐌𝐄');
   assert.equal(templateByKey('inconnu'), null);
 });
 
@@ -36,8 +36,12 @@ test('documentation Discord : contenu complet et limites embed', () => {
     }
     assert.ok(docs.some((doc) => doc.description.includes(site)), `le site doit être lié dans ${key}`);
   }
-  assert.ok(channelDocs('api', site).length >= 4, 'le salon API doit contenir la documentation complète');
-  assert.ok(channelDocs('valaria-code', site).length >= 4, 'le salon CLI doit contenir la documentation complète');
+  assert.ok(channelDocs('api', site).length >= 4, 'API channel must contain the full documentation');
+  assert.ok(channelDocs('valaria-code', site).length >= 4, 'CLI channel must contain the full documentation');
+  assert.match(channelDocs('welcome', site)[0].title, /Welcome/);
+  assert.ok(channelDocs('valaria-code', site).every((doc) => doc.image), 'CLI documentation must include images');
+  assert.ok(channelDocs('welcome', site)[0].image, 'welcome documentation must include an image');
+  assert.match(channelNames().join(' '), /𝐖𝐄𝐋𝐂𝐎𝐌𝐄/);
 });
 
 test('bot Discord : désactivé sans token ou guilde', async () => {

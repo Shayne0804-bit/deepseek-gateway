@@ -18,19 +18,19 @@ import { setDiscordStatus } from './status.js';
 const COMMANDS = [
   new SlashCommandBuilder()
     .setName('status')
-    .setDescription('État de la passerelle VALARIA Gateway'),
+    .setDescription('VALARIA Gateway status and version'),
   new SlashCommandBuilder()
-    .setName('aide')
-    .setDescription('Liens et commandes utiles de VALARIA'),
+    .setName('help')
+    .setDescription('VALARIA links and bot commands'),
   new SlashCommandBuilder()
     .setName('api')
-    .setDescription('URL et intégration de l’API VALARIA'),
+    .setDescription('VALARIA API URLs and integration'),
   new SlashCommandBuilder()
     .setName('valaria-code')
-    .setDescription('Installer et lancer VALARIA Code dans le terminal'),
+    .setDescription('Install and run VALARIA Code'),
   new SlashCommandBuilder()
     .setName('ping')
-    .setDescription('Vérifier que le bot répond'),
+    .setDescription('Check bot latency'),
 ].map((command) => command.toJSON());
 
 function siteUrl(env) {
@@ -53,62 +53,6 @@ function log(logger, level, message, ...args) {
   }
 }
 
-function introEmbed(key, site, categoryName) {
-  const embed = new EmbedBuilder().setFooter({ text: 'VALARIA Gateway' }).setTimestamp();
-  if (key === 'welcome') {
-    embed
-      .setColor(0x2ba26a)
-      .setTitle('Bienvenue sur VALARIA Gateway')
-      .setDescription(`Une seule clé fournisseur côté serveur, des accès individuels et un agent de code dans le terminal.\n\n[Ouvrir le site](${site}) · [Mon espace](${site}/portal)`)
-      .addFields(
-        { name: 'API', value: `OpenAI et Anthropic compatibles\n\`${site}/v1\``, inline: true },
-        { name: 'VALARIA Code', value: '`npm install -g valaria-code`\npuis `valaria login`', inline: true },
-        { name: 'Commencer', value: `[Créer un compte](${site}/signup)`, inline: false },
-      );
-  } else if (key === 'api') {
-    embed
-      .setColor(0x2ba26a)
-      .setTitle('API VALARIA Gateway')
-      .setDescription(
-        `URL de base OpenAI : \`${site}/v1\`\nURL Anthropic : \`${site}/anthropic\`\n\n` +
-        'Créez votre clé dans **Mon espace → Mes clés API**. La clé est personnelle et révocable.',
-      )
-      .addFields({ name: 'Guide', value: `[Guide d’intégration](${site}/portal)`, inline: false });
-  } else if (key === 'valaria-code') {
-    embed
-      .setColor(0x2ba26a)
-      .setTitle('VALARIA Code')
-      .setDescription('L’agent de code dans votre terminal, connecté par appareil sans clé API collée.')
-      .addFields(
-        { name: 'Installer', value: '```bash\nnpm install -g valaria-code\nvalaria login\nvalaria\n```', inline: false },
-        { name: 'Contrôle', value: '`/diff` pour la revue permanente · `Ctrl+G` pour changer de mode d’approbation', inline: false },
-        { name: 'Guide', value: `[Guide CLI](${site}/portal)`, inline: false },
-      );
-  } else if (key === 'support') {
-    embed
-      .setColor(0x2ba26a)
-      .setTitle('Support VALARIA')
-      .setDescription(`Posez votre question ici. Pour un problème de compte, précisez votre email et la date concernée.\n\n[Mon espace](${site}/portal)`)
-      .addFields({ name: 'À ne jamais partager', value: 'Votre clé API complète ou un jeton d’appareil `vlt_…`.', inline: false });
-  } else if (key === 'annonces') {
-    embed
-      .setColor(0x2ba26a)
-      .setTitle('Annonces VALARIA')
-      .setDescription(`Les nouveautés du site, de l’API et de VALARIA Code sont publiées ici.\n\n[Site](${site})`);
-  } else if (key === 'statut') {
-    embed
-      .setColor(0x2ba26a)
-      .setTitle('Statut VALARIA Gateway')
-      .setDescription(`Panneau de statut mis à jour automatiquement.\n\n[Site](${site}) · [Mon espace](${site}/portal)`);
-  } else {
-    embed
-      .setColor(0x2ba26a)
-      .setTitle(`VALARIA · ${categoryName}`)
-      .setDescription(`[Ouvrir le site](${site})`);
-  }
-  return embed;
-}
-
 async function statusEmbed(site, fetchImpl) {
   try {
     const response = await fetchImpl(`${site}/healthz`, { headers: { accept: 'application/json' } });
@@ -116,20 +60,20 @@ async function statusEmbed(site, fetchImpl) {
     const data = await response.json();
     return new EmbedBuilder()
       .setColor(0x2ba26a)
-      .setTitle('VALARIA Gateway est en ligne')
+      .setTitle('VALARIA Gateway is online')
       .addFields(
         { name: 'Version', value: `\`${data.version || '—'}\``, inline: true },
-        { name: 'Base de données', value: `\`${data.database || '—'}\``, inline: true },
-        { name: 'Passerelle', value: data.providerConfigured ? 'configurée' : 'non configurée', inline: true },
+        { name: 'Database', value: `\`${data.database || '—'}\``, inline: true },
+        { name: 'Gateway', value: data.providerConfigured ? 'configured' : 'not configured', inline: true },
       )
-      .setFooter({ text: 'Statut VALARIA' })
+      .setFooter({ text: 'VALARIA Status' })
       .setTimestamp();
   } catch (error) {
     return new EmbedBuilder()
       .setColor(0xf06b5d)
-      .setTitle('VALARIA Gateway indisponible')
-      .setDescription(`La vérification du site a échoué : \`${String(error.message).slice(0, 200)}\``)
-      .setFooter({ text: 'Statut VALARIA' })
+      .setTitle('VALARIA Gateway unavailable')
+      .setDescription(`Health check failed: \`${String(error.message).slice(0, 200)}\``)
+      .setFooter({ text: 'VALARIA Status' })
       .setTimestamp();
   }
 }
@@ -139,11 +83,12 @@ async function ensureStatusPanel(channel, client, site, fetchImpl) {
   const embed = await statusEmbed(site, fetchImpl);
   try {
     const messages = await channel.messages.fetch({ limit: 20 });
-    const current = messages.find((message) => message.author.id === client.user.id && message.embeds[0]?.footer?.text === 'Statut VALARIA');
+    const current = messages.find((message) => message.author.id === client.user.id
+      && ['VALARIA Status', 'Statut VALARIA'].includes(message.embeds[0]?.footer?.text));
     if (current) await current.edit({ embeds: [embed] });
     else await channel.send({ embeds: [embed] });
   } catch (error) {
-    log(console, 'warn', `Statut Discord non publié : ${error.message}`);
+    log(console, 'warn', `Discord status panel not published: ${error.message}`);
   }
 }
 
@@ -170,12 +115,13 @@ async function ensureChannelDocs(channel, client, template, site, logger) {
   for (let index = 0; index < docs.length; index += 1) {
     const marker = `${index + 1}/${docs.length}`;
     const doc = docs[index];
-    const embed = new EmbedBuilder()
+    let embed = new EmbedBuilder()
       .setColor(0x2ba26a)
       .setTitle(String(doc.title || `VALARIA · ${template.name}`).slice(0, 256))
       .setDescription(String(doc.description || '').slice(0, 4096))
       .setFooter({ text: `${markerPrefix}${marker}` })
       .setTimestamp();
+    if (doc.image) embed = embed.setImage(doc.image);
     try {
       const previous = existing.get(marker);
       const message = previous
@@ -302,9 +248,9 @@ async function handleCommand(interaction, { site, fetchImpl }) {
     if (name === 'api') {
       const embed = new EmbedBuilder()
         .setColor(0x2ba26a)
-        .setTitle('API VALARIA Gateway')
+        .setTitle('VALARIA Gateway API')
         .setDescription(`\`${site}/v1\` · OpenAI compatible\n\`${site}/anthropic\` · Anthropic Messages`)
-        .addFields({ name: 'Guide', value: `[Ouvrir le guide](${site}/portal)`, inline: false });
+        .addFields({ name: 'Guide', value: `[Open the guide](${site}/portal)`, inline: false });
       await interaction.reply({ embeds: [embed], ephemeral: true });
       return;
     }
@@ -314,27 +260,27 @@ async function handleCommand(interaction, { site, fetchImpl }) {
         .setTitle('VALARIA Code')
         .setDescription('```bash\nnpm install -g valaria-code\nvalaria login\nvalaria\n```')
         .addFields(
-          { name: 'Terminal', value: 'Diff permanent, conversation, approbations.', inline: false },
-          { name: 'Guide', value: `[Espace VALARIA](${site}/portal)`, inline: false },
+          { name: 'Terminal', value: 'Permanent diff, conversation, approvals.', inline: false },
+          { name: 'Guide', value: `[VALARIA dashboard](${site}/portal)`, inline: false },
         );
       await interaction.reply({ embeds: [embed], ephemeral: true });
       return;
     }
-    if (name === 'aide') {
+    if (name === 'help' || name === 'aide') {
       const embed = new EmbedBuilder()
         .setColor(0x2ba26a)
-        .setTitle('Aide VALARIA')
-        .setDescription('Commandes du bot et liens utiles.')
+        .setTitle('VALARIA help')
+        .setDescription('Bot commands and useful links.')
         .addFields(
-          { name: 'Commandes', value: '`/status` · `/api` · `/valaria-code` · `/aide` · `/ping`', inline: false },
-          { name: 'Site', value: `[Accueil](${site}) · [Mon espace](${site}/portal) · [Créer un compte](${site}/signup)`, inline: false },
+          { name: 'Commands', value: '`/status` · `/api` · `/valaria-code` · `/help` · `/ping`', inline: false },
+          { name: 'Website', value: `[Home](${site}) · [Dashboard](${site}/portal) · [Create account](${site}/signup)`, inline: false },
         );
       await interaction.reply({ embeds: [embed], ephemeral: true });
     }
   } catch (error) {
-    log(console, 'warn', `Discord : commande ${name} en erreur : ${error.message}`);
+    log(console, 'warn', `Discord command ${name} failed: ${error.message}`);
     if (!interaction.replied) {
-      await interaction.reply({ content: 'La commande a échoué. Réessayez plus tard.', ephemeral: true }).catch(() => {});
+      await interaction.reply({ content: 'The command failed. Please try again later.', ephemeral: true }).catch(() => {});
     }
   }
 }
