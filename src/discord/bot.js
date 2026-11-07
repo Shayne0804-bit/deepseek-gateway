@@ -11,7 +11,8 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js';
-import { DISCORD_CATEGORY_NAME, DISCORD_CHANNEL_TEMPLATES } from './channels.js';
+import { DISCORD_CATEGORY_NAME, DISCORD_CATEGORY_LEGACY_NAME, DISCORD_CHANNEL_TEMPLATES, templateByKey } from './channels.js';
+import { channelDocs } from './content.js';
 
 const COMMANDS = [
   new SlashCommandBuilder()
@@ -145,16 +146,71 @@ async function ensureStatusPanel(channel, client, site, fetchImpl) {
   }
 }
 
+async function ensureChannelDocs(channel, client, template, site, logger) {
+  const docs = channelDocs(template.key, site);
+  let recent = null;
+  try {
+    recent = await channel.messages.fetch({ limit: 50 });
+  } catch (error) {
+    log(logger, 'warn', `Discord : messages illisibles dans #${template.name} : ${error.message}`);
+  }
+  const markerPrefix = `VALARIA DOC · ${template.key} · `;
+  const existing = new Map();
+  if (recent) {
+    for (const message of recent.values()) {
+      if (message.author?.id !== client.user.id) continue;
+      for (const embed of message.embeds ?? []) {
+        const footer = embed.footer?.text || '';
+        if (footer.startsWith(markerPrefix)) existing.set(footer.slice(markerPrefix.length), message);
+      }
+    }
+  }
+  let firstMessage = null;
+  for (let index = 0; index < docs.length; index += 1) {
+    const marker = `${index + 1}/${docs.length}`;
+    const doc = docs[index];
+    const embed = new EmbedBuilder()
+      .setColor(0x2ba26a)
+      .setTitle(String(doc.title || `VALARIA · ${template.name}`).slice(0, 256))
+      .setDescription(String(doc.description || '').slice(0, 4096))
+      .setFooter({ text: `${markerPrefix}${marker}` })
+      .setTimestamp();
+    try {
+      const previous = existing.get(marker);
+      const message = previous
+        ? await previous.edit({ embeds: [embed] })
+        : await channel.send({ embeds: [embed] });
+      if (!firstMessage) firstMessage = message;
+    } catch (error) {
+      log(logger, 'warn', `Discord : documentation non envoyée dans #${template.name} : ${error.message}`);
+      break;
+    }
+  }
+  if (firstMessage) {
+    await firstMessage.pin('Documentation VALARIA').catch(() => {});
+  }
+}
+
 async function ensureChannels(guild, client, { site, categoryName, fetchImpl, logger }) {
   const channels = await guild.channels.fetch();
-  let category = channels.find((channel) => channel?.type === ChannelType.GuildCategory && channel.name === categoryName);
+  let category = channels.find((channel) => channel?.type === ChannelType.GuildCategory
+    && (channel.name === categoryName || channel.name === DISCORD_CATEGORY_LEGACY_NAME));
   if (!category) {
-    category = await guild.channels.create({ name: categoryName, type: ChannelType.GuildCategory, reason: 'Déploiement VALARIA Gateway' });
-    log(logger, 'info', `Discord : catégorie créée « ${categoryName} »`);
+    try {
+      category = await guild.channels.create({ name: categoryName, type: ChannelType.GuildCategory, reason: 'Déploiement VALARIA Gateway' });
+    } catch (error) {
+      log(logger, 'warn', `Discord : catégorie stylée refusée, repli sur « ${DISCORD_CATEGORY_LEGACY_NAME} » : ${error.message}`);
+      category = await guild.channels.create({ name: DISCORD_CATEGORY_LEGACY_NAME, type: ChannelType.GuildCategory, reason: 'Déploiement VALARIA Gateway' });
+    }
+    log(logger, 'info', `Discord : catégorie créée « ${category.name} »`);
+  } else if (category.name !== categoryName) {
+    await category.setName(categoryName).catch((error) => log(logger, 'warn', `Discord : catégorie non renommée : ${error.message}`));
   }
+
   const created = [];
   for (const template of DISCORD_CHANNEL_TEMPLATES) {
-    let channel = channels.find((item) => item?.type === ChannelType.GuildText && item.name === template.name);
+    let channel = channels.find((item) => item?.type === ChannelType.GuildText
+      && (item.name === template.name || item.name === template.legacyName));
     const overwrites = [
       {
         id: guild.roles.everyone.id,
@@ -173,18 +229,33 @@ async function ensureChannels(guild, client, { site, categoryName, fetchImpl, lo
       },
     ];
     if (!channel) {
-      channel = await guild.channels.create({
-        name: template.name,
-        type: ChannelType.GuildText,
-        parent: category.id,
-        topic: template.topic,
-        permissionOverwrites: overwrites,
-        reason: 'Salon VALARIA Gateway',
-      });
+      try {
+        channel = await guild.channels.create({
+          name: template.name,
+          type: ChannelType.GuildText,
+          parent: category.id,
+          topic: template.topic,
+          permissionOverwrites: overwrites,
+          reason: 'Salon VALARIA Gateway',
+        });
+      } catch (error) {
+        log(logger, 'warn', `Discord : nom stylé refusé pour ${template.name}, repli sur « ${template.legacyName} » : ${error.message}`);
+        channel = await guild.channels.create({
+          name: template.legacyName,
+          type: ChannelType.GuildText,
+          parent: category.id,
+          topic: template.topic,
+          permissionOverwrites: overwrites,
+          reason: 'Salon VALARIA Gateway',
+        });
+      }
       created.push(channel);
-      log(logger, 'info', `Discord : salon créé #${template.name}`);
+      log(logger, 'info', `Discord : salon créé #${channel.name}`);
     } else {
       if (channel.parentId !== category.id) await channel.setParent(category.id, { lockPermissions: false }).catch(() => {});
+      if (channel.name !== template.name) {
+        await channel.setName(template.name).catch((error) => log(logger, 'warn', `Discord : #${template.legacyName} non renommé : ${error.message}`));
+      }
       if (channel.topic !== template.topic) await channel.setTopic(template.topic).catch(() => {});
       await channel.permissionOverwrites.edit(guild.roles.everyone, {
         ViewChannel: true,
@@ -200,14 +271,8 @@ async function ensureChannels(guild, client, { site, categoryName, fetchImpl, lo
         ManageMessages: true,
       }).catch(() => {});
     }
-    if (created.includes(channel)) {
-      try {
-        await channel.send({ embeds: [introEmbed(template.key, site, categoryName)] });
-      } catch (error) {
-        log(logger, 'warn', `Discord : message d’accueil non envoyé dans #${template.name} : ${error.message}`);
-      }
-    }
-    if (template.key === 'statut') await ensureStatusPanel(channel, client, site, fetchImpl);
+    await ensureChannelDocs(channel, client, template, site, logger);
+    if (template.key === 'status') await ensureStatusPanel(channel, client, site, fetchImpl);
   }
   return created;
 }
@@ -297,7 +362,9 @@ export async function startDiscordBot({ env = process.env, logger = console, fet
       const guild = await client.guilds.fetch(guildId);
       if (syncChannels) await ensureChannels(guild, client, { site, categoryName, fetchImpl, logger });
       await registerCommands(guild, logger);
-      const statusChannel = guild.channels.cache.find((channel) => channel?.type === ChannelType.GuildText && channel.name === 'statut');
+      const statusTemplate = templateByKey('status');
+      const statusChannel = guild.channels.cache.find((channel) => channel?.type === ChannelType.GuildText
+        && (channel.name === statusTemplate?.name || channel.name === statusTemplate?.legacyName));
       if (statusChannel) {
         statusTimer = setInterval(() => ensureStatusPanel(statusChannel, client, site, fetchImpl), 5 * 60_000);
         statusTimer.unref?.();

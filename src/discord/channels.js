@@ -3,49 +3,64 @@
  * Ces templates sont la source de vérité pour la synchronisation des salons.
  */
 
-export const DISCORD_CATEGORY_NAME = 'VALARIA GATEWAY';
+export const DISCORD_CATEGORY_NAME = '「💠」VALARIA GATEWAY';
+export const DISCORD_CATEGORY_LEGACY_NAME = 'VALARIA GATEWAY';
 
 export const DISCORD_CHANNEL_TEMPLATES = Object.freeze([
   {
     key: 'welcome',
-    name: 'bienvenue',
-    topic: 'Bienvenue sur VALARIA Gateway — API et VALARIA Code.',
+    name: '「💠」bienvenue',
+    legacyName: 'bienvenue',
+    topic: '[VALARIA] Bienvenue sur VALARIA Gateway — API et VALARIA Code.',
     readOnly: false,
   },
   {
     key: 'announcements',
-    name: 'annonces',
-    topic: 'Annonces officielles VALARIA Gateway.',
+    name: '「📢」annonces',
+    legacyName: 'annonces',
+    topic: '[VALARIA] Annonces officielles VALARIA Gateway.',
     readOnly: true,
   },
   {
     key: 'status',
-    name: 'statut',
-    topic: 'État de la passerelle et du service VALARIA Code.',
+    name: '「📡」statut',
+    legacyName: 'statut',
+    topic: '[VALARIA] État de la passerelle et du service VALARIA Code.',
     readOnly: true,
   },
   {
+    key: 'general',
+    name: '「💬」général',
+    legacyName: 'général',
+    topic: '[VALARIA] Discussion générale autour de l’API et du CLI.',
+    readOnly: false,
+  },
+  {
     key: 'support',
-    name: 'support',
-    topic: 'Entraide, questions et retours sur VALARIA Gateway.',
+    name: '「🛟」support',
+    legacyName: 'support',
+    topic: '[VALARIA] Entraide, questions et retours sur VALARIA Gateway.',
     readOnly: false,
   },
   {
     key: 'api',
-    name: 'api',
-    topic: 'Intégration OpenAI / Anthropic — endpoints et clés dérivées.',
+    name: '「🔌」api',
+    legacyName: 'api',
+    topic: '[VALARIA] Intégration OpenAI / Anthropic — endpoints et clés dérivées.',
     readOnly: false,
   },
   {
     key: 'valaria-code',
-    name: 'valaria-code',
-    topic: 'Le CLI de code VALARIA : installation, modes et diff.',
+    name: '「⌨️」valaria-code',
+    legacyName: 'valaria-code',
+    topic: '[VALARIA] Le CLI de code VALARIA : installation, modes et diff.',
     readOnly: false,
   },
   {
     key: 'reports',
-    name: 'signalements',
-    topic: 'Signaler un problème, un abus ou une erreur de facturation.',
+    name: '「🚨」signalements',
+    legacyName: 'signalements',
+    topic: '[VALARIA] Signaler un problème, un abus ou une erreur de facturation.',
     readOnly: false,
   },
 ]);

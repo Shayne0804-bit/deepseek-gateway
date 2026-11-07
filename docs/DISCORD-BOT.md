@@ -5,21 +5,38 @@ l’identifiant du serveur sont configurés. Il ne possède aucun intent privil�
 
 ## Ce qu’il crée au démarrage
 
-Catégorie **VALARIA GATEWAY** :
+Catégorie **「💠」VALARIA GATEWAY** :
 
 | Salon | Rôle |
 |---|---|
-| `#bienvenue` | accueil, liens vers le site et l’espace |
-| `#annonces` | annonces officielles, lecture seule |
-| `#statut` | panneau de statut actualisé toutes les 5 minutes |
-| `#support` | entraide et questions |
-| `#api` | endpoints OpenAI / Anthropic |
-| `#valaria-code` | installation et usage du CLI |
-| `#signalements` | incidents, abus, facturation |
+| `「💠」#bienvenue` | accueil, liens vers le site et l’espace |
+| `「📢」#annonces` | annonces officielles, lecture seule |
+| `「📡」#statut` | panneau de statut actualisé toutes les 5 minutes |
+| `「💬」#général` | discussion générale |
+| `「🛟」#support` | entraide et questions |
+| `「🔌」#api` | documentation API OpenAI / Anthropic |
+| `「⌨️」#valaria-code` | documentation complète du CLI |
+| `「🚨」#signalements` | incidents, abus, facturation |
 
-Les salons existants sont conservés. Le bot met à jour le sujet, la catégorie et
-les permissions sans supprimer les messages. Les messages d’accueil ne sont
-envoyés que lors de la création d’un salon.
+Les salons existants sont conservés. Le bot renomme les anciens noms simples vers
+les noms stylés, met à jour les sujets et permissions, puis publie ou met à jour
+toute la documentation dans les salons concernés. Les documents sont épinglés et
+identifiés par un marqueur pour éviter les doublons au redémarrage.
+
+### Documentation publiée
+
+| Salon | Contenu |
+|---|---|
+| `#bienvenue` | présentation, liens, règles |
+| `#annonces` | annonce de lancement |
+| `#statut` | panneau live + endpoint `/healthz` |
+| `#général` | règles de discussion |
+| `#support` | procédure de support et diagnostic |
+| `#api` | URLs, auth, cURL, Node.js, Python, endpoints, modèles, quotas et erreurs |
+| `#valaria-code` | installation, login appareil, interfaces, commandes, diff et modes d’approbation |
+| `#signalements` | modèle de signalement et sécurité |
+
+Les messages sont mis à jour lorsque leur contenu change, sans être dupliqués.
 
 ## Configuration
 
@@ -27,7 +44,7 @@ envoyés que lors de la création d’un salon.
 DISCORD_ENABLED=1
 DISCORD_TOKEN=...
 DISCORD_GUILD_ID=...
-DISCORD_CATEGORY_NAME=VALARIA GATEWAY
+DISCORD_CATEGORY_NAME=「💠」VALARIA GATEWAY
 DISCORD_SYNC_CHANNELS=1
 DISCORD_SITE_URL=https://api.valariamenu.com
 ```
@@ -42,6 +59,7 @@ Inviter le bot avec :
 - Envoyer des messages ;
 - Intégrer des liens ;
 - Lire l’historique des messages ;
+- Gérer les messages (épinglage de la documentation) ;
 - Utiliser les commandes d’application.
 
 Aucun intent privilégié (`Message Content`, `Members`) n’est requis.
