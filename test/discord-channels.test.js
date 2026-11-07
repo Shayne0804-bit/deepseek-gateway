@@ -6,7 +6,7 @@ import { startDiscordBot } from '../src/discord/bot.js';
 
 test('templates Discord VALARIA : catégorie, salons et sujets', () => {
   assert.match(DISCORD_CATEGORY_NAME, /VALARIA GATEWAY/);
-  assert.ok(/[💠「」]/.test(DISCORD_CATEGORY_NAME), 'la catégorie doit utiliser des caractères spéciaux');
+  assert.ok(/[｜💠]/.test(DISCORD_CATEGORY_NAME), 'la catégorie doit utiliser des caractères spéciaux');
   assert.ok(DISCORD_CHANNEL_TEMPLATES.length >= 7);
   const names = channelNames();
   assert.equal(new Set(names).size, names.length, 'les noms de salons doivent être uniques');
@@ -14,7 +14,7 @@ test('templates Discord VALARIA : catégorie, salons et sujets', () => {
   assert.equal(new Set(legacyNames).size, legacyNames.length);
   for (const template of DISCORD_CHANNEL_TEMPLATES) {
     assert.ok(template.name.length > template.legacyName.length, `nom stylé attendu pour ${template.legacyName}`);
-    assert.match(template.name, /^[^\s]+$/);
+    assert.match(template.name, /^｜.+｜/);
     assert.ok(template.topic.length > 10);
     assert.equal(typeof template.readOnly, 'boolean');
   }
