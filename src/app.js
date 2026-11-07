@@ -23,6 +23,7 @@ import { createPortalApi } from './portal-api.js';
 import { createMailer } from './mailer.js';
 import { createProxyHandler, isProxyPath } from './proxy.js';
 import { DEFAULT_PRICING } from './pricing.js';
+import { getDiscordStatus } from './discord/status.js';
 import { IpRateLimiter } from './limits.js';
 import {
   applySecurityHeaders,
@@ -341,6 +342,7 @@ export async function startGateway(overrides = {}) {
         discord: {
           enabled: Boolean(config.discordEnabled),
           configured: Boolean(config.discordToken && config.discordGuildId),
+          ...getDiscordStatus(),
         },
         warnings: startupWarnings,
       });

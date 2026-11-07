@@ -13,6 +13,7 @@ import {
 } from 'discord.js';
 import { DISCORD_CATEGORY_NAME, DISCORD_CATEGORY_LEGACY_NAME, DISCORD_CHANNEL_TEMPLATES, categoryMatches, channelMatches, templateByKey } from './channels.js';
 import { channelDocs } from './content.js';
+import { setDiscordStatus } from './status.js';
 
 const COMMANDS = [
   new SlashCommandBuilder()
@@ -343,9 +344,14 @@ export async function startDiscordBot({ env = process.env, logger = console, fet
   const guildId = String(env.DISCORD_GUILD_ID || '').trim();
   if (!token || !guildId) {
     log(logger, 'debug', 'Discord : DISCORD_TOKEN ou DISCORD_GUILD_ID absent, bot désactivé.');
+    setDiscordStatus({ status: 'missing_config', error: 'DISCORD_TOKEN ou DISCORD_GUILD_ID manquant.' });
     return null;
   }
-  if (!enabled(env.DISCORD_ENABLED, true)) return null;
+  if (!enabled(env.DISCORD_ENABLED, true)) {
+    setDiscordStatus({ status: 'disabled' });
+    return null;
+  }
+  setDiscordStatus({ status: 'connecting', error: null, guild: null, guildId });
   const site = siteUrl(env);
   const categoryName = String(env.DISCORD_CATEGORY_NAME || DISCORD_CATEGORY_NAME).trim() || DISCORD_CATEGORY_NAME;
   const syncChannels = enabled(env.DISCORD_SYNC_CHANNELS, true);
@@ -356,9 +362,11 @@ export async function startDiscordBot({ env = process.env, logger = console, fet
   client.once('clientReady', async () => {
     log(logger, 'info', `Discord : connecté en tant que ${client.user.tag}`);
     client.user.setPresence({ status: 'online', activities: [{ name: 'VALARIA Gateway', type: 3 }] });
+    setDiscordStatus({ status: 'syncing', guildId, error: null });
     readyResolve();
     try {
       const guild = await client.guilds.fetch(guildId);
+      setDiscordStatus({ guild: guild.name, guildId: guild.id });
       if (syncChannels) await ensureChannels(guild, client, { site, categoryName, fetchImpl, logger });
       await registerCommands(guild, logger);
       const statusTemplate = templateByKey('status');
@@ -367,20 +375,33 @@ export async function startDiscordBot({ env = process.env, logger = console, fet
         statusTimer = setInterval(() => ensureStatusPanel(statusChannel, client, site, fetchImpl), 5 * 60_000);
         statusTimer.unref?.();
       }
+      setDiscordStatus({ status: 'ready', guild: guild.name, guildId: guild.id, readyAt: new Date().toISOString(), lastSyncAt: new Date().toISOString(), error: null });
     } catch (error) {
       log(logger, 'warn', `Discord : synchronisation impossible : ${error.message}`);
+      setDiscordStatus({ status: 'sync_failed', error: String(error.message).slice(0, 300) });
     }
   });
-  client.on('error', (error) => log(logger, 'warn', `Discord : erreur client : ${error.message}`));
+  client.on('error', (error) => {
+    log(logger, 'warn', `Discord : erreur client : ${error.message}`);
+    setDiscordStatus({ status: 'error', error: String(error.message).slice(0, 300) });
+  });
   client.on('interactionCreate', (interaction) => {
     handleCommand(interaction, { site, fetchImpl }).catch((error) => log(logger, 'warn', `Discord : interaction : ${error.message}`));
   });
-  await client.login(token);
+  try {
+    await client.login(token);
+  } catch (error) {
+    log(logger, 'warn', `Discord : connexion refusée : ${error.message}`);
+    setDiscordStatus({ status: 'login_failed', error: String(error.message).slice(0, 300) });
+    throw error;
+  }
+  setDiscordStatus({ status: 'online', guildId });
   return {
     client,
     ready,
     async destroy() {
       if (statusTimer) clearInterval(statusTimer);
+      setDiscordStatus({ status: 'stopped' });
       try { await client.destroy(); } catch { /* ignore */ }
     },
   };
