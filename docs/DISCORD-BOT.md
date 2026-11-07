@@ -5,18 +5,18 @@ l’identifiant du serveur sont configurés. Il ne possède aucun intent privil�
 
 ## Ce qu’il crée au démarrage
 
-Catégorie **｜💠｜VALARIA GATEWAY** :
+Catégorie **｜💠｜𝐕𝐀𝐋𝐀𝐑𝐈𝐀 𝐆𝐀𝐓𝐄𝐖𝐀𝐘** :
 
 | Salon | Rôle |
 |---|---|
-| `｜💠｜bienvenue` | accueil, liens vers le site et l’espace |
-| `｜📢｜annonces` | annonces officielles, lecture seule |
-| `｜📡｜statut` | panneau de statut actualisé toutes les 5 minutes |
-| `｜💬｜général` | discussion générale |
-| `｜🛟｜support` | entraide et questions |
-| `｜🔌｜api` | documentation API OpenAI / Anthropic |
-| `｜⌨️｜valaria-code` | documentation complète du CLI |
-| `｜🚨｜signalements` | incidents, abus, facturation |
+| `｜💠｜𝐛𝐢𝐞𝐧𝐯𝐞𝐧𝐮𝐞` | accueil, liens vers le site et l’espace |
+| `｜📢｜𝐚𝐧𝐧𝐨𝐧𝐜𝐞𝐬` | annonces officielles, lecture seule |
+| `｜📡｜𝐬𝐭𝐚𝐭𝐮𝐭` | panneau de statut actualisé toutes les 5 minutes |
+| `｜💬｜𝐠𝐞𝐧𝐞𝐫𝐚𝐥` | discussion générale |
+| `｜🛟｜𝐬𝐮𝐩𝐩𝐨𝐫𝐭` | entraide et questions |
+| `｜🔌｜𝐚𝐩𝐢` | documentation API OpenAI / Anthropic |
+| `｜⌨️｜𝐯𝐚𝐥𝐚𝐫𝐢𝐚-𝐜𝐨𝐝𝐞` | documentation complète du CLI |
+| `｜🚨｜𝐬𝐢𝐠𝐧𝐚𝐥𝐞𝐦𝐞𝐧𝐭𝐬` | incidents, abus, facturation |
 
 Les salons existants sont conservés. Le bot renomme les anciens noms simples vers
 les noms stylés, met à jour les sujets et permissions, puis publie ou met à jour
@@ -44,7 +44,7 @@ Les messages sont mis à jour lorsque leur contenu change, sans être dupliqués
 DISCORD_ENABLED=1
 DISCORD_TOKEN=...
 DISCORD_GUILD_ID=...
-DISCORD_CATEGORY_NAME=｜💠｜VALARIA GATEWAY
+DISCORD_CATEGORY_NAME=｜💠｜𝐕𝐀𝐋𝐀𝐑𝐈𝐀 𝐆𝐀𝐓𝐄𝐖𝐀𝐘
 DISCORD_SYNC_CHANNELS=1
 DISCORD_SITE_URL=https://api.valariamenu.com
 ```

@@ -5,7 +5,7 @@ import { channelDocs } from '../src/discord/content.js';
 import { startDiscordBot } from '../src/discord/bot.js';
 
 test('templates Discord VALARIA : catégorie, salons et sujets', () => {
-  assert.match(DISCORD_CATEGORY_NAME, /VALARIA GATEWAY/);
+  assert.match(DISCORD_CATEGORY_NAME, /𝐕𝐀𝐋𝐀𝐑𝐈𝐀 𝐆𝐀𝐓𝐄𝐖𝐀𝐘/);
   assert.ok(/[｜💠]/.test(DISCORD_CATEGORY_NAME), 'la catégorie doit utiliser des caractères spéciaux');
   assert.ok(DISCORD_CHANNEL_TEMPLATES.length >= 7);
   const names = channelNames();
@@ -20,6 +20,8 @@ test('templates Discord VALARIA : catégorie, salons et sujets', () => {
   }
   assert.equal(templateByKey('status').readOnly, true);
   assert.equal(templateByKey('api').readOnly, false);
+  assert.equal(templateByKey('api').name, '｜🔌｜𝐚𝐩𝐢');
+  assert.equal(templateByKey('welcome').name, '｜💠｜𝐛𝐢𝐞𝐧𝐯𝐞𝐧𝐮𝐞');
   assert.equal(templateByKey('inconnu'), null);
 });
 

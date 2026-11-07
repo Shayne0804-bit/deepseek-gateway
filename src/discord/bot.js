@@ -11,7 +11,7 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from 'discord.js';
-import { DISCORD_CATEGORY_NAME, DISCORD_CATEGORY_LEGACY_NAME, DISCORD_CATEGORY_PREVIOUS_NAME, DISCORD_CHANNEL_TEMPLATES, templateByKey } from './channels.js';
+import { DISCORD_CATEGORY_NAME, DISCORD_CATEGORY_LEGACY_NAME, DISCORD_CHANNEL_TEMPLATES, categoryMatches, channelMatches, templateByKey } from './channels.js';
 import { channelDocs } from './content.js';
 
 const COMMANDS = [
@@ -194,7 +194,7 @@ async function ensureChannelDocs(channel, client, template, site, logger) {
 async function ensureChannels(guild, client, { site, categoryName, fetchImpl, logger }) {
   const channels = await guild.channels.fetch();
   let category = channels.find((channel) => channel?.type === ChannelType.GuildCategory
-    && (channel.name === categoryName || channel.name === DISCORD_CATEGORY_LEGACY_NAME || channel.name === DISCORD_CATEGORY_PREVIOUS_NAME));
+    && (channel.name === categoryName || categoryMatches(channel.name)));
   if (!category) {
     try {
       category = await guild.channels.create({ name: categoryName, type: ChannelType.GuildCategory, reason: 'Déploiement VALARIA Gateway' });
@@ -209,8 +209,7 @@ async function ensureChannels(guild, client, { site, categoryName, fetchImpl, lo
 
   const created = [];
   for (const template of DISCORD_CHANNEL_TEMPLATES) {
-    let channel = channels.find((item) => item?.type === ChannelType.GuildText
-      && (item.name === template.name || item.name === template.previousName || item.name === template.legacyName));
+    let channel = channels.find((item) => item?.type === ChannelType.GuildText && channelMatches(template, item.name));
     const overwrites = [
       {
         id: guild.roles.everyone.id,
@@ -363,8 +362,7 @@ export async function startDiscordBot({ env = process.env, logger = console, fet
       if (syncChannels) await ensureChannels(guild, client, { site, categoryName, fetchImpl, logger });
       await registerCommands(guild, logger);
       const statusTemplate = templateByKey('status');
-      const statusChannel = guild.channels.cache.find((channel) => channel?.type === ChannelType.GuildText
-        && (channel.name === statusTemplate?.name || channel.name === statusTemplate?.previousName || channel.name === statusTemplate?.legacyName));
+      const statusChannel = guild.channels.cache.find((channel) => channel?.type === ChannelType.GuildText && channelMatches(statusTemplate, channel.name));
       if (statusChannel) {
         statusTimer = setInterval(() => ensureStatusPanel(statusChannel, client, site, fetchImpl), 5 * 60_000);
         statusTimer.unref?.();
