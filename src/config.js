@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '3.10.1';
+export const APP_VERSION = '3.10.2';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -151,6 +151,13 @@ export function loadConfig(overrides = {}) {
     logFormat: (overrides.logFormat ?? raw('LOG_FORMAT') ?? 'text') === 'json' ? 'json' : 'text',
     usageRetentionDays: overrides.usageRetentionDays ?? intOr(raw('USAGE_RETENTION_DAYS'), 0),
     masterKey: overrides.masterKey ?? raw('MASTER_KEY') ?? '',
+    // Bot Discord optionnel, démarré avec le serveur.
+    discordEnabled: boolOr(raw('DISCORD_ENABLED'), true),
+    discordToken: raw('DISCORD_TOKEN') ?? '',
+    discordGuildId: raw('DISCORD_GUILD_ID') ?? '',
+    discordCategoryName: raw('DISCORD_CATEGORY_NAME') ?? '',
+    discordSyncChannels: boolOr(raw('DISCORD_SYNC_CHANNELS'), true),
+    discordSiteUrl: raw('DISCORD_SITE_URL') ?? '',
     // Connexion portail par code recu par email (OTP).
     mailTransport: overrides.mailTransport ?? raw('MAIL_TRANSPORT') ?? '',
     mailFrom: overrides.mailFrom ?? raw('MAIL_FROM') ?? '',
@@ -356,6 +363,7 @@ export function loadConfig(overrides = {}) {
   config.signupEnabled = Boolean(config.signupEnabled);
   return config;
 }
+
 
 
 
