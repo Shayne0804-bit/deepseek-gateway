@@ -42,6 +42,14 @@ if (discordConfig?.discordEnabled && discordConfig.discordToken && discordConfig
   } catch (error) {
     started.log?.warn?.(`Discord : bot non démarré : ${error.message}`);
   }
+} else if (discordConfig?.discordEnabled) {
+  const missing = [
+    discordConfig.discordToken ? '' : 'DISCORD_TOKEN',
+    discordConfig.discordGuildId ? '' : 'DISCORD_GUILD_ID',
+  ].filter(Boolean).join(', ');
+  started.log?.warn?.(`Discord : bot non démarré, variable(s) manquante(s) : ${missing}`);
+} else {
+  started.log?.info?.('Discord : bot désactivé (DISCORD_ENABLED=0).');
 }
 
 let stopping = false;

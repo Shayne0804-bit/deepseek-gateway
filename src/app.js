@@ -338,6 +338,10 @@ export async function startGateway(overrides = {}) {
         uptimeSeconds: Math.round(process.uptime()),
         database: config.dbDriver,
         providerConfigured: Boolean(provider.apiKey),
+        discord: {
+          enabled: Boolean(config.discordEnabled),
+          configured: Boolean(config.discordToken && config.discordGuildId),
+        },
         warnings: startupWarnings,
       });
       return;
