@@ -353,7 +353,7 @@ export async function startDiscordBot({ env = process.env, logger = console, fet
   let statusTimer = null;
   let readyResolve;
   const ready = new Promise((resolve) => { readyResolve = resolve; });
-  client.once('ready', async () => {
+  client.once('clientReady', async () => {
     log(logger, 'info', `Discord : connecté en tant que ${client.user.tag}`);
     client.user.setPresence({ status: 'online', activities: [{ name: 'VALARIA Gateway', type: 3 }] });
     readyResolve();
