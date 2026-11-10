@@ -494,8 +494,17 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           : Math.floor(client.maxOutputTokens ?? 4096));
         const promptEstimate = estimateUsage(rawBody ?? '', 0).prompt;
         const priceModel = creditPricingModel ?? body.model ?? null;
+        // Claude Desktop envoie de tres gros contextes caches : reserver tout
+        // le prompt au prix cache-miss bloquait des requetes valides.
+        const estimatedCacheHit = Math.floor(promptEstimate * config.reservationCacheHitRatio);
         const promptReal = computeCost(
-          { prompt: promptEstimate, completion: 0, total: promptEstimate, cacheHit: 0, cacheMiss: promptEstimate },
+          {
+            prompt: promptEstimate,
+            completion: 0,
+            total: promptEstimate,
+            cacheHit: estimatedCacheHit,
+            cacheMiss: Math.max(0, promptEstimate - estimatedCacheHit),
+          },
           priceModel,
           pricing,
         );

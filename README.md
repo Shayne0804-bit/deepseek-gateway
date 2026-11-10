@@ -1296,3 +1296,8 @@ Variables : `SASPAY_API_KEY`, `SASPAY_WEBHOOK_SECRET`, `SASPAY_BASE_URL`. Webhoo
 
 L'onglet **Recharger** permet d'acheter du credit site au montant libre (minimum 1 000 FCFA), converti avec `PAYG_FCFA_PER_CREDIT` (550 FCFA par dollar de credit par defaut). Le credit est stocke dans un wallet en micro-USD entiers, sans expiration. Quand le pass n'a plus de credit ou est expire, les requetes consomment le wallet. Le paiement passe par SasPay checkout et le meme webhook signe.
 
+
+## Reservation et cache Claude Desktop
+
+La reservation de credit estime le prompt avec 90 % de cache hit par defaut (`RESERVATION_CACHE_HIT_RATE`). Sans cela, un contexte Claude Desktop de plusieurs centaines de milliers de tokens etait estime au prix cache-miss premium et refusait a tort des requetes. Le debit reel reste calcule sur l'usage renvoye par l'API.
+

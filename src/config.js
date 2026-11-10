@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '3.12.1';
+export const APP_VERSION = '3.12.2';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -193,6 +193,8 @@ export function loadConfig(overrides = {}) {
     siteCreditWindowHours: overrides.siteCreditWindowHours ?? intOr(raw('SITE_CREDIT_WINDOW_HOURS'), 5),
     // PAYG : nombre de FCFA payes pour 1 $ de credit site.
     paygFcfaPerCredit: overrides.paygFcfaPerCredit ?? Number(raw('PAYG_FCFA_PER_CREDIT') ?? 550),
+    // Part du prompt supposee servie par le cache lors de la reservation.
+    reservationCacheHitRatio: overrides.reservationCacheHitRatio ?? Number(raw('RESERVATION_CACHE_HIT_RATE') ?? 0.9),
     // Anti-abus inscription : 1 compte par IP / appareil sur une fenetre.
     signupMaxPerIp: overrides.signupMaxPerIp ?? intOr(raw('SIGNUP_MAX_PER_IP'), 1),
     signupIpWindowDays: overrides.signupIpWindowDays ?? intOr(raw('SIGNUP_IP_WINDOW_DAYS'), 30),
@@ -362,6 +364,9 @@ export function loadConfig(overrides = {}) {
     config.trialQuotaUsd = Math.round(config.trialQuotaUsd * config.siteCreditRate * 1e6) / 1e6;
     config.trialQuotaUsd = Math.max(config.trialQuotaUsd, 5);
   }
+  if (!Number.isFinite(config.reservationCacheHitRatio) || config.reservationCacheHitRatio < 0 || config.reservationCacheHitRatio > 0.99) {
+    config.reservationCacheHitRatio = 0.9;
+  }
   if (!Number.isFinite(config.paygFcfaPerCredit) || config.paygFcfaPerCredit < 100 || config.paygFcfaPerCredit > 5000) {
     config.paygFcfaPerCredit = 550;
   }
@@ -372,6 +377,7 @@ export function loadConfig(overrides = {}) {
   config.signupEnabled = Boolean(config.signupEnabled);
   return config;
 }
+
 
 
 
