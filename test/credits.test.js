@@ -18,10 +18,10 @@ test('plans : durees, credit site et plafond 5 h', () => {
   assert.equal(byId.decouverte.quotaUsd, 5);
   assert.equal(byId.decouverte.quotaRequests, null);
   assert.equal(byId.createur.quotaRequests, null);
-  assert.equal(byId.decouverte.credit5hLimit, 1.5);
-  assert.equal(byId.createur.credit5hLimit, 2.5);
-  assert.equal(byId.equipe.credit5hLimit, 4);
-  assert.equal(byId.business.credit5hLimit, 8);
+  assert.equal(byId.decouverte.credit5hLimit, 2.5);
+  assert.equal(byId.createur.credit5hLimit, 5);
+  assert.equal(byId.equipe.credit5hLimit, 10);
+  assert.equal(byId.business.credit5hLimit, 25);
 });
 
 test('plans : la date de fin est calculee depuis la duree', () => {
@@ -105,4 +105,5 @@ test('fable-5.1 : tarif reel -25 % avant credit site', () => {
   assert.equal(real, 0.02625);
   assert.equal(Math.round(real * 3.75 * 1e6) / 1e6, 0.098438);
 });
+
 

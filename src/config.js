@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '3.12.0';
+export const APP_VERSION = '3.12.1';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -180,7 +180,7 @@ export function loadConfig(overrides = {}) {
     // Credit site du pass gratuit. L'ancienne variable TRIAL_QUOTA_USD etait
     // exprimee en cout reel : on la convertit une fois via SITE_CREDIT_RATE.
     trialQuotaUsd: overrides.trialQuotaUsd
-      ?? Number(raw('TRIAL_CREDIT_SITE_USD') ?? raw('TRIAL_QUOTA_USD') ?? 2.5),
+      ?? Number(raw('TRIAL_CREDIT_SITE_USD') ?? raw('TRIAL_QUOTA_USD') ?? 5),
     trialQuotaLegacy: overrides.trialQuotaUsd === undefined
       && raw('TRIAL_CREDIT_SITE_USD') === undefined
       && raw('TRIAL_QUOTA_USD') !== undefined,
@@ -349,7 +349,7 @@ export function loadConfig(overrides = {}) {
     && (config.mailTransport === 'console' || Boolean(config.mailFrom));
   // Valeurs d'essai coherentes (un pass d'essai ne doit jamais etre infini par accident).
   if (!Number.isFinite(config.trialDays) || config.trialDays < 1 || config.trialDays > 90) config.trialDays = 7;
-  if (!Number.isFinite(config.trialQuotaUsd) || config.trialQuotaUsd < 0) config.trialQuotaUsd = 2.5;
+  if (!Number.isFinite(config.trialQuotaUsd) || config.trialQuotaUsd < 0) config.trialQuotaUsd = 5;
   // Le pass d'essai n'a plus de quota de requetes : seul le credit site l'arrete.
   config.trialQuotaRequests = null;
   if (!Number.isFinite(config.trialRpmLimit) || config.trialRpmLimit < 1) config.trialRpmLimit = 60;
@@ -360,7 +360,7 @@ export function loadConfig(overrides = {}) {
   }
   if (config.trialQuotaLegacy) {
     config.trialQuotaUsd = Math.round(config.trialQuotaUsd * config.siteCreditRate * 1e6) / 1e6;
-    config.trialQuotaUsd = Math.max(config.trialQuotaUsd, 2.5);
+    config.trialQuotaUsd = Math.max(config.trialQuotaUsd, 5);
   }
   if (!Number.isFinite(config.paygFcfaPerCredit) || config.paygFcfaPerCredit < 100 || config.paygFcfaPerCredit > 5000) {
     config.paygFcfaPerCredit = 550;
@@ -372,6 +372,7 @@ export function loadConfig(overrides = {}) {
   config.signupEnabled = Boolean(config.signupEnabled);
   return config;
 }
+
 
 
 
