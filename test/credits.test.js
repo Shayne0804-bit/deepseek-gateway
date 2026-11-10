@@ -18,10 +18,10 @@ test('plans : durees, credit site et plafond 5 h', () => {
   assert.equal(byId.decouverte.quotaUsd, 5);
   assert.equal(byId.decouverte.quotaRequests, null);
   assert.equal(byId.createur.quotaRequests, null);
-  assert.equal(byId.decouverte.credit5hLimit, 2.5);
-  assert.equal(byId.createur.credit5hLimit, 5);
-  assert.equal(byId.equipe.credit5hLimit, 10);
-  assert.equal(byId.business.credit5hLimit, 25);
+  assert.equal(byId.decouverte.credit5hLimit, 5);
+  assert.equal(byId.createur.credit5hLimit, 10);
+  assert.equal(byId.equipe.credit5hLimit, 20);
+  assert.equal(byId.business.credit5hLimit, 50);
 });
 
 test('plans : la date de fin est calculee depuis la duree', () => {
@@ -67,20 +67,16 @@ test('credit site : fenetre glissante de 5 h', async () => {
 });
 
 
-test('reservations de credit persistantes : partielle sans depassement total', async () => {
+test('reservations de credit persistantes : plafond strict', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsg-reserve-'));
   const db = await openDb(dir);
   try {
     const base = { clientId: 'c1', availableMicroUsd: 500000, ttlMs: 60000 };
     assert.equal(await reserveCreditSlot(db, { ...base, id: 'r1', amountMicroUsd: 400000 }), true);
-    // Deuxieme requete concurrente : reservation partielle sur les 100 000 restants.
-    assert.equal(await reserveCreditSlot(db, { ...base, id: 'r2', amountMicroUsd: 200000 }), true);
-    // Plus de place : refus.
-    assert.equal(await reserveCreditSlot(db, { ...base, id: 'r3', amountMicroUsd: 1 }), false);
+    assert.equal(await reserveCreditSlot(db, { ...base, id: 'r2', amountMicroUsd: 200000 }), false);
     await releaseCreditSlot(db, 'r1');
-    await releaseCreditSlot(db, 'r2');
-    assert.equal(await reserveCreditSlot(db, { ...base, id: 'r4', amountMicroUsd: 200000 }), true);
-    await releaseCreditSlot(db, 'r4');
+    assert.equal(await reserveCreditSlot(db, { ...base, id: 'r3', amountMicroUsd: 200000 }), true);
+    await releaseCreditSlot(db, 'r3');
   } finally {
     await closeDb(db);
     fs.rmSync(dir, { recursive: true, force: true });
@@ -109,5 +105,6 @@ test('fable-5.1 : tarif reel -25 % avant credit site', () => {
   assert.equal(real, 0.02625);
   assert.equal(Math.round(real * 3.75 * 1e6) / 1e6, 0.098438);
 });
+
 
 

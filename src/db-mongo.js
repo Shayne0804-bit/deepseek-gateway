@@ -1056,10 +1056,8 @@ export async function reserveCreditSlot(handle, { id, clientId, amountMicroUsd, 
         { $match: { client_id: clientId, expires_at: { $gt: nowIso } } },
         { $group: { _id: null, total: { $sum: '$amount_micro_usd' } } },
       ], { session }).toArray();
-      const remaining = Math.max(0, availableMicroUsd - Number(rows[0]?.total ?? 0));
-      if (remaining <= 0) return;
-      const reservedMicro = Math.min(amountMicroUsd, remaining);
-      await collection.insertOne({ id, client_id: clientId, amount_micro_usd: reservedMicro, created_at: nowIso, expires_at: expiresAt }, { session });
+      if (Number(rows[0]?.total ?? 0) + amountMicroUsd > availableMicroUsd) return;
+      await collection.insertOne({ id, client_id: clientId, amount_micro_usd: amountMicroUsd, created_at: nowIso, expires_at: expiresAt }, { session });
       reserved = true;
     });
     return reserved;
