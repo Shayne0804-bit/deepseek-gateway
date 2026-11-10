@@ -898,13 +898,17 @@ export function reserveCreditSlot(db, { id, clientId, amountMicroUsd, availableM
     const row = db.prepare(
       'SELECT COALESCE(SUM(amount_micro_usd), 0) AS total FROM credit_reservations WHERE client_id = ? AND expires_at > ?',
     ).get(clientId, nowIso);
-    if (Number(row?.total ?? 0) + amountMicroUsd > availableMicroUsd) {
+    const remaining = Math.max(0, availableMicroUsd - Number(row?.total ?? 0));
+    if (remaining <= 0) {
       db.exec('ROLLBACK');
       return false;
     }
+    // Reservation partielle : les requetes concurrentes de Claude Desktop
+    // ne doivent pas se bloquer mutuellement tant qu'il reste du credit.
+    const reservedMicro = Math.min(amountMicroUsd, remaining);
     db.prepare(
       'INSERT INTO credit_reservations (id, client_id, amount_micro_usd, created_at, expires_at) VALUES (?, ?, ?, ?, ?)',
-    ).run(id, clientId, amountMicroUsd, nowIso, expiresAt);
+    ).run(id, clientId, reservedMicro, nowIso, expiresAt);
     db.exec('COMMIT');
     return true;
   } catch (err) {

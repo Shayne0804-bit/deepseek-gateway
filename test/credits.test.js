@@ -67,16 +67,20 @@ test('credit site : fenetre glissante de 5 h', async () => {
 });
 
 
-test('reservations de credit persistantes : empeche le depassement concurrent', async () => {
+test('reservations de credit persistantes : partielle sans depassement total', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dsg-reserve-'));
   const db = await openDb(dir);
   try {
     const base = { clientId: 'c1', availableMicroUsd: 500000, ttlMs: 60000 };
     assert.equal(await reserveCreditSlot(db, { ...base, id: 'r1', amountMicroUsd: 400000 }), true);
-    assert.equal(await reserveCreditSlot(db, { ...base, id: 'r2', amountMicroUsd: 200000 }), false);
+    // Deuxieme requete concurrente : reservation partielle sur les 100 000 restants.
+    assert.equal(await reserveCreditSlot(db, { ...base, id: 'r2', amountMicroUsd: 200000 }), true);
+    // Plus de place : refus.
+    assert.equal(await reserveCreditSlot(db, { ...base, id: 'r3', amountMicroUsd: 1 }), false);
     await releaseCreditSlot(db, 'r1');
-    assert.equal(await reserveCreditSlot(db, { ...base, id: 'r3', amountMicroUsd: 200000 }), true);
-    await releaseCreditSlot(db, 'r3');
+    await releaseCreditSlot(db, 'r2');
+    assert.equal(await reserveCreditSlot(db, { ...base, id: 'r4', amountMicroUsd: 200000 }), true);
+    await releaseCreditSlot(db, 'r4');
   } finally {
     await closeDb(db);
     fs.rmSync(dir, { recursive: true, force: true });
