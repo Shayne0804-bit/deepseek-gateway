@@ -46,6 +46,21 @@
   }
 
   function showSuccessModal(order, me) {
+    if (order.kind === 'payg') {
+      const body = $('#pass-modal-body');
+      $('#pass-modal-title').textContent = 'Crédit rechargé';
+      body.innerHTML = `
+        <p class="small muted" style="margin-top:0">Votre wallet PAYG est crédité.</p>
+        <dl class="spec-list">
+          <div class="spec-row"><dt>Crédit ajouté</dt><dd>${fmtUsd(order.creditUsd)}</dd></div>
+          <div class="spec-row"><dt>Nouveau solde</dt><dd>${fmtUsd(me?.client?.walletUsd)}</dd></div>
+          <div class="spec-row"><dt>Montant payé</dt><dd>${esc(order.amount)} ${esc(order.currency)}</dd></div>
+          <div class="spec-row"><dt>Commande</dt><dd class="mono small">${esc(order.id)}</dd></div>
+        </dl>
+        <p class="small muted">Ce crédit n’expire pas. Il est consommé quand votre pass n’a plus de crédit.</p>`;
+      $('#pass-modal').classList.remove('hidden');
+      return;
+    }
     const plan = me?.plan || {};
     const quota = me?.quota?.usd || {};
     const limits = me?.limits || {};

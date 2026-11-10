@@ -47,6 +47,7 @@ import {
   listPendingPaymentOrders,
   listClientPaymentOrders,
   claimPaymentOrder,
+  creditWallet,
   resetClientUsage,
 } from './db.js';
 import {
@@ -612,6 +613,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         expiresAt: client.expiresAt,
         createdAt: client.createdAt,
         enabled: client.enabled,
+        walletUsd: client.walletUsd ?? 0,
       },
       status: access ? access.code : 'ok',
       statusMessage: access ? access.message : null,
@@ -680,6 +682,8 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       amount: order.amount,
       currency: order.currency,
       status: order.status,
+      kind: order.kind || 'pass',
+      creditUsd: order.creditMicroUsd ? order.creditMicroUsd / 1_000_000 : null,
       checkoutUrl: order.status === 'pending' ? order.checkoutUrl : null,
       createdAt: order.createdAt,
       paidAt: order.paidAt,
@@ -695,10 +699,36 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     });
     if (!claimed) return getPaymentOrder(db, order.id);
     try {
+      const client = await getClientById(db, order.clientId);
+      if (!client) throw new Error('Client introuvable.');
+      if (order.kind === 'payg' || order.plan === 'payg') {
+        const creditMicro = Number(order.creditMicroUsd) || 0;
+        if (creditMicro <= 0) throw new Error('Crédit PAYG manquant.');
+        await creditWallet(db, order.clientId, creditMicro);
+        await updatePaymentOrder(db, order.id, { status: 'completed', creditedAt: new Date().toISOString() });
+        log.info(`[paiement] Crédit PAYG ajouté à ${order.clientId} : ${creditMicro} micro-USD.`);
+        if (mailer && mailer.transport !== 'disabled' && typeof mailer.sendPaymentReceipt === 'function' && client.email) {
+          Promise.resolve(mailer.sendPaymentReceipt({
+            to: client.email,
+            receipt: {
+              customerName: client.name,
+              orderId: order.id,
+              planName: 'Recharge crédit site',
+              amount: order.amount,
+              currency: order.currency,
+              paidAt,
+              expiresAt: 'sans expiration',
+              quotaUsd: (creditMicro / 1_000_000).toFixed(2),
+              credit5h: null,
+              creditWeek: null,
+            },
+          })).catch((err) => log.warn(`[paiement] Reçu email impossible pour ${order.id} : ${err.message}`));
+        }
+        return getPaymentOrder(db, order.id);
+      }
       const preset = passPlanFields(order.plan);
       const passPlan = getPassPlan(order.plan);
       if (!preset || !passPlan) throw new Error(`Pass inconnu : ${order.plan}`);
-      const client = await getClientById(db, order.clientId);
       await updateClientFields(db, order.clientId, preset);
       await resetClientUsage(db, order.clientId, periodKeyFor(preset.period));
       await updatePaymentOrder(db, order.id, {
@@ -1420,6 +1450,77 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         return;
       }
 
+      if (route === '/wallet/checkout' && method === 'POST') {
+        const current = await sessionFromRequest(req);
+        if (!current) {
+          portalError(res, 401, 'Session portail expirée. Reconnectez-vous.', 'unauthorized');
+          return;
+        }
+        if (!requireCsrf(req, res)) return;
+        const body = await readJsonBody(req, 4 * 1024);
+        const context = await currencyContext(req, { config });
+        if (!PAYABLE_CURRENCIES.has(context.currency)) {
+          portalError(res, 400, 'Le paiement n’est pas disponible pour votre devise.', 'payment_currency_unsupported');
+          return;
+        }
+        const amountLocal = Number(String(body.amount ?? '').replace(',', '.'));
+        const minLocal = (1000 / 655.957) * context.rate;
+        const maxLocal = (1_000_000 / 655.957) * context.rate;
+        if (!Number.isFinite(amountLocal) || amountLocal < minLocal - 0.01 || amountLocal > maxLocal + 0.01) {
+          portalError(res, 400, 'Montant de recharge invalide (minimum 1 000 FCFA).', 'invalid_amount');
+          return;
+        }
+        const amountFcfa = (amountLocal / context.rate) * 655.957;
+        const creditMicroUsd = Math.round((amountFcfa / config.paygFcfaPerCredit) * 1_000_000);
+        if (creditMicroUsd <= 0) {
+          portalError(res, 400, 'Le montant est trop faible.', 'invalid_amount');
+          return;
+        }
+        const client = await getClientById(db, current.client.id);
+        if (!client) {
+          portalError(res, 401, 'Session invalide.', 'unauthorized');
+          return;
+        }
+        const country = context.country && context.country.length === 2
+          ? context.country
+          : CURRENCY_COUNTRY[context.currency];
+        const order = {
+          id: crypto.randomUUID(),
+          clientId: client.id,
+          plan: 'payg',
+          kind: 'payg',
+          creditMicroUsd,
+          amount: amountLocal.toFixed(2),
+          currency: context.currency,
+          country,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+        };
+        await insertPaymentOrder(db, order);
+        try {
+          const session = await createSaspayCheckout(config, {
+            amount: order.amount,
+            currency: context.currency,
+            country,
+            description: 'Recharge crédit site VALARIA',
+            customer_email: client.email || 'client@valariamenu.com',
+            customer_name: client.name,
+            return_url: `${requestOrigin(req, config)}/payment?order=${order.id}`,
+            metadata: { order_id: order.id, client_id: client.id, kind: 'payg' },
+          });
+          await updatePaymentOrder(db, order.id, { checkoutId: session.id, checkoutUrl: session.checkout_url });
+          sendJson(res, 200, {
+            order: publicPaymentOrder(await getPaymentOrder(db, order.id)),
+            checkout_url: session.checkout_url,
+          });
+        } catch (err) {
+          await updatePaymentOrder(db, order.id, { status: 'failed' });
+          log.warn(`[paiement] Création checkout PAYG impossible : ${err.message}`);
+          portalError(res, 502, 'Le paiement en ligne est momentanément indisponible.', 'payment_unavailable');
+        }
+        return;
+      }
+
       if (route === '/pass/checkout' && method === 'POST') {
         const current = await sessionFromRequest(req);
         if (!current) {
@@ -1520,6 +1621,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
 
   return { handle };
 }
+
 
 
 

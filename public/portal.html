@@ -291,30 +291,29 @@
                   <h2>Recharger mon crédit</h2>
                   <span class="hint">Pay as you go — recharge libre, sans engagement.</span>
                 </div>
-                <span class="badge badge-warn">Release soon</span>
+                <span class="badge badge-ok" id="billing-badge">Pay as you go</span>
               </div>
-              <div class="alert warn">
-                <strong>Bientôt disponible.</strong>
-                Le paiement en ligne et le crédit à la demande ne sont pas encore activés.
-                Cette page est une prévisualisation : aucun paiement ne peut être effectué.
+              <div class="alert" id="billing-alert">
+                Rechargez votre crédit site en mobile money. Le crédit acheté n’expire pas.
               </div>
               <p class="small muted">Choisissez un montant prédéfini ou saisissez un montant personnalisé.</p>
               <div class="billing-amounts" id="billing-amounts" aria-label="Montants prédéfinis">
-                <button type="button" class="billing-amount" data-billing-base="1000" disabled>1 000 FCFA</button>
-                <button type="button" class="billing-amount" data-billing-base="3000" disabled>3 000 FCFA</button>
-                <button type="button" class="billing-amount" data-billing-base="6000" disabled>6 000 FCFA</button>
-                <button type="button" class="billing-amount" data-billing-base="15000" disabled>15 000 FCFA</button>
-                <button type="button" class="billing-amount" data-billing-base="50000" disabled>50 000 FCFA</button>
+                <button type="button" class="billing-amount" data-billing-base="1000">1 000 FCFA</button>
+                <button type="button" class="billing-amount" data-billing-base="3000">3 000 FCFA</button>
+                <button type="button" class="billing-amount" data-billing-base="6000">6 000 FCFA</button>
+                <button type="button" class="billing-amount" data-billing-base="15000">15 000 FCFA</button>
+                <button type="button" class="billing-amount" data-billing-base="50000">50 000 FCFA</button>
               </div>
               <label class="field full billing-custom">
                 <span id="billing-custom-label">Montant personnalisé (FCFA)</span>
-                <input type="number" id="billing-custom-input" min="1000" step="500" placeholder="ex : 10 000" disabled>
+                <input type="number" id="billing-custom-input" min="1000" step="500" placeholder="ex : 10 000">
                 <small>Minimum 1 000 FCFA — le crédit site sera ajouté à votre solde.</small>
               </label>
               <p class="small muted" id="billing-currency-note"></p>
-              <button type="button" class="btn btn-primary btn-block" disabled>Recharger — bientôt disponible</button>
+              <button type="button" class="btn btn-primary btn-block" id="billing-buy">Recharger mon crédit</button>
+              <div class="small" id="billing-status" role="status"></div>
               <p class="small muted" style="margin-top:14px">
-                Une fois disponible, le crédit acheté n’expirera pas et sera consommé au taux du crédit site.
+                Le crédit acheté est ajouté à votre wallet et consommé au taux du crédit site.
               </p>
             </section>
           </section>

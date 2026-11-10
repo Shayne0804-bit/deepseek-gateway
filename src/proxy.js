@@ -230,6 +230,13 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
       return;
     }
 
+    const walletMicroUsd = Number(client.walletMicroUsd ?? 0);
+    const passExpired = Boolean(client.expiresAt && new Date(client.expiresAt).getTime() <= Date.now());
+    const passQuotaExhausted = (client.quotaUsd != null && client.usedUsd >= client.quotaUsd - 1e-9)
+      || (client.quotaRequests != null && client.usedRequests >= client.quotaRequests)
+      || (client.quotaTokens != null && client.usedTokens >= client.quotaTokens);
+    const useWallet = walletMicroUsd > 0 && (passExpired || passQuotaExhausted);
+
     // ---- 3. Limites de debit ------------------------------------------
     if (client.rpmLimit != null) {
       const rate = limiter.hit(client.id, client.rpmLimit);
@@ -269,7 +276,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
     const responseHeaders = { ...cors, ...quotaHeaders(client) };
 
     // ---- 3 bis. Plafond glissant de credit site (5 h par defaut) -------
-    const plan = getPassPlan(client.plan);
+    const plan = useWallet ? null : getPassPlan(client.plan);
     let credit5hUsed = 0;
     let creditWeekUsed = 0;
     const windowLimit = Number(plan?.credit5hLimit ?? 0);
@@ -351,6 +358,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           requestedModel: opts.requestedModel ?? logRequestedModel,
           usage: opts.usage ?? null,
           costUsd: billedCost,
+          walletMicroUsd: useWallet ? Math.round(billedCost * 1_000_000) : 0,
           status: opts.status ?? 0,
           streamed: Boolean(opts.streamed),
           estimated: Boolean(opts.estimated),
@@ -492,7 +500,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
           pricing,
         );
         const promptCredit = promptReal * config.siteCreditRate;
-        const totalRoom = client.quotaUsd == null ? Infinity : Math.max(0, client.quotaUsd - client.usedUsd);
+        const totalRoom = useWallet ? walletMicroUsd / 1_000_000 : (client.quotaUsd == null ? Infinity : Math.max(0, client.quotaUsd - client.usedUsd));
         const fiveRoom = plan?.credit5hLimit == null ? Infinity : Math.max(0, plan.credit5hLimit - credit5hUsed);
         const weekRoom = plan?.creditWeeklyLimit == null ? Infinity : Math.max(0, plan.creditWeeklyLimit - creditWeekUsed);
         const room = Math.min(totalRoom, fiveRoom, weekRoom);

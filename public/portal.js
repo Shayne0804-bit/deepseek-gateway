@@ -619,6 +619,43 @@
     }
     const note = $('#billing-currency-note');
     if (note) note.textContent = `Montants affichés en ${info.label} selon votre localisation.`;
+    const enabled = Boolean(state.paymentsEnabled);
+    document.querySelectorAll('[data-billing-base]').forEach((button) => { button.disabled = !enabled; });
+    if (input) input.disabled = !enabled;
+    const buy = $('#billing-buy');
+    if (buy) buy.disabled = !enabled;
+    const alert = $('#billing-alert');
+    if (alert) alert.textContent = enabled
+      ? 'Rechargez votre crédit site en mobile money. Le crédit acheté n’expire pas.'
+      : 'Le paiement en ligne n’est pas encore configuré sur cette passerelle.';
+  }
+
+  function billingAmountValue(baseFcfa) {
+    const { rate, decimals } = billingCurrencyInfo();
+    const value = (Number(baseFcfa) / BILLING_BASE_FCFA) * rate;
+    return decimals === 0 ? Math.round(value) : Number(value.toFixed(2));
+  }
+
+  async function startWalletRecharge(button) {
+    const input = $('#billing-custom-input');
+    const status = $('#billing-status');
+    const amount = Number(String(input?.value ?? '').replace(',', '.'));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      if (status) status.textContent = 'Choisissez un montant.';
+      return;
+    }
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Préparation…';
+    try {
+      const data = await api('/wallet/checkout', { method: 'POST', body: { amount } });
+      if (!data.checkout_url) throw new Error('Page de paiement indisponible.');
+      window.location.assign(data.checkout_url);
+    } catch (err) {
+      if (status) status.textContent = err.message;
+      button.disabled = false;
+      button.textContent = label;
+    }
   }
 
   function planCurrencyNote() {    const currency = state.currency;
@@ -1617,6 +1654,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     if (me.limits?.credit5h) cards.push(quotaCard('Crédit / 5 h', me.limits.credit5h, fmtUsd));
     if (me.limits?.creditWeek) cards.push(quotaCard('Crédit / semaine', me.limits.creditWeek, fmtUsd));
     cards.push(passCard(me));
+    if (Number(me.client?.walletUsd) > 0) cards.push(quotaCard('Wallet PAYG', { used: 0, limit: me.client.walletUsd, remaining: me.client.walletUsd }, fmtUsd));
     $('#portal-quotas').innerHTML = cards.join('');
 
     const series = me.usage?.series ?? [];
@@ -1815,6 +1853,18 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
       }
     });
     document.addEventListener('click', async (event) => {
+      const amountButton = event.target.closest('[data-billing-base]');
+      if (amountButton) {
+        const input = $('#billing-custom-input');
+        if (input) input.value = String(billingAmountValue(amountButton.dataset.billingBase));
+        return;
+      }
+      const walletButton = event.target.closest('#billing-buy');
+      if (walletButton) {
+        event.preventDefault();
+        await startWalletRecharge(walletButton);
+        return;
+      }
       const buyButton = event.target.closest('[data-buy-plan]');
       if (!buyButton) return;
       event.preventDefault();

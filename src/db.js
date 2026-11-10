@@ -215,6 +215,8 @@ export async function clientUsageSeriesSince(db, clientId, sinceIso) {
     ? mongo.clientUsageSeriesSince(db, clientId, sinceIso)
     : sqlite.clientUsageSeriesSince(db, clientId, sinceIso);
 }
+export async function creditWallet(db, clientId, amountMicroUsd) { return dbDriver(db) === 'mongo' ? mongo.creditWallet(db, clientId, amountMicroUsd) : sqlite.creditWallet(db, clientId, amountMicroUsd); }
+export async function debitWallet(db, clientId, amountMicroUsd) { return dbDriver(db) === 'mongo' ? mongo.debitWallet(db, clientId, amountMicroUsd) : sqlite.debitWallet(db, clientId, amountMicroUsd); }
 
 /* ------------------------------- sessions ------------------------------- */
 export async function insertAdminSession(db, tokenHash, createdAt, expiresAt) {
@@ -306,6 +308,7 @@ export async function recordAdminAudit(db, entry) {
 export async function listAdminAudit(db, options) {
   return dbDriver(db) === 'mongo' ? mongo.listAdminAudit(db, options) : sqlite.listAdminAudit(db, options);
 }
+
 
 
 

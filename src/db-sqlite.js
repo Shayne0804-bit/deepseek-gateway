@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS clients (
   used_tokens INTEGER NOT NULL DEFAULT 0,
   used_requests INTEGER NOT NULL DEFAULT 0,
   used_usd REAL NOT NULL DEFAULT 0,
+  wallet_micro_usd INTEGER NOT NULL DEFAULT 0,
   period TEXT NOT NULL DEFAULT 'monthly',
   period_start TEXT NOT NULL,
   rpm_limit INTEGER,
@@ -186,6 +187,16 @@ function migrateDb(db) {
   if (!clientColumns.some((column) => column.name === 'plan')) {
     db.exec('ALTER TABLE clients ADD COLUMN plan TEXT');
   }
+  if (!clientColumns.some((column) => column.name === 'wallet_micro_usd')) {
+    db.exec('ALTER TABLE clients ADD COLUMN wallet_micro_usd INTEGER NOT NULL DEFAULT 0');
+  }
+  const orderColumns = db.prepare('PRAGMA table_info(payment_orders)').all();
+  if (orderColumns.length && !orderColumns.some((column) => column.name === 'kind')) {
+    db.exec("ALTER TABLE payment_orders ADD COLUMN kind TEXT NOT NULL DEFAULT 'pass'");
+  }
+  if (orderColumns.length && !orderColumns.some((column) => column.name === 'credit_micro_usd')) {
+    db.exec('ALTER TABLE payment_orders ADD COLUMN credit_micro_usd INTEGER NOT NULL DEFAULT 0');
+  }
   db.exec(
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_email ON clients (email COLLATE NOCASE) WHERE email IS NOT NULL",
   );
@@ -247,6 +258,8 @@ export function mapClientRow(row) {
     usedTokens: Number(row.used_tokens ?? 0),
     usedRequests: Number(row.used_requests ?? 0),
     usedUsd: Number(row.used_usd ?? 0),
+    walletMicroUsd: Number(row.wallet_micro_usd ?? 0),
+    walletUsd: Number(row.wallet_micro_usd ?? 0) / 1_000_000,
     period: row.period,
     periodStart: row.period_start,
     rpmLimit: row.rpm_limit == null ? null : Number(row.rpm_limit),
@@ -354,10 +367,10 @@ export function insertClient(db, client) {
     `INSERT INTO clients (
        id, name, key_hash, key_prefix, enabled,
        quota_tokens, quota_requests, quota_usd,
-       used_tokens, used_requests, used_usd,
+       used_tokens, used_requests, used_usd, wallet_micro_usd,
        period, period_start, rpm_limit, concurrency_limit,
        max_output_tokens, allowed_models, expires_at, note, created_at, email, plan
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     client.id,
     client.name,
@@ -370,6 +383,7 @@ export function insertClient(db, client) {
     client.usedTokens ?? 0,
     client.usedRequests ?? 0,
     client.usedUsd ?? 0,
+    client.walletMicroUsd ?? 0,
     client.period,
     client.periodStart,
     client.rpmLimit,
@@ -402,6 +416,7 @@ export function updateClientFields(db, id, fields) {
     note: 'note',
     keyHash: 'key_hash',
     keyPrefix: 'key_prefix',
+    walletMicroUsd: 'wallet_micro_usd',
   };
   const sets = [];
   const values = [];
@@ -811,14 +826,26 @@ export function insertUsageAndUpdateClient(db, logRow) {
   db.exec('BEGIN IMMEDIATE');
   try {
     insertUsageLog(db, logRow);
-    db.prepare(
-      `UPDATE clients
-          SET used_tokens = used_tokens + ?,
-              used_requests = used_requests + 1,
-              used_usd = used_usd + ?,
-              last_used_at = ?
-        WHERE id = ?`,
-    ).run(logRow.totalTokens, logRow.costUsd, logRow.createdAt, logRow.clientId);
+    if (Number(logRow.walletMicroUsd) > 0) {
+      const result = db.prepare(
+        `UPDATE clients
+            SET used_tokens = used_tokens + ?,
+                used_requests = used_requests + 1,
+                wallet_micro_usd = wallet_micro_usd - ?,
+                last_used_at = ?
+          WHERE id = ? AND wallet_micro_usd >= ?`,
+      ).run(logRow.totalTokens, logRow.walletMicroUsd, logRow.createdAt, logRow.clientId, logRow.walletMicroUsd);
+      if (result.changes !== 1) throw new Error('Wallet insuffisant.');
+    } else {
+      db.prepare(
+        `UPDATE clients
+            SET used_tokens = used_tokens + ?,
+                used_requests = used_requests + 1,
+                used_usd = used_usd + ?,
+                last_used_at = ?
+          WHERE id = ?`,
+      ).run(logRow.totalTokens, logRow.costUsd, logRow.createdAt, logRow.clientId);
+    }
     db.exec('COMMIT');
   } catch (err) {
     try {
@@ -911,6 +938,8 @@ function mapPaymentOrder(row) {
     id: row.id,
     clientId: row.client_id,
     plan: row.plan,
+    kind: row.kind || 'pass',
+    creditMicroUsd: Number(row.credit_micro_usd ?? 0),
     amount: row.amount,
     currency: row.currency,
     country: row.country,
@@ -926,10 +955,10 @@ function mapPaymentOrder(row) {
 
 export function insertPaymentOrder(db, order) {
   db.prepare(
-    `INSERT INTO payment_orders (id, client_id, plan, amount, currency, country, checkout_id, checkout_url, status, provider_payment_id, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO payment_orders (id, client_id, plan, kind, credit_micro_usd, amount, currency, country, checkout_id, checkout_url, status, provider_payment_id, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
-    order.id, order.clientId, order.plan, order.amount, order.currency, order.country ?? null,
+    order.id, order.clientId, order.plan, order.kind ?? 'pass', order.creditMicroUsd ?? 0, order.amount, order.currency, order.country ?? null,
     order.checkoutId ?? null, order.checkoutUrl ?? null, order.status ?? 'pending', order.providerPaymentId ?? null, order.createdAt,
   );
 }
@@ -972,5 +1001,19 @@ export function claimPaymentOrder(db, id, fields) {
   const result = db.prepare(
     "UPDATE payment_orders SET status = 'processing', paid_at = ?, provider_payment_id = ? WHERE id = ? AND status = 'pending'",
   ).run(fields.paidAt ?? new Date().toISOString(), fields.providerPaymentId ?? null, id);
+  return result.changes === 1;
+}
+
+/** Ajoute du credit site au wallet (micro-USD entiers). */
+export function creditWallet(db, clientId, amountMicroUsd) {
+  db.prepare('UPDATE clients SET wallet_micro_usd = wallet_micro_usd + ? WHERE id = ?').run(Math.round(amountMicroUsd), clientId);
+}
+
+/** Debite le wallet sans jamais passer sous zero. */
+export function debitWallet(db, clientId, amountMicroUsd) {
+  const value = Math.round(amountMicroUsd);
+  const result = db.prepare(
+    'UPDATE clients SET wallet_micro_usd = wallet_micro_usd - ? WHERE id = ? AND wallet_micro_usd >= ?',
+  ).run(value, clientId, value);
   return result.changes === 1;
 }

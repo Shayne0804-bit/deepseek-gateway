@@ -58,7 +58,8 @@ export function checkClientAccess(client, now = new Date()) {
       message: 'Cette cle API a ete desactivee par l administrateur.',
     };
   }
-  if (client.expiresAt && new Date(client.expiresAt).getTime() <= now.getTime()) {
+  const hasWallet = Number(client.walletMicroUsd ?? 0) > 0;
+  if (client.expiresAt && new Date(client.expiresAt).getTime() <= now.getTime() && !hasWallet) {
     return {
       status: 403,
       type: 'permission_error',
@@ -66,7 +67,7 @@ export function checkClientAccess(client, now = new Date()) {
       message: `Cette cle API a expire le ${client.expiresAt}.`,
     };
   }
-  if (client.quotaRequests != null && client.usedRequests >= client.quotaRequests) {
+  if (!hasWallet && client.quotaRequests != null && client.usedRequests >= client.quotaRequests) {
     return {
       status: 429,
       type: 'insufficient_quota',
@@ -74,7 +75,7 @@ export function checkClientAccess(client, now = new Date()) {
       message: `Quota de requetes epuise (${client.quotaRequests} requetes par ${client.period}).`,
     };
   }
-  if (client.quotaTokens != null && client.usedTokens >= client.quotaTokens) {
+  if (!hasWallet && client.quotaTokens != null && client.usedTokens >= client.quotaTokens) {
     return {
       status: 429,
       type: 'insufficient_quota',
@@ -82,7 +83,7 @@ export function checkClientAccess(client, now = new Date()) {
       message: `Quota de tokens epuise (${client.quotaTokens} tokens par ${client.period}).`,
     };
   }
-  if (client.quotaUsd != null && client.usedUsd >= client.quotaUsd - 1e-9) {
+  if (!hasWallet && client.quotaUsd != null && client.usedUsd >= client.quotaUsd - 1e-9) {
     return {
       status: 429,
       type: 'insufficient_quota',
@@ -211,6 +212,7 @@ export async function recordUsage(
     requestedModel = null,
     usage = null,
     costUsd = 0,
+    walletMicroUsd = 0,
     status = 0,
     streamed = false,
     estimated = false,
@@ -233,6 +235,7 @@ export async function recordUsage(
     completionTokens,
     totalTokens,
     costUsd: cost,
+    walletMicroUsd: Math.max(0, Math.round(Number(walletMicroUsd) || 0)),
     status,
     streamed,
     estimated,

@@ -442,6 +442,8 @@ export function mapClientRow(row) {
     usedTokens: Number(row.used_tokens ?? 0),
     usedRequests: Number(row.used_requests ?? 0),
     usedUsd: Number(row.used_usd ?? 0),
+    walletMicroUsd: Number(row.wallet_micro_usd ?? 0),
+    walletUsd: Number(row.wallet_micro_usd ?? 0) / 1_000_000,
     period: row.period,
     periodStart: row.period_start,
     rpmLimit: row.rpm_limit == null ? null : Number(row.rpm_limit),
@@ -578,6 +580,7 @@ export async function insertClient(handle, client) {
     quota_tokens: client.quotaTokens ?? null,
     quota_requests: client.quotaRequests ?? null,
     quota_usd: client.quotaUsd ?? null,
+    wallet_micro_usd: client.walletMicroUsd ?? 0,
     used_tokens: client.usedTokens ?? 0,
     used_requests: client.usedRequests ?? 0,
     used_usd: client.usedUsd ?? 0,
@@ -671,17 +674,22 @@ export async function insertUsageLog(handle, logRow) {
  */
 export async function insertUsageAndUpdateClient(handle, logRow) {
   await insertUsageLog(handle, logRow);
-  await getCollection(handle, 'clients').updateOne(
-    { id: logRow.clientId ?? null },
-    {
-      $inc: {
-        used_tokens: safeNumber(logRow.totalTokens),
-        used_requests: 1,
-        used_usd: safeNumber(logRow.costUsd),
-      },
-      $set: { last_used_at: logRow.createdAt ?? null },
-    },
-  );
+  const walletMicroUsd = Math.max(0, Math.round(Number(logRow.walletMicroUsd) || 0));
+  const inc = { used_tokens: safeNumber(logRow.totalTokens), used_requests: 1 };
+  if (walletMicroUsd > 0) {
+    inc.wallet_micro_usd = -walletMicroUsd;
+    const result = await getCollection(handle, 'clients').updateOne(
+      { id: logRow.clientId ?? null, wallet_micro_usd: { $gte: walletMicroUsd } },
+      { $inc: inc, $set: { last_used_at: logRow.createdAt ?? null } },
+    );
+    if (result.modifiedCount !== 1) throw new Error('Wallet insuffisant.');
+  } else {
+    inc.used_usd = safeNumber(logRow.costUsd);
+    await getCollection(handle, 'clients').updateOne(
+      { id: logRow.clientId ?? null },
+      { $inc: inc, $set: { last_used_at: logRow.createdAt ?? null } },
+    );
+  }
 }
 
 export async function countUsageSince(handle, sinceIso) {
@@ -1085,6 +1093,8 @@ function mapPaymentOrder(row) {
     id: row.id,
     clientId: row.client_id,
     plan: row.plan,
+    kind: row.kind || 'pass',
+    creditMicroUsd: Number(row.credit_micro_usd ?? 0),
     amount: row.amount,
     currency: row.currency,
     country: row.country,
@@ -1103,6 +1113,8 @@ export async function insertPaymentOrder(handle, order) {
     id: order.id,
     client_id: order.clientId,
     plan: order.plan,
+    kind: order.kind ?? 'pass',
+    credit_micro_usd: order.creditMicroUsd ?? 0,
     amount: order.amount,
     currency: order.currency,
     country: order.country ?? null,
@@ -1150,4 +1162,19 @@ export async function claimPaymentOrder(handle, id, fields) {
     { returnDocument: 'before' },
   );
   return Boolean(result);
+}
+
+/** Ajoute du credit site au wallet (micro-USD entiers). */
+export async function creditWallet(handle, clientId, amountMicroUsd) {
+  await getCollection(handle, 'clients').updateOne({ id: clientId }, { $inc: { wallet_micro_usd: Math.round(amountMicroUsd) } });
+}
+
+/** Debite le wallet sans jamais passer sous zero. */
+export async function debitWallet(handle, clientId, amountMicroUsd) {
+  const value = Math.round(amountMicroUsd);
+  const result = await getCollection(handle, 'clients').updateOne(
+    { id: clientId, $expr: { $gte: ['$wallet_micro_usd', value] } },
+    { $inc: { wallet_micro_usd: -value } },
+  );
+  return result.modifiedCount === 1;
 }

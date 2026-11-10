@@ -1291,3 +1291,8 @@ Les cartes de pass du portail ont un bouton **Payer ce pass / Renouveler ce pass
 
 Variables : `SASPAY_API_KEY`, `SASPAY_WEBHOOK_SECRET`, `SASPAY_BASE_URL`. Webhook SasPay à configurer dans le dashboard avec l'URL `https://api.valariamenu.com/portal/api/saspay/webhook` et les événements `transaction.success` / `transaction.failed`.
 
+
+## Pay as you go
+
+L'onglet **Recharger** permet d'acheter du credit site au montant libre (minimum 1 000 FCFA), converti avec `PAYG_FCFA_PER_CREDIT` (550 FCFA par dollar de credit par defaut). Le credit est stocke dans un wallet en micro-USD entiers, sans expiration. Quand le pass n'a plus de credit ou est expire, les requetes consomment le wallet. Le paiement passe par SasPay checkout et le meme webhook signe.
+
