@@ -1447,7 +1447,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
             description: `Pass VALARIA ${plan.name}`,
             customer_email: client.email || 'client@valariamenu.com',
             customer_name: client.name,
-            return_url: `${requestOrigin(req, config)}/portal?pass_order=${order.id}`,
+            return_url: `${requestOrigin(req, config)}/payment?order=${order.id}`,
             metadata: { order_id: order.id, client_id: client.id, plan_id: plan.id },
           });
           await updatePaymentOrder(db, order.id, {
@@ -1501,6 +1501,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
 
   return { handle };
 }
+
 
 
 
