@@ -688,14 +688,17 @@ export function createPortalApi({ config, db, log, mailer = null }) {
 
   async function applyPaidPaymentOrder(order, providerPaymentId) {
     if (!order || order.status !== 'pending') return order;
+    const paidAt = new Date().toISOString();
     const claimed = await claimPaymentOrder(db, order.id, {
-      paidAt: new Date().toISOString(),
+      paidAt,
       providerPaymentId: providerPaymentId ?? null,
     });
     if (!claimed) return getPaymentOrder(db, order.id);
     try {
       const preset = passPlanFields(order.plan);
-      if (!preset) throw new Error(`Pass inconnu : ${order.plan}`);
+      const passPlan = getPassPlan(order.plan);
+      if (!preset || !passPlan) throw new Error(`Pass inconnu : ${order.plan}`);
+      const client = await getClientById(db, order.clientId);
       await updateClientFields(db, order.clientId, preset);
       await resetClientUsage(db, order.clientId, periodKeyFor(preset.period));
       await updatePaymentOrder(db, order.id, {
@@ -703,6 +706,22 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         creditedAt: new Date().toISOString(),
       });
       log.info(`[paiement] Pass ${order.plan} activé pour ${order.clientId} (${order.id}).`);
+      if (mailer && mailer.transport !== 'disabled' && typeof mailer.sendPaymentReceipt === 'function' && client?.email) {
+        const receipt = {
+          customerName: client.name,
+          orderId: order.id,
+          planName: passPlan.name,
+          amount: order.amount,
+          currency: order.currency,
+          paidAt,
+          expiresAt: preset.expiresAt,
+          quotaUsd: preset.quotaUsd,
+          credit5h: passPlan.credit5hLimit,
+          creditWeek: passPlan.creditWeeklyLimit,
+        };
+        Promise.resolve(mailer.sendPaymentReceipt({ to: client.email, receipt }))
+          .catch((err) => log.warn(`[paiement] Reçu email impossible pour ${order.id} : ${err.message}`));
+      }
     } catch (err) {
       await updatePaymentOrder(db, order.id, { status: 'failed_credit' });
       log.error(`[paiement] Crédit impossible pour ${order.id} : ${err.message}`);
@@ -1501,6 +1520,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
 
   return { handle };
 }
+
 
 
 

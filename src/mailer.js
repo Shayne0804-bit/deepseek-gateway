@@ -79,8 +79,80 @@ export function buildPortalCodeEmail({ to, code, minutes, from, fromName }) {
   return { subject, text, html, message: body, fromHeader };
 }
 
-/* ----------------------------------------------------------------- SMTP -- */
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[char]));
+}
 
+/** Reçu de paiement d'un pass, envoye une seule fois apres confirmation. */
+export function buildPaymentReceiptEmail({ to, receipt, from, fromName }) {
+  const amount = `${receipt.amount} ${receipt.currency}`;
+  const subject = `Reçu de paiement — ${receipt.planName}`;
+  const text = [
+    `Merci ${receipt.customerName || ''},`,
+    '',
+    'Votre paiement a été confirmé et votre pass est activé.',
+    '',
+    `Reçu : ${receipt.orderId}`,
+    `Pass : ${receipt.planName}`,
+    `Montant payé : ${amount}`,
+    `Date de paiement : ${receipt.paidAt}`,
+    `Fin du pass : ${receipt.expiresAt}`,
+    `Crédit site : ${receipt.quotaUsd} $`,
+    receipt.credit5h ? `Plafond 5 h : ${receipt.credit5h} $` : null,
+    receipt.creditWeek ? `Plafond semaine : ${receipt.creditWeek} $` : null,
+    '',
+    'Ce reçu est généré automatiquement par VALARIA Gateway API.',
+  ].filter(Boolean).join('\n');
+  const html = `<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>${escapeHtml(subject)}</title></head>
+<body style="margin:0;padding:24px;background:#040705;color:#d6f7df;font-family:ui-monospace,Consolas,monospace">
+  <div style="max-width:540px;margin:0 auto;border:1px solid #1f4a30;background:#07110b;padding:24px">
+    <p style="margin:0 0 6px;color:#3ee97f;font-size:12px">&gt;_ VALARIA Gateway API</p>
+    <h1 style="margin:0 0 16px;font-size:20px">Reçu de paiement</h1>
+    <p style="margin:0 0 18px;line-height:1.6">Votre paiement a été confirmé et votre pass est activé.</p>
+    <p style="margin:0 0 14px;font-size:18px;color:#3ee97f"><strong>${escapeHtml(receipt.planName)}</strong></p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;line-height:1.7">
+      <tr><td style="color:#8ab89a;padding:4px 0">Reçu</td><td style="text-align:right">${escapeHtml(receipt.orderId)}</td></tr>
+      <tr><td style="color:#8ab89a;padding:4px 0">Montant payé</td><td style="text-align:right"><strong>${escapeHtml(amount)}</strong></td></tr>
+      <tr><td style="color:#8ab89a;padding:4px 0">Date</td><td style="text-align:right">${escapeHtml(receipt.paidAt)}</td></tr>
+      <tr><td style="color:#8ab89a;padding:4px 0">Fin du pass</td><td style="text-align:right">${escapeHtml(receipt.expiresAt)}</td></tr>
+      <tr><td style="color:#8ab89a;padding:4px 0">Crédit site</td><td style="text-align:right">${escapeHtml(receipt.quotaUsd)} $</td></tr>
+      ${receipt.credit5h ? `<tr><td style="color:#8ab89a;padding:4px 0">Plafond 5 h</td><td style="text-align:right">${escapeHtml(receipt.credit5h)} $</td></tr>` : ''}
+      ${receipt.creditWeek ? `<tr><td style="color:#8ab89a;padding:4px 0">Plafond semaine</td><td style="text-align:right">${escapeHtml(receipt.creditWeek)} $</td></tr>` : ''}
+    </table>
+    <p style="margin:18px 0 0;font-size:12px;line-height:1.6;color:#5d8769">Ce reçu est généré automatiquement par VALARIA Gateway API.</p>
+  </div>
+</body></html>`;
+  const fromHeader = fromName ? `${encodeHeader(fromName)} <${from}>` : `<${from}>`;
+  const messageId = `<${Date.now()}.${Math.random().toString(36).slice(2)}@valaria-gateway>`;
+  const message = [
+    `From: ${fromHeader}`,
+    `To: <${to}>`,
+    `Subject: ${encodeHeader(subject)}`,
+    `Date: ${new Date().toUTCString()}`,
+    `Message-ID: ${messageId}`,
+    'MIME-Version: 1.0',
+    'Content-Type: multipart/alternative; boundary="dsg-receipt-boundary"',
+    '',
+    '--dsg-receipt-boundary',
+    'Content-Type: text/plain; charset="utf-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    wrapBase64(text),
+    '--dsg-receipt-boundary',
+    'Content-Type: text/html; charset="utf-8"',
+    'Content-Transfer-Encoding: base64',
+    '',
+    wrapBase64(html),
+    '--dsg-receipt-boundary--',
+    '',
+  ].join('\r\n');
+  return { subject, text, html, message, fromHeader };
+}
+
+/* ----------------------------------------------------------------- SMTP -- */
 class SmtpSession {
   constructor(socket) {
     this.socket = socket;
@@ -225,12 +297,7 @@ export function createMailer(config, log) {
   const fromName = config.mailFromName || 'VALARIA Gateway API';
   const enabled = Boolean(config.emailLoginEnabled);
 
-  async function sendPortalCode({ to, code, minutes }) {
-    if (transport === 'console') {
-      log.warn(`[email:dev] Code de connexion pour ${to} : ${code} (valable ${minutes} min)`);
-      return { ok: true, transport };
-    }
-    const email = buildPortalCodeEmail({ to, code, minutes, from, fromName });
+  async function deliverEmail(email, to) {
     if (transport === 'smtp') {
       return smtpSend({ smtpUrl: config.smtpUrl, from, to, message: email.message, fromName });
     }
@@ -259,11 +326,30 @@ export function createMailer(config, log) {
     throw new Error('Aucun transport email configuré.');
   }
 
+  async function sendPortalCode({ to, code, minutes }) {
+    if (transport === 'console') {
+      log.warn(`[email:dev] Code de connexion pour ${to} : ${code} (valable ${minutes} min)`);
+      return { ok: true, transport };
+    }
+    const email = buildPortalCodeEmail({ to, code, minutes, from, fromName });
+    return deliverEmail(email, to);
+  }
+
+  async function sendPaymentReceipt({ to, receipt }) {
+    if (transport === 'console') {
+      log.warn(`[email:dev] Reçu ${receipt.orderId} pour ${to} : ${receipt.amount} ${receipt.currency} (${receipt.planName}).`);
+      return { ok: true, transport };
+    }
+    const email = buildPaymentReceiptEmail({ to, receipt, from, fromName });
+    return deliverEmail(email, to);
+  }
+
   return {
     enabled,
     transport,
     from,
     sendPortalCode,
+    sendPaymentReceipt,
   };
 }
 

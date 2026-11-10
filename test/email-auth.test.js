@@ -6,7 +6,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { startGateway } from '../src/app.js';
-import { buildPortalCodeEmail, createMailer, parseSmtpUrl } from '../src/mailer.js';
+import { buildPaymentReceiptEmail, buildPortalCodeEmail, createMailer, parseSmtpUrl } from '../src/mailer.js';
 
 const ADMIN_PASSWORD = 'email-admin-password-123';
 const silentLogger = { debug() {}, info() {}, warn() {}, error() {} };
@@ -254,3 +254,27 @@ test('mailer : URL SMTP et mode console', async () => {
 
 
 
+
+test('reçu de paiement : contient pass, montant et reference', () => {
+  const email = buildPaymentReceiptEmail({
+    to: 'client@example.com',
+    from: 'no-reply@mail.example.com',
+    fromName: 'VALARIA Gateway API',
+    receipt: {
+      customerName: 'Client Test',
+      orderId: 'order-123',
+      planName: 'Découverte',
+      amount: '2558.00',
+      currency: 'XOF',
+      paidAt: '2026-11-10T09:00:00.000Z',
+      expiresAt: '2026-11-17T09:00:00.000Z',
+      quotaUsd: 5,
+      credit5h: 0.45,
+      creditWeek: 5,
+    },
+  });
+  assert.match(email.subject, /Reçu de paiement/);
+  assert.match(email.text, /order-123/);
+  assert.match(email.text, /2558\.00 XOF/);
+  assert.match(email.html, /Découverte/);
+});

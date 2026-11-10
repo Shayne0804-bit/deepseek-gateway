@@ -1,6 +1,6 @@
 {
   "name": "valaria-gateway",
-  "version": "3.10.1",
+  "version": "3.10.2",
   "description": "Client et serveur VALARIA Gateway API : console cliente connectée à une instance hébergée (quotas, chat, logs) et passerelle auto-hébergeable.",
   "type": "module",
   "bin": {
@@ -56,5 +56,6 @@
     "mongodb": "^7.8.0"
   }
 }
+
 
 
