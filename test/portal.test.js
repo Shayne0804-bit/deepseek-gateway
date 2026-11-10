@@ -143,15 +143,15 @@ test('catalogue des pass et pass applique au compte', async () => {
     assert.equal(data.client.planName, 'Créateur');
     assert.equal(data.client.quotaRequests, null);
     assert.equal(data.client.quotaUsd, 15);
-    assert.equal(data.client.rpmLimit, 60);
-    assert.equal(data.client.concurrencyLimit, 3);
+    assert.equal(data.client.rpmLimit, 120);
+    assert.equal(data.client.concurrencyLimit, 6);
     assert.ok(data.client.expiresAt, 'date de fin du pass automatique');
     const decouverte = catalog.plans.find((plan) => plan.id === 'decouverte');
     assert.equal(decouverte.durationDays, 7);
-    assert.equal(decouverte.credit5hLimit, 0.45);
+    assert.equal(decouverte.credit5hLimit, 1.5);
     const createur = catalog.plans.find((plan) => plan.id === 'createur');
     assert.equal(createur.durationDays, 14);
-    assert.equal(createur.credit5hLimit, 0.7);
+    assert.equal(createur.credit5hLimit, 2.5);
 
     const login = await portalLogin(started.url, data.key);
     assert.equal(login.status, 200);
@@ -269,6 +269,7 @@ test('portail : isolation des donnees entre deux cles', async () => {
     await started.close();
   }
 });
+
 
 
 

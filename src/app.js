@@ -14,11 +14,14 @@ import {
   closeDb,
   deleteUsageLogsBefore,
   getSetting,
+  listClients,
+  updateClientFields,
   openDb,
   setSetting,
 } from './db.js';
 import { bootstrapAdmin, migrateProviderSecret, resolveProviderConfig } from './settings.js';
 import { createAdminApi } from './admin-api.js';
+import { getPassPlan } from './plans.js';
 import { createPortalApi } from './portal-api.js';
 import { createMailer } from './mailer.js';
 import { createProxyHandler, isProxyPath } from './proxy.js';
@@ -214,6 +217,20 @@ export async function startGateway(overrides = {}) {
   const trialQuotaCleanup = await clearTrialRequestQuotas(db);
   if (trialQuotaCleanup > 0) {
     log.info(`Quota de requetes retire sur ${trialQuotaCleanup} pass(es) d'essai.`);
+  }
+  // Releve les anciennes limites stockees (RPM, concurrence, sortie) vers
+  // les profils actuels, sans toucher aux credits ni aux dates de pass.
+  for (const client of await listClients(db)) {
+    const preset = client.plan === 'essai'
+      ? { rpmLimit: config.trialRpmLimit, concurrencyLimit: config.trialConcurrencyLimit, maxOutputTokens: config.trialMaxOutputTokens }
+      : getPassPlan(client.plan);
+    if (!preset) continue;
+    const changes = {};
+    if (client.rpmLimit == null || client.rpmLimit < (preset.rpmLimit ?? 0)) changes.rpmLimit = preset.rpmLimit;
+    if (client.concurrencyLimit == null || client.concurrencyLimit < (preset.concurrencyLimit ?? 0)) changes.concurrencyLimit = preset.concurrencyLimit;
+    if (client.maxOutputTokens == null || client.maxOutputTokens < (preset.maxOutputTokens ?? 0)) changes.maxOutputTokens = preset.maxOutputTokens;
+    if (client.plan === 'essai' && (client.quotaUsd == null || client.quotaUsd < config.trialQuotaUsd)) changes.quotaUsd = config.trialQuotaUsd;
+    if (Object.keys(changes).length) await updateClientFields(db, client.id, changes);
   }
   if (!(await getSetting(db, 'trial_credit_site_migrated', false))) {
     const raised = await raiseTrialCreditQuota(db, config.trialQuotaUsd);
