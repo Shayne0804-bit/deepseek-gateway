@@ -1284,3 +1284,10 @@ Les reservations de credit sont persistees en base (table/collection `credit_res
 
 
 
+
+## Paiement des pass avec SasPay
+
+Les cartes de pass du portail ont un bouton **Payer ce pass / Renouveler ce pass** quand `SASPAY_API_KEY` est configurée. Le bouton crée une session checkout SasPay côté serveur, redirige vers `checkout_url`, puis le retour portail confirme le paiement via `/checkout-sessions/{id}/status/` avant d'activer le pass. Un webhook signé `/portal/api/saspay/webhook` réconcilie aussi les commandes en attente.
+
+Variables : `SASPAY_API_KEY`, `SASPAY_WEBHOOK_SECRET`, `SASPAY_BASE_URL`. Webhook SasPay à configurer dans le dashboard avec l'URL `https://api.valariamenu.com/portal/api/saspay/webhook` et les événements `transaction.success` / `transaction.failed`.
+

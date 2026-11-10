@@ -199,11 +199,17 @@ export async function raiseTrialCreditQuota(db, minUsd) {
     ? mongo.raiseTrialCreditQuota(db, minUsd)
     : sqlite.raiseTrialCreditQuota(db, minUsd);
 }
+export async function insertPaymentOrder(db, order) { return dbDriver(db) === 'mongo' ? mongo.insertPaymentOrder(db, order) : sqlite.insertPaymentOrder(db, order); }
+export async function getPaymentOrder(db, id) { return dbDriver(db) === 'mongo' ? mongo.getPaymentOrder(db, id) : sqlite.getPaymentOrder(db, id); }
+export async function updatePaymentOrder(db, id, fields) { return dbDriver(db) === 'mongo' ? mongo.updatePaymentOrder(db, id, fields) : sqlite.updatePaymentOrder(db, id, fields); }
+export async function listPendingPaymentOrders(db, limit = 50) { return dbDriver(db) === 'mongo' ? mongo.listPendingPaymentOrders(db, limit) : sqlite.listPendingPaymentOrders(db, limit); }
+export async function listClientPaymentOrders(db, clientId, limit = 20) { return dbDriver(db) === 'mongo' ? mongo.listClientPaymentOrders(db, clientId, limit) : sqlite.listClientPaymentOrders(db, clientId, limit); }
 export async function clearTrialRequestQuotas(db) {
   return dbDriver(db) === 'mongo'
     ? mongo.clearTrialRequestQuotas(db)
     : sqlite.clearTrialRequestQuotas(db);
 }
+export async function claimPaymentOrder(db, id, fields) { return dbDriver(db) === 'mongo' ? mongo.claimPaymentOrder(db, id, fields) : sqlite.claimPaymentOrder(db, id, fields); }
 export async function clientUsageSeriesSince(db, clientId, sinceIso) {
   return dbDriver(db) === 'mongo'
     ? mongo.clientUsageSeriesSince(db, clientId, sinceIso)
@@ -300,6 +306,8 @@ export async function recordAdminAudit(db, entry) {
 export async function listAdminAudit(db, options) {
   return dbDriver(db) === 'mongo' ? mongo.listAdminAudit(db, options) : sqlite.listAdminAudit(db, options);
 }
+
+
 
 
 

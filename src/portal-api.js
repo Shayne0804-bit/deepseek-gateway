@@ -41,6 +41,13 @@ import {
   insertCliToken,
   listCliTokensByClient,
   revokeCliToken,
+  insertPaymentOrder,
+  getPaymentOrder,
+  updatePaymentOrder,
+  listPendingPaymentOrders,
+  listClientPaymentOrders,
+  claimPaymentOrder,
+  resetClientUsage,
 } from './db.js';
 import {
   displayKeyPrefix,
@@ -60,9 +67,10 @@ import {
 } from './quota.js';
 import { loadPricing } from './pricing.js';
 import { loadModelAliases, publicModelIds } from './model-aliases.js';
-import { PASS_PLANS, getPassPlan, publicPlan } from './plans.js';
+import { PASS_PLANS, getPassPlan, passPlanFields, publicPlan } from './plans.js';
 import { currencyContext } from './currency.js';
 import { deviceHashFor, isDisposableEmail } from './abuse.js';
+import { createSaspayCheckout, getSaspayCheckoutStatus, verifySaspayWebhook } from './saspay.js';
 import { lookupIpqsEmail, lookupIpqsIp, verifyHcaptcha, verifyTurnstile } from './fraud.js';
 import {
   bearerToken,
@@ -71,6 +79,7 @@ import {
   isHttpsRequest,
   originAllowed,
   parseCookies,
+  readBody,
   readJsonBody,
   sendApiError,
   sendJson,
@@ -658,6 +667,96 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     };
   }
 
+  const PAYABLE_CURRENCIES = new Set([
+    'XOF', 'XAF', 'NGN', 'GHS', 'KES', 'TZS', 'UGX', 'RWF', 'ZMW', 'MWK', 'CDF', 'GNF',
+  ]);
+  const CURRENCY_COUNTRY = { XOF: 'BJ', XAF: 'CM', NGN: 'NG', GHS: 'GH', KES: 'KE', TZS: 'TZ', UGX: 'UG', RWF: 'RW', ZMW: 'ZM', MWK: 'MW', CDF: 'CD', GNF: 'GN' };
+
+  function publicPaymentOrder(order) {
+    if (!order) return null;
+    return {
+      id: order.id,
+      plan: order.plan,
+      amount: order.amount,
+      currency: order.currency,
+      status: order.status,
+      checkoutUrl: order.status === 'pending' ? order.checkoutUrl : null,
+      createdAt: order.createdAt,
+      paidAt: order.paidAt,
+    };
+  }
+
+  async function applyPaidPaymentOrder(order, providerPaymentId) {
+    if (!order || order.status !== 'pending') return order;
+    const claimed = await claimPaymentOrder(db, order.id, {
+      paidAt: new Date().toISOString(),
+      providerPaymentId: providerPaymentId ?? null,
+    });
+    if (!claimed) return getPaymentOrder(db, order.id);
+    try {
+      const preset = passPlanFields(order.plan);
+      if (!preset) throw new Error(`Pass inconnu : ${order.plan}`);
+      await updateClientFields(db, order.clientId, preset);
+      await resetClientUsage(db, order.clientId, periodKeyFor(preset.period));
+      await updatePaymentOrder(db, order.id, {
+        status: 'completed',
+        creditedAt: new Date().toISOString(),
+      });
+      log.info(`[paiement] Pass ${order.plan} activé pour ${order.clientId} (${order.id}).`);
+    } catch (err) {
+      await updatePaymentOrder(db, order.id, { status: 'failed_credit' });
+      log.error(`[paiement] Crédit impossible pour ${order.id} : ${err.message}`);
+    }
+    return getPaymentOrder(db, order.id);
+  }
+
+  async function reconcilePaymentOrder(order) {
+    if (!order) return null;
+    if (order.status !== 'pending' || !order.checkoutId) return order;
+    try {
+      const status = await getSaspayCheckoutStatus(config, order.checkoutId);
+      const transactionStatus = String(status?.transaction_status ?? '').toUpperCase();
+      const sessionStatus = String(status?.status ?? '').toUpperCase();
+      if (transactionStatus === 'SUCCESS' || sessionStatus === 'PAID') {
+        return applyPaidPaymentOrder(order, status?.transaction_id);
+      }
+      if (['FAILED', 'CANCELLED', 'EXPIRED'].includes(transactionStatus)
+        || ['FAILED', 'CANCELLED', 'EXPIRED'].includes(sessionStatus)) {
+        await updatePaymentOrder(db, order.id, { status: 'failed' });
+        return getPaymentOrder(db, order.id);
+      }
+    } catch (err) {
+      log.warn(`[paiement] Vérification ${order.id} impossible : ${err.message}`);
+    }
+    return order;
+  }
+
+  async function reconcilePendingPaymentOrders(limit = 10) {
+    const orders = await listPendingPaymentOrders(db, limit);
+    for (const order of orders) {
+      await reconcilePaymentOrder(order);
+    }
+  }
+
+  async function handleSaspayWebhook(req, res) {
+    const rawBody = await readBody(req, 256 * 1024);
+    const signature = req.headers['x-webhook-signature'];
+    const timestamp = req.headers['x-webhook-timestamp'];
+    if (!verifySaspayWebhook(rawBody, signature, timestamp, config.saspayWebhookSecret)) {
+      log.warn('Webhook SasPay rejeté (signature ou horodatage invalide).');
+      sendJson(res, 401, { ok: false });
+      return;
+    }
+    let event = null;
+    try { event = JSON.parse(rawBody); } catch { /* payload invalide */ }
+    if (!event?.event) {
+      sendJson(res, 400, { ok: false });
+      return;
+    }
+    await reconcilePendingPaymentOrders(10);
+    sendJson(res, 200, { ok: true });
+  }
+
   async function handle(req, res, url, pathname) {
     const route = pathname.slice('/portal/api'.length) || '/';
     const method = req.method;
@@ -863,6 +962,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       if (route === '/config' && method === 'GET') {
         sendJson(res, 200, {
           emailLoginEnabled: Boolean(mailer?.enabled),
+          paymentsEnabled: Boolean(config.saspayApiKey),
           signupEnabled: Boolean(config.signupEnabled) && Boolean(mailer?.enabled),
           captchaProvider: config.captchaProvider,
           captchaSiteKey: config.captchaSiteKey || null,
@@ -1285,6 +1385,105 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         return;
       }
 
+      if (route === '/saspay/webhook' && method === 'POST') {
+        await handleSaspayWebhook(req, res);
+        return;
+      }
+
+      if (route === '/pass/orders' && method === 'GET') {
+        const current = await sessionFromRequest(req);
+        if (!current) {
+          portalError(res, 401, 'Session portail expirée. Reconnectez-vous.', 'unauthorized');
+          return;
+        }
+        const orders = await listClientPaymentOrders(db, current.client.id, 20);
+        sendJson(res, 200, { orders: orders.map(publicPaymentOrder) });
+        return;
+      }
+
+      if (route === '/pass/checkout' && method === 'POST') {
+        const current = await sessionFromRequest(req);
+        if (!current) {
+          portalError(res, 401, 'Session portail expirée. Reconnectez-vous.', 'unauthorized');
+          return;
+        }
+        if (!requireCsrf(req, res)) return;
+        const body = await readJsonBody(req, 4 * 1024);
+        const plan = getPassPlan(body.plan);
+        if (!plan) {
+          portalError(res, 400, 'Pass inconnu.', 'invalid_plan');
+          return;
+        }
+        const context = await currencyContext(req, { config });
+        if (!PAYABLE_CURRENCIES.has(context.currency)) {
+          portalError(res, 400, 'Le paiement n’est pas disponible pour votre devise.', 'payment_currency_unsupported');
+          return;
+        }
+        const amount = (plan.priceEur * context.rate).toFixed(2);
+        const country = context.country && context.country.length === 2
+          ? context.country
+          : CURRENCY_COUNTRY[context.currency];
+        const client = await getClientById(db, current.client.id);
+        if (!client) {
+          portalError(res, 401, 'Session invalide.', 'unauthorized');
+          return;
+        }
+        const order = {
+          id: crypto.randomUUID(),
+          clientId: client.id,
+          plan: plan.id,
+          amount,
+          currency: context.currency,
+          country,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+        };
+        await insertPaymentOrder(db, order);
+        try {
+          const session = await createSaspayCheckout(config, {
+            amount,
+            currency: context.currency,
+            country,
+            description: `Pass VALARIA ${plan.name}`,
+            customer_email: client.email || 'client@valariamenu.com',
+            customer_name: client.name,
+            return_url: `${requestOrigin(req, config)}/portal?pass_order=${order.id}`,
+            metadata: { order_id: order.id, client_id: client.id, plan_id: plan.id },
+          });
+          await updatePaymentOrder(db, order.id, {
+            checkoutId: session.id,
+            checkoutUrl: session.checkout_url,
+          });
+          sendJson(res, 200, {
+            order: publicPaymentOrder(await getPaymentOrder(db, order.id)),
+            checkout_url: session.checkout_url,
+          });
+        } catch (err) {
+          await updatePaymentOrder(db, order.id, { status: 'failed' });
+          log.warn(`[paiement] Création checkout impossible : ${err.message}`);
+          portalError(res, 502, 'Le paiement en ligne est momentanément indisponible.', 'payment_unavailable');
+        }
+        return;
+      }
+
+      if (route === '/pass/confirm' && method === 'POST') {
+        const current = await sessionFromRequest(req);
+        if (!current) {
+          portalError(res, 401, 'Session portail expirée. Reconnectez-vous.', 'unauthorized');
+          return;
+        }
+        if (!requireCsrf(req, res)) return;
+        const body = await readJsonBody(req, 4 * 1024);
+        const order = await getPaymentOrder(db, String(body.order_id ?? ''));
+        if (!order || order.clientId !== current.client.id) {
+          portalError(res, 404, 'Commande introuvable.', 'not_found');
+          return;
+        }
+        const updated = await reconcilePaymentOrder(order);
+        sendJson(res, 200, { order: publicPaymentOrder(updated) });
+        return;
+      }
+
       portalError(res, 404, 'Route inconnue.', 'not_found');
     } catch (err) {
       if (res.headersSent) {
@@ -1302,6 +1501,8 @@ export function createPortalApi({ config, db, log, mailer = null }) {
 
   return { handle };
 }
+
+
 
 
 

@@ -136,6 +136,25 @@ CREATE TABLE IF NOT EXISTS credit_reservations (
   expires_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_credit_res_client ON credit_reservations (client_id, expires_at);
+
+-- Commandes de paiement SasPay (pass).
+CREATE TABLE IF NOT EXISTS payment_orders (
+  id TEXT PRIMARY KEY,
+  client_id TEXT NOT NULL,
+  plan TEXT NOT NULL,
+  amount TEXT NOT NULL,
+  currency TEXT NOT NULL,
+  country TEXT,
+  checkout_id TEXT,
+  checkout_url TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  provider_payment_id TEXT,
+  created_at TEXT NOT NULL,
+  paid_at TEXT,
+  credited_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_payment_orders_client ON payment_orders (client_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_payment_orders_pending ON payment_orders (status, created_at);
 `;
 
 export function openDb(dataDir) {
@@ -882,4 +901,76 @@ export function raiseTrialCreditQuota(db, minUsd) {
   return db.prepare(
     "UPDATE clients SET quota_usd = ? WHERE plan = 'essai' AND quota_usd IS NOT NULL AND quota_usd < ?",
   ).run(value, value).changes;
+}
+
+
+/* ------------------------- commandes de paiement ------------------------- */
+function mapPaymentOrder(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    clientId: row.client_id,
+    plan: row.plan,
+    amount: row.amount,
+    currency: row.currency,
+    country: row.country,
+    checkoutId: row.checkout_id,
+    checkoutUrl: row.checkout_url,
+    status: row.status,
+    providerPaymentId: row.provider_payment_id,
+    createdAt: row.created_at,
+    paidAt: row.paid_at,
+    creditedAt: row.credited_at,
+  };
+}
+
+export function insertPaymentOrder(db, order) {
+  db.prepare(
+    `INSERT INTO payment_orders (id, client_id, plan, amount, currency, country, checkout_id, checkout_url, status, provider_payment_id, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    order.id, order.clientId, order.plan, order.amount, order.currency, order.country ?? null,
+    order.checkoutId ?? null, order.checkoutUrl ?? null, order.status ?? 'pending', order.providerPaymentId ?? null, order.createdAt,
+  );
+}
+
+export function getPaymentOrder(db, id) {
+  return mapPaymentOrder(db.prepare('SELECT * FROM payment_orders WHERE id = ?').get(id));
+}
+
+export function updatePaymentOrder(db, id, fields) {
+  const mapping = {
+    checkoutId: 'checkout_id', checkoutUrl: 'checkout_url', status: 'status',
+    providerPaymentId: 'provider_payment_id', paidAt: 'paid_at', creditedAt: 'credited_at',
+  };
+  const sets = [];
+  const values = [];
+  for (const [key, column] of Object.entries(mapping)) {
+    if (Object.prototype.hasOwnProperty.call(fields, key)) {
+      sets.push(`${column} = ?`);
+      values.push(fields[key] ?? null);
+    }
+  }
+  if (!sets.length) return;
+  db.prepare(`UPDATE payment_orders SET ${sets.join(', ')} WHERE id = ?`).run(...values, id);
+}
+
+export function listPendingPaymentOrders(db, limit = 50) {
+  return db.prepare("SELECT * FROM payment_orders WHERE status = 'pending' ORDER BY created_at ASC LIMIT ?")
+    .all(limit)
+    .map(mapPaymentOrder);
+}
+
+export function listClientPaymentOrders(db, clientId, limit = 20) {
+  return db.prepare('SELECT * FROM payment_orders WHERE client_id = ? ORDER BY created_at DESC LIMIT ?')
+    .all(clientId, limit)
+    .map(mapPaymentOrder);
+}
+
+/** Tente de prendre une commande pending (idempotence webhook). */
+export function claimPaymentOrder(db, id, fields) {
+  const result = db.prepare(
+    "UPDATE payment_orders SET status = 'processing', paid_at = ?, provider_payment_id = ? WHERE id = ? AND status = 'pending'",
+  ).run(fields.paidAt ?? new Date().toISOString(), fields.providerPaymentId ?? null, id);
+  return result.changes === 1;
 }

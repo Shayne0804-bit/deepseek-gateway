@@ -10,7 +10,7 @@
   const DAY_LABEL = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit' });
 
   const $ = (selector) => document.querySelector(selector);
-  const state = { me: null, busy: false, emailBusy: false, newKey: null, userView: 'overview', currency: null };
+  const state = { me: null, busy: false, emailBusy: false, newKey: null, userView: 'overview', currency: null, paymentsEnabled: false };
 
   const ICONS = {
     grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
@@ -677,9 +677,61 @@
           ${(plan.features ?? []).map((feature) => `<li>${esc(feature)}</li>`).join('')}
           <li>${esc(plan.support || '')}</li>
         </ul>
+        ${state.paymentsEnabled
+          ? `<button type="button" class="btn btn-primary btn-block plan-buy" data-buy-plan="${esc(plan.id)}">${plan.id === currentId ? 'Renouveler ce pass' : 'Payer ce pass'}</button>`
+          : '<button type="button" class="btn btn-primary btn-block" disabled>Paiement bientôt disponible</button>'}
       </article>`).join('');
   }
 
+  async function startPlanPayment(planId, button) {
+    if (state.busy) return;
+    state.busy = true;
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Préparation du paiement…';
+    const status = $('#portal-status');
+    try {
+      const data = await api('/pass/checkout', { method: 'POST', body: { plan: planId } });
+      if (data.checkout_url) {
+        window.location.assign(data.checkout_url);
+        return;
+      }
+      throw new Error('Le paiement en ligne n’a pas renvoyé de page de paiement.');
+    } catch (err) {
+      if (status) {
+        status.className = 'portal-status alert danger';
+        status.textContent = err.message;
+      }
+    } finally {
+      state.busy = false;
+      button.disabled = false;
+      button.textContent = label;
+    }
+  }
+
+  async function confirmReturningPayment() {
+    const orderId = new URLSearchParams(window.location.search).get('pass_order');
+    if (!orderId) return;
+    const status = $('#portal-status');
+    try {
+      const data = await api('/pass/confirm', { method: 'POST', body: { order_id: orderId } });
+      const order = data.order || {};
+      if (status) {
+        status.className = `portal-status alert ${order.status === 'completed' ? 'ok' : 'warn'}`;
+        status.textContent = order.status === 'completed'
+          ? `Paiement confirmé : pass « ${order.plan} » activé.`
+          : 'Paiement en attente de confirmation. Actualisez dans quelques instants.';
+      }
+      if (order.status === 'completed') await loadMe();
+    } catch (err) {
+      if (status) {
+        status.className = 'portal-status alert warn';
+        status.textContent = err.message;
+      }
+    } finally {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }
   function devicesMarkup(devices) {
     if (!devices.length) {
       return '<div class="empty-state"><strong>Aucun appareil connecté</strong><p>Vos terminaux VALARIA Code apparaîtront ici après autorisation depuis la page de connexion d’appareil.</p></div>';
@@ -1763,6 +1815,12 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
       }
     });
     document.addEventListener('click', async (event) => {
+      const buyButton = event.target.closest('[data-buy-plan]');
+      if (!buyButton) return;
+      event.preventDefault();
+      await startPlanPayment(buyButton.dataset.buyPlan, buyButton);
+    });
+    document.addEventListener('click', async (event) => {
       const button = event.target.closest('[data-copy]');
       if (!button) return;
       try {
@@ -1834,6 +1892,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
       document.querySelector('.auth-tabs').classList.add('hidden');
       return;
     }
+    state.paymentsEnabled = Boolean(config.paymentsEnabled);
     if (!config.emailLoginEnabled) {
       document.querySelector('.auth-tabs').classList.add('hidden');
       return;
@@ -1879,6 +1938,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     await loadCurrency();
     try {
       await loadMe();
+      await confirmReturningPayment();
     } catch (err) {
       showLogin(err.status === 401 ? '' : err.message);
     }
@@ -1886,6 +1946,8 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
 
   init();
 })();
+
+
 
 
 

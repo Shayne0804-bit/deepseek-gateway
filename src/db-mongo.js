@@ -31,6 +31,7 @@ const COLLECTION_NAMES = [
   'admin_audit',
   'signup_identities',
   'credit_reservations',
+  'payment_orders',
   'counters',
 ];
 
@@ -1074,4 +1075,79 @@ export async function raiseTrialCreditQuota(handle, minUsd) {
     { $set: { quota_usd: value } },
   );
   return result.modifiedCount ?? 0;
+}
+
+
+/* ------------------------- commandes de paiement ------------------------- */
+function mapPaymentOrder(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    clientId: row.client_id,
+    plan: row.plan,
+    amount: row.amount,
+    currency: row.currency,
+    country: row.country,
+    checkoutId: row.checkout_id,
+    checkoutUrl: row.checkout_url,
+    status: row.status,
+    providerPaymentId: row.provider_payment_id,
+    createdAt: row.created_at,
+    paidAt: row.paid_at,
+    creditedAt: row.credited_at,
+  };
+}
+
+export async function insertPaymentOrder(handle, order) {
+  await getCollection(handle, 'payment_orders').insertOne({
+    id: order.id,
+    client_id: order.clientId,
+    plan: order.plan,
+    amount: order.amount,
+    currency: order.currency,
+    country: order.country ?? null,
+    checkout_id: order.checkoutId ?? null,
+    checkout_url: order.checkoutUrl ?? null,
+    status: order.status ?? 'pending',
+    provider_payment_id: order.providerPaymentId ?? null,
+    created_at: order.createdAt,
+    paid_at: null,
+    credited_at: null,
+  });
+}
+
+export async function getPaymentOrder(handle, id) {
+  return mapPaymentOrder(await getCollection(handle, 'payment_orders').findOne({ id }));
+}
+
+export async function updatePaymentOrder(handle, id, fields) {
+  const mapping = {
+    checkoutId: 'checkout_id', checkoutUrl: 'checkout_url', status: 'status',
+    providerPaymentId: 'provider_payment_id', paidAt: 'paid_at', creditedAt: 'credited_at',
+  };
+  const set = {};
+  for (const [key, column] of Object.entries(mapping)) {
+    if (Object.prototype.hasOwnProperty.call(fields, key)) set[column] = fields[key] ?? null;
+  }
+  if (Object.keys(set).length) await getCollection(handle, 'payment_orders').updateOne({ id }, { $set: set });
+}
+
+export async function listPendingPaymentOrders(handle, limit = 50) {
+  const rows = await getCollection(handle, 'payment_orders').find({ status: 'pending' }).sort({ created_at: 1 }).limit(limit).toArray();
+  return rows.map(mapPaymentOrder);
+}
+
+export async function listClientPaymentOrders(handle, clientId, limit = 20) {
+  const rows = await getCollection(handle, 'payment_orders').find({ client_id: clientId }).sort({ created_at: -1 }).limit(limit).toArray();
+  return rows.map(mapPaymentOrder);
+}
+
+/** Tente de prendre une commande pending (idempotence webhook). */
+export async function claimPaymentOrder(handle, id, fields) {
+  const result = await getCollection(handle, 'payment_orders').findOneAndUpdate(
+    { id, status: 'pending' },
+    { $set: { status: 'processing', paid_at: fields.paidAt ?? new Date().toISOString(), provider_payment_id: fields.providerPaymentId ?? null } },
+    { returnDocument: 'before' },
+  );
+  return Boolean(result);
 }

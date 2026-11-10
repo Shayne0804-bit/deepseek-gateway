@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const APP_ROOT = path.resolve(import.meta.dirname, '..');
-export const APP_VERSION = '3.10.9';
+export const APP_VERSION = '3.10.0';
 export const PANEL_COOKIE = 'dsk_admin';
 export const PROVIDER_DEFAULT_BASE_URL = 'https://api.deepseek.com';
 
@@ -125,6 +125,9 @@ export function loadConfig(overrides = {}) {
     // Modele reellement appele chez le fournisseur. Par defaut TOUT est servi par
     // deepseek-flash, meme si le client demande deepseek-v4-pro ou un alias Claude.
     // Mettre BILLED_MODEL=none pour desactiver ce forcage.
+    saspayApiKey: overrides.saspayApiKey ?? raw('SASPAY_API_KEY') ?? '',
+    saspayWebhookSecret: overrides.saspayWebhookSecret ?? raw('SASPAY_WEBHOOK_SECRET') ?? '',
+    saspayBaseUrl: stripTrailingSlash(overrides.saspayBaseUrl ?? raw('SASPAY_BASE_URL') ?? 'https://api.saspay.me/api/v1'),
     billedModel: overrides.billedModel ?? raw('BILLED_MODEL') ?? 'deepseek-flash',
     // Les alias premium consomment le credit au tarif v4-pro, meme si le modele
     // reellement appele reste flash. Desactivable via ALIAS_PREMIUM_BILLING=0.
@@ -363,6 +366,8 @@ export function loadConfig(overrides = {}) {
   config.signupEnabled = Boolean(config.signupEnabled);
   return config;
 }
+
+
 
 
 
