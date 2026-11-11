@@ -248,7 +248,6 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
     const passQuotaExhausted = (client.quotaUsd != null && client.usedUsd >= client.quotaUsd - 1e-9)
       || (client.quotaRequests != null && client.usedRequests >= client.quotaRequests)
       || (client.quotaTokens != null && client.usedTokens >= client.quotaTokens);
-    const useWallet = walletMicroUsd > 0 && (passExpired || passQuotaExhausted);
 
     // ---- 3. Limites de debit ------------------------------------------
     if (client.rpmLimit != null) {
@@ -288,61 +287,69 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
 
     const responseHeaders = { ...cors, ...quotaHeaders(client) };
 
-    // ---- 3 bis. Plafond glissant de credit site (5 h par defaut) -------
-    const plan = useWallet ? null : getPassPlan(client.plan);
+    // ---- 3 bis. Plafonds glissants du pass -----------------------------
+    let plan = getPassPlan(client.plan);
     let credit5hUsed = 0;
     let creditWeekUsed = 0;
-    const windowLimit = Number(plan?.credit5hLimit ?? 0);
-    if (windowLimit > 0) {
-      const windowHours = config.siteCreditWindowHours || 5;
+    let oldest5h = null;
+    let oldestWeek = null;
+    const windowHours = config.siteCreditWindowHours || 5;
+    if (plan?.credit5hLimit != null) {
       const sinceIso = new Date(Date.now() - windowHours * 3_600_000).toISOString();
       const win = await clientCreditWindowSince(db, client.id, sinceIso);
       credit5hUsed = win.total;
-      if (win.total >= windowLimit) {
-        const oldestMs = win.oldest ? Date.parse(win.oldest) : NaN;
-        const retryAfter = Number.isFinite(oldestMs)
-          ? Math.max(1, Math.ceil((oldestMs + windowHours * 3_600_000 - Date.now()) / 1000))
-          : 300;
-        release();
-        log.warn(`[${req.requestId ?? '-'}] Plafond credit ${windowHours} h atteint pour ${client.name}.`);
-        sendApiError(
-          res,
-          429,
-          `Plafond de credit atteint sur ${windowHours} h (${windowLimit.toFixed(2)} $). Reessayez dans ${Math.ceil(retryAfter / 60)} min.`,
-          'rate_limit_error',
-          'credit_window_exceeded',
-          { ...responseHeaders, 'retry-after': String(retryAfter) },
-        );
-        return;
-      }
+      oldest5h = win.oldest;
     }
-
-    const pricingValue = await getSetting(db, 'pricing', null);
-
-    // ---- 3 ter. Plafond glissant hebdomadaire (7 jours) ----------------
-    const weeklyLimit = Number(plan?.creditWeeklyLimit ?? 0);
-    if (weeklyLimit > 0) {
+    if (plan?.creditWeeklyLimit != null) {
       const sinceIso = new Date(Date.now() - 7 * 86_400_000).toISOString();
       const win = await clientCreditWindowSince(db, client.id, sinceIso);
       creditWeekUsed = win.total;
-      if (win.total >= weeklyLimit) {
-        const oldestMs = win.oldest ? Date.parse(win.oldest) : NaN;
-        const retryAfter = Number.isFinite(oldestMs)
-          ? Math.max(1, Math.ceil((oldestMs + 7 * 86_400_000 - Date.now()) / 1000))
-          : 3600;
-        release();
-        log.warn(`[${req.requestId ?? '-'}] Plafond hebdomadaire atteint pour ${client.name}.`);
-        sendApiError(
-          res,
-          429,
-          `Plafond hebdomadaire de crédit atteint (${weeklyLimit.toFixed(2)} $). Réessayez dans ${Math.ceil(retryAfter / 3600)} h.`,
-          'rate_limit_error',
-          'credit_week_exceeded',
-          { ...responseHeaders, 'retry-after': String(retryAfter) },
-        );
-        return;
-      }
+      oldestWeek = win.oldest;
     }
+    const passWindowExceeded = (plan?.credit5hLimit != null && credit5hUsed >= plan.credit5hLimit)
+      || (plan?.creditWeeklyLimit != null && creditWeekUsed >= plan.creditWeeklyLimit);
+    // Le wallet prend le relais non seulement quand le credit total est
+    // epuise, mais aussi quand un plafond 5 h / semaine bloque le pass.
+    const useWallet = walletMicroUsd > 0 && (passExpired || passQuotaExhausted || passWindowExceeded);
+    if (useWallet) plan = null;
+
+    if (!useWallet && plan?.credit5hLimit != null && credit5hUsed >= plan.credit5hLimit) {
+      const oldestMs = oldest5h ? Date.parse(oldest5h) : NaN;
+      const retryAfter = Number.isFinite(oldestMs)
+        ? Math.max(1, Math.ceil((oldestMs + windowHours * 3_600_000 - Date.now()) / 1000))
+        : 300;
+      release();
+      log.warn(`[${req.requestId ?? '-'}] Plafond credit ${windowHours} h atteint pour ${client.name}.`);
+      sendApiError(
+        res,
+        429,
+        `Plafond de credit atteint sur ${windowHours} h (${plan.credit5hLimit.toFixed(2)} $). Reessayez dans ${Math.ceil(retryAfter / 60)} min.`,
+        'rate_limit_error',
+        'credit_window_exceeded',
+        { ...responseHeaders, 'retry-after': String(retryAfter) },
+      );
+      return;
+    }
+
+    if (!useWallet && plan?.creditWeeklyLimit != null && creditWeekUsed >= plan.creditWeeklyLimit) {
+      const oldestMs = oldestWeek ? Date.parse(oldestWeek) : NaN;
+      const retryAfter = Number.isFinite(oldestMs)
+        ? Math.max(1, Math.ceil((oldestMs + 7 * 86_400_000 - Date.now()) / 1000))
+        : 3600;
+      release();
+      log.warn(`[${req.requestId ?? '-'}] Plafond hebdomadaire atteint pour ${client.name}.`);
+      sendApiError(
+        res,
+        429,
+        `Plafond hebdomadaire de crédit atteint (${plan.creditWeeklyLimit.toFixed(2)} $). Réessayez dans ${Math.ceil(retryAfter / 3600)} h.`,
+        'rate_limit_error',
+        'credit_week_exceeded',
+        { ...responseHeaders, 'retry-after': String(retryAfter) },
+      );
+      return;
+    }
+
+    const pricingValue = await getSetting(db, 'pricing', null);
     const aliasesValue = await getSetting(db, 'model_aliases', null);
     const pricing = loadPricing(() => pricingValue);
     const modelAliases = loadModelAliases(() => aliasesValue);
