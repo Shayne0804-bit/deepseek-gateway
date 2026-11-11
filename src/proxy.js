@@ -221,6 +221,19 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
       return;
     }
 
+    // La decouverte de modeles est une operation de connexion, pas une
+    // requete facturee : elle doit fonctionner meme si le credit est epuise.
+    // Claude Desktop refuse sinon la connexion avant meme d'envoyer un prompt.
+    if (req.method === 'GET' && isModelsPath(pathname)) {
+      const pricingValue = await getSetting(db, 'pricing', null);
+      const aliasesValue = await getSetting(db, 'model_aliases', null);
+      sendJson(res, 200, buildModelsPayload(pathname, req, loadPricing(() => pricingValue), loadModelAliases(() => aliasesValue)), {
+        ...cors,
+        'cache-control': 'public, max-age=60',
+      });
+      return;
+    }
+
     // ---- 2. Remise a zero de periode + droits -------------------------
     client = await maybeRollPeriod(db, client);
     const denied = checkClientAccess(client);
@@ -391,15 +404,7 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
     };
 
     try {
-      // ---- 4. Decouverte de modeles : repondue localement -------------
-      // (DeepSeek n'expose pas /anthropic/v1/models ; Claude Desktop en a besoin.)
-      if (req.method === 'GET' && isModelsPath(pathname)) {
-        sendJson(res, 200, buildModelsPayload(pathname, req, pricing, modelAliases), {
-          ...responseHeaders,
-          'cache-control': 'public, max-age=60',
-        });
-        return;
-      }
+      // ---- 4. Decouverte de modeles : deja traitee avant les quotas ----
 
       // Garde-fou budget global mensuel (production, multi-utilisateurs).
       if (req.method !== 'GET') {
