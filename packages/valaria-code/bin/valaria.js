@@ -18,6 +18,7 @@ import {
   saveConfig,
 } from '../src/config.js';
 import { runTui, renderScreen } from '../src/tui.js';
+import { createSession, clearSession, loadSession, saveSession, sessionApiMessages } from '../src/session.js';
 import { chooseModel } from '../src/onboarding.js';
 import { playSplash } from '../src/splash.js';
 import { supportsColor } from '../src/theme.js';
@@ -57,9 +58,14 @@ function help() {
     valaria status               quotas, pass et compte
     valaria models               lister les modèles autorisés
     valaria chat "..."           envoyer un message sans TUI
+    valaria --new                repartir d'une conversation vide
     valaria preview              aperçu statique de l'interface
     valaria preview --splash     aperçu avec l'animation de démarrage
     valaria --version | --help
+
+  MÉMOIRE
+    La conversation est sauvegardée par projet et reprise automatiquement.
+    /new dans la TUI (ou --new) efface la mémoire du projet courant.
 
   OPTIONS
     --url <url>                  instance VALARIA (défaut : ${DEFAULT_BASE_URL})
@@ -188,13 +194,33 @@ async function commandChat(flags) {
   const client = createClient({ url: auth.url, token: auth.token, model: auth.model });
   const color = supportsColor();
   const accent = (text) => (color ? `\x1b[92m${text}\x1b[0m` : text);
+  const cwd = process.cwd();
+  const session = flags.new ? createSession({ cwd, model: auth.model }) : loadSession({ cwd });
+  const history = sessionApiMessages(session, { limit: 30 });
+  const messages = [
+    { role: 'system', content: 'Tu es VALARIA Code, un agent de code. Tiens compte de la conversation précédente. Réponds de façon concise.' },
+    ...history,
+    { role: 'user', content: prompt },
+  ];
   process.stdout.write(`\n${accent('▌')} `);
+  let assistant = '';
   try {
-    await client.stream(
-      [{ role: 'user', content: prompt }],
-      { model: auth.model, onDelta: (delta) => process.stdout.write(delta) },
-    );
+    const result = await client.stream(messages, {
+      model: auth.model,
+      onDelta: (delta) => {
+        assistant += delta;
+        process.stdout.write(delta);
+      },
+    });
+    if (!assistant && result?.content) {
+      assistant = result.content;
+      process.stdout.write(assistant);
+    }
     process.stdout.write('\n\n');
+    session.model = auth.model;
+    session.messages.push({ role: 'user', content: prompt, at: Date.now() });
+    if (assistant.trim()) session.messages.push({ role: 'assistant', content: assistant, at: Date.now() });
+    saveSession(session);
     return 0;
   } catch (error) {
     console.error(`\n  ${error.message}\n`);
@@ -241,6 +267,7 @@ async function commandTui(flags) {
     console.error('\n  L’interface plein écran nécessite un terminal interactif (TTY).\n  Utilisez : valaria chat "..." ou valaria status\n');
     return 1;
   }
+  if (flags.new) clearSession({ cwd: process.cwd() });
   const client = createClient({ url: auth.url, token: auth.token, model: auth.model });
   try {
     const me = await client.me();

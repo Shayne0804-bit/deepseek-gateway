@@ -11,6 +11,7 @@ import { MARK, PULSE, SPINNER, TAGLINE, WORDMARK } from './assets.js';
 import { collectWorkspaceDiff, summarize } from './diff-view.js';
 import { playSplash } from './splash.js';
 import { diffText, extractCode, listFiles, readFile, runCommand, writeFile } from './tools.js';
+import { clearSession, createSession, loadSession, saveSession, sessionApiMessages, sessionSummary } from './session.js';
 
 const SYSTEM_PROMPT = `Tu es VALARIA Code, un agent de code dans le terminal.
 Tu aides l'utilisateur à comprendre, écrire, modifier et tester du code.
@@ -29,9 +30,12 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function createTui({ client, config, model, layout = 'focus', approvalMode = 'strict', version = '0.7.0', color = supportsColor(), animations = true, account = null, onModelChange = null, onPreferencesChange = null } = {}) {
+export function createTui({ client, config, model, layout = 'focus', approvalMode = 'strict', version = '0.8.0', color = supportsColor(), animations = true, account = null, onModelChange = null, onPreferencesChange = null } = {}) {
+  const root = process.cwd();
+  const restoredSession = loadSession({ cwd: root });
   const state = {
-    messages: [],
+    messages: restoredSession.messages.slice(-80).map(({ role, content, at }) => ({ role, content, at: at || Date.now() })),
+    session: restoredSession,
     input: '',
     history: [],
     historyIndex: -1,
@@ -60,7 +64,31 @@ export function createTui({ client, config, model, layout = 'focus', approvalMod
     suggestions: [],
     startedAt: Date.now(),
   };
-  const root = process.cwd();
+  let sessionSaveTimer = null;
+  function persistSession(immediate = false) {
+    if (!state.session) return;
+    const write = () => {
+      try {
+        state.session.messages = state.messages
+          .filter((message) => ['user', 'assistant'].includes(message.role))
+          .map(({ role, content, at }) => ({ role, content, at }));
+        saveSession(state.session);
+      } catch {
+        /* la mémoire ne doit jamais bloquer la conversation */
+      }
+    };
+    if (immediate) {
+      clearTimeout(sessionSaveTimer);
+      sessionSaveTimer = null;
+      write();
+      return;
+    }
+    if (sessionSaveTimer) return;
+    sessionSaveTimer = setTimeout(() => {
+      sessionSaveTimer = null;
+      write();
+    }, 220);
+  }
   const draw = () => renderScreen(state, { client, config, color, root });
   let renderTimer = null;
   const scheduleRender = () => {
@@ -84,6 +112,7 @@ export function createTui({ client, config, model, layout = 'focus', approvalMod
     state.messages.push({ role, content: String(content), at: Date.now() });
     if (state.messages.length > 80) state.messages.splice(0, state.messages.length - 80);
     if (role === 'user') state.scrollBack = 0;
+    if (role === 'user' || role === 'assistant') persistSession();
   }
 
   function systemMessage(content) {
@@ -100,13 +129,24 @@ export function createTui({ client, config, model, layout = 'focus', approvalMod
     systemMessage(`Suggestions : ${base.map((item) => `[${item.code}] ${item.label}`).join('  ·  ')}`);
   }
 
-  function apiMessages() {
-    const history = state.messages
-      .filter((message) => ['user', 'assistant', 'system'].includes(message.role))
+  if (restoredSession.messages.length) {
+    const info = sessionSummary(restoredSession);
+    systemMessage(`⚙ Session reprise · ${info.messageCount} message(s) · ${new Date(info.updatedAt || Date.now()).toLocaleString('fr-FR')}\nTapez /new pour repartir de zéro.`);
+  }
+
+  function conversationHistory(limit = 30) {
+    return state.messages
+      .filter((message) => ['user', 'assistant'].includes(message.role))
       .filter((message) => !message.content.startsWith('✎') && !message.content.startsWith('⚙'))
-      .slice(-24)
-      .map((message) => ({ role: message.role === 'system' ? 'system' : message.role, content: message.content }));
-    return [{ role: 'system', content: `${SYSTEM_PROMPT}\nProjet courant : ${root}` }, ...history];
+      .slice(-limit)
+      .map((message) => ({ role: message.role, content: message.content }));
+  }
+
+  function apiMessages() {
+    return [
+      { role: 'system', content: `${SYSTEM_PROMPT}\nProjet courant : ${root}` },
+      ...conversationHistory(24),
+    ];
   }
 
   async function sendChat(text) {
@@ -144,6 +184,7 @@ export function createTui({ client, config, model, layout = 'focus', approvalMod
     } finally {
       state.streaming = false;
       state.abort = null;
+      persistSession();
       refreshAccount();
       draw();
     }
@@ -232,6 +273,7 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
       systemMessage('usage : /agent <tâche>');
       return;
     }
+    const history = conversationHistory();
     state.agentRunning = true;
     state.streaming = true;
     state.mode = 'agent';
@@ -239,11 +281,13 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
     state.status = 'agent en cours…';
     addMessage('user', task);
     draw();
+    let assistantSeen = false;
     try {
       const result = await runAgent({
         client,
         root,
         task,
+        history,
         model: state.model,
         signal: state.agentAbort.signal,
         approve: (request) => {
@@ -263,20 +307,25 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
           });
         },
         onEvent: (event) => {
-          if (event.type === 'assistant' && event.content) addMessage('assistant', event.content);
-          else if (event.type === 'tool') {
+          if (event.type === 'assistant' && event.content) {
+            assistantSeen = true;
+            addMessage('assistant', event.content);
+          } else if (event.type === 'tool') {
             const args = event.args || {};
             const label = event.name === 'read_file' ? `Lecture ${args.path || ''}`
               : event.name === 'write_file' ? `Écriture ${args.path || ''}`
-                : event.name === 'run_command' ? `$ ${args.command || ''}`
-                  : event.name === 'search_files' ? `Recherche « ${args.query || ''} »`
-                    : `Liste ${args.path || '.'}`;
+                : event.name === 'replace_in_file' ? `Patch ${args.path || ''}`
+                  : event.name === 'run_command' ? `$ ${args.command || ''}`
+                    : event.name === 'search_files' ? `Recherche « ${args.query || ''} »`
+                      : event.name === 'git_status' || event.name === 'git_diff' ? `Git ${event.name}`
+                        : `Liste ${args.path || '.'}`;
             addMessage('tool', label.trim());
             state.status = `agent · ${event.name}`;
             scheduleRender();
           } else if (event.type === 'error') systemMessage(`✎ ${event.name} : ${event.message}`);
         },
       });
+      if (!assistantSeen && result.summary) addMessage('assistant', result.summary);
       systemMessage(`⚙ Agent terminé · ${result.steps} étape(s)`);
       suggestionsFor(task);
       state.status = 'prêt';
@@ -383,7 +432,7 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
     const argument = rest.join(' ').trim();
     switch (command) {
       case 'help':
-        systemMessage('⚙ Votre message est exécuté par l’agent (lecture/patch/tests, avec approbations).\n/chat <message> · /agent <tâche> · /interview · /plan <objectif> · /review · /diff\n/files [dossier] · /read <fichier> · /edit <fichier> <instruction> · /run <commande>\n/models · /model <nom> · /account · /layout focus|studio|compact · /1|/2|/3 (strict|safe|full)\n/animations on|off · /mode agent|chat · /usage · /clear · /quit\n\nCtrl+G ou Alt+M : mode d’approbation · Ctrl+O : compte · Ctrl+P : interface · PgUp/PgDn : historique');
+        systemMessage('⚙ Écrivez directement votre demande : l’agent garde la mémoire de la conversation.\n/new · /clear  démarrer une nouvelle conversation\n/plan <objectif> · /review · /diff · /account · /usage\n/files [dossier] · /read <fichier> · /edit <fichier> <instruction> · /run <commande>\n/models · /model <nom> · /layout focus|studio|compact · /1|/2|/3 (strict|safe|full)\n/animations on|off · /mode agent|chat · /quit\n\nLa mémoire est enregistrée par projet et reprise automatiquement au prochain lancement.\nCtrl+G ou Alt+M : mode d’approbation · Ctrl+O : compte · Ctrl+P : interface · PgUp/PgDn : historique');
         break;
       case 'agent': {
         await runAgentTask(argument, { explicit: true });
@@ -516,13 +565,26 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
         } catch (error) { systemMessage(`✎ ${error.message}`); }
         break;
       }
-      case 'clear':
-        state.messages = [];
+      case 'session': {
+        const info = sessionSummary(state.session);
+        systemMessage(`⚙ Session ${info.messageCount} message(s) · dernière activité ${info.updatedAt ? new Date(info.updatedAt).toLocaleString('fr-FR') : '—'}\nProjet : ${root}`);
         break;
+      }
+      case 'new':
+      case 'clear': {
+        state.session = createSession({ cwd: root, model: state.model });
+        state.messages = [];
+        state.scrollBack = 0;
+        try { clearSession({ cwd: root }); } catch { /* ignore */ }
+        saveSession(state.session);
+        systemMessage('⚙ Nouvelle conversation. L’historique précédent a été effacé de ce projet.');
+        break;
+      }
       case 'quit':
       case 'exit':
-        state.closed = true;
-        break;
+        persistSession(true);
+        cleanup();
+        return;
       default:
         systemMessage(`✎ Commande inconnue : /${command}. /help pour la liste.`);
     }
@@ -755,6 +817,7 @@ Retourne UNIQUEMENT le contenu complet du fichier, sans explication, dans un blo
 
   function cleanup() {
     if (state.closed) return;
+    persistSession(true);
     state.closed = true;
     try { process.stdin.setRawMode(false); } catch { /* ignore */ }
     process.stdin.pause();
@@ -844,7 +907,7 @@ export function renderScreen(state, { client, config, color = true, root = proce
   const project = String(root).replace(/\\/g, '/').split('/').filter(Boolean).pop() || 'projet';
   const head = layout === 'focus'
     ? `  ${c(MARK, COLORS.accent)} ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${d('—')}   ${d(project)}   ${pulse} ${d(account ? 'en ligne' : 'hors ligne')}`
-    : `  ${c(MARK, COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${pulse} ${account ? 'en ligne' : 'hors ligne'}   ${d(LAYOUT_LABELS[layout])}   ${c(model, COLORS.amber)}   ${d(`v${state.version || '0.7.0'}`)}`;
+    : `  ${c(MARK, COLORS.accent)}  ${b('VALARIA')} ${c('CODE', COLORS.accent2)}   ${pulse} ${account ? 'en ligne' : 'hors ligne'}   ${d(LAYOUT_LABELS[layout])}   ${c(model, COLORS.amber)}   ${d(`v${state.version || '0.8.0'}`)}`;
   add(head);
   add(`  ${d('─'.repeat(Math.max(0, cols - 4)))}`);
 
@@ -1226,6 +1289,7 @@ export async function runPlainChat({ client, messages, model, onDelta }) {
 }
 
 export const runTui = createTui;
+
 
 
 

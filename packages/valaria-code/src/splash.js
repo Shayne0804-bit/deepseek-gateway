@@ -7,7 +7,7 @@ import { LOGO_LINES, SPLASH_PALETTE, TAGLINE } from './assets.js';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function playSplash({ output = process.stdout, color = true, reduced = false, frameMs = 220, version = '0.7.0' } = {}) {
+export async function playSplash({ output = process.stdout, color = true, reduced = false, frameMs = 220, version = '0.8.0' } = {}) {
   if (reduced || !output.isTTY || process.env.VALARIA_NO_ANIMATION || process.env.TERM === 'dumb') return;
   const cols = Math.max(54, Math.min(Number(output.columns) || 96, 220));
   const rows = Math.max(16, Number(output.rows) || 28);
@@ -48,5 +48,6 @@ export async function playSplash({ output = process.stdout, color = true, reduce
   }
   await sleep(400);
 }
+
 
 

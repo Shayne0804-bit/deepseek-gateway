@@ -32,9 +32,29 @@ valaria login           # autoriser cet appareil
 valaria status          # compte, pass, quotas
 valaria models          # modèles disponibles
 valaria chat "Bonjour"  # réponse simple sans TUI
+valaria --new           # nouvelle conversation (efface la mémoire locale du projet)
 valaria preview         # aperçu statique de l'interface
 valaria preview --splash # revoir l'animation de démarrage
 valaria logout          # oublier cet appareil
+```
+
+## Mémoire persistante
+
+La conversation est **sauvegardée automatiquement par projet** dans
+`~/.valaria/sessions/` et reprise au prochain lancement de `valaria`.
+
+- une seule commande suffit : tapes simplement ta demande, sans `/agent` ;
+- les tours suivants reçoivent l’historique des échanges précédents ;
+- `valaria chat "..."` utilise la même mémoire que la TUI ;
+- `/new` ou `--new` efface la mémoire du projet courant ;
+- seuls les messages utilisateur/assistant sont conservés, sans les détails
+  internes des outils ;
+- le contexte envoyé au modèle est limité aux derniers échanges pour rester
+  rapide et éviter de saturer la fenêtre.
+
+```text
+valaria --new
+/new
 ```
 
 ## Interfaces
@@ -85,9 +105,24 @@ Le mode est affiché dans la ligne d’état et enregistré avec la configuratio
 
 - `PgUp` / `PgDn` font défiler l’historique de la conversation ;
 - l’envoi d’un nouveau message revient automatiquement en bas ;
+- la conversation est persistante et reprise après redémarrage ;
 - le diff est **visible en permanence** dans la colonne de droite par défaut ;
 - `/diff` l’actualise, `/diff off` le masque, `/diff on` le réaffiche ;
 - pendant une approbation, le diff reste visible à droite.
+
+## Agent complet
+
+L’agent dispose de :
+
+- lecture et recherche de fichiers, lecture par plage de lignes ;
+- écriture complète et **remplacement ciblé** (`replace_in_file`) avec diff ;
+- exécution de tests, lint et builds avec approbation ;
+- consultation Git (`git_status`, `git_diff`) sans approbation ;
+- instructions de projet chargées automatiquement depuis `AGENTS.md`,
+  `VALARIA.md`, `CLAUDE.md` ou `.valaria/instructions.md`.
+
+Une demande en langage naturel lance directement l’agent. Les actions
+d’écriture et de commande restent soumises au mode d’approbation.
 
 ## Revue de diff
 
@@ -127,8 +162,10 @@ ou dans la TUI :
 
 ## Dans la TUI
 
-- `Entrée` envoyer un message — il lance l’agent par défaut.
+- `Entrée` envoyer un message — il lance l’agent par défaut avec la mémoire du projet.
 - `/help` lister les commandes.
+- `/new` ou `/clear` repartir d’une conversation vide.
+- `/session` afficher le nombre de messages mémorisés.
 - `/chat <message>` conversation simple sans outils.
 - `/agent <tâche>` relancer explicitement l’agent.
 - `/interview`, `/plan <objectif>`, `/review` : parcours guidé proche de Freebuff.
@@ -144,6 +181,7 @@ ou dans la TUI :
 ## Configuration
 
 `~/.valaria/code.json` (0600) contient l'URL, le jeton d'appareil et le modèle.
+Les conversations sont dans `~/.valaria/sessions/` (dossier 0700, fichiers 0600).
 `VALARIA_API_KEY` reste disponible pour les environnements CI uniquement.
 
 ## Variables

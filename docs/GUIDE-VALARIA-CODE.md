@@ -44,6 +44,27 @@ L’agent travaille dans le dossier courant. Décrivez simplement la tâche :
 Il lit les fichiers, propose un patch, puis demande votre validation avant
 d’écrire ou de lancer une commande.
 
+## Mémoire de conversation
+
+VALARIA Code sauvegarde automatiquement la conversation **par projet** dans
+`~/.valaria/sessions/`. Au prochain lancement dans le même dossier, l’historique
+est repris et l’agent tient compte des échanges précédents.
+
+- aucune commande spéciale n’est nécessaire : écrivez directement votre demande ;
+- `valaria chat "..."` partage la même mémoire ;
+- `/new` ou `valaria --new` efface la conversation du projet courant ;
+- seuls les messages utilisateur/assistant sont conservés ; les détails internes
+  des outils ne polluent pas le fichier ;
+- le contexte envoyé au modèle est limité aux derniers échanges pour rester
+  rapide.
+
+```text
+> /session
+Session 12 message(s) · dernière activité 12/11/2026 08:42
+> /new
+Nouvelle conversation.
+```
+
 ## Interfaces
 
 ```bash
@@ -121,6 +142,8 @@ Après une réponse, les suggestions `1/2/3` permettent d’enchaîner.
 ```text
 /agent <tâche>      relancer explicitement l’agent
 /chat <message>     conversation simple sans outils
+/new · /clear       effacer la mémoire du projet courant
+/session            afficher la session mémorisée
 /files [dossier]    lister le projet
 /read <fichier>     ajouter un fichier au contexte
 /edit <fichier> <instruction>
@@ -129,9 +152,12 @@ Après une réponse, les suggestions `1/2/3` permettent d’enchaîner.
 /model <nom>        changer de modèle
 /usage              quotas et consommation
 /animations on|off  splash, spinner, pulse
-/clear              effacer la conversation
 /quit
 ```
+
+L’agent peut aussi lire une plage de lignes, remplacer un extrait précis
+(`replace_in_file`), consulter Git (`git_status`, `git_diff`) et charger les
+instructions du projet (`AGENTS.md`, `VALARIA.md`, `CLAUDE.md`).
 
 Désactiver les animations au lancement :
 

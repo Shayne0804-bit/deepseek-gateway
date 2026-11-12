@@ -15,6 +15,7 @@ import { LOGO_LINES, MARK, SPINNER } from '../src/assets.js';
 import { playSplash } from '../src/splash.js';
 import { collectWorkspaceDiff } from '../src/diff-view.js';
 import { renderScreen } from '../src/tui.js';
+import { appendSessionTurn, clearSession, createSession, loadSession, saveSession, sessionApiMessages, sessionSummary } from '../src/session.js';
 import { diffText, listFiles, readFile, runCommand, writeFile } from '../src/tools.js';
 
 function tmpDir(prefix = 'valaria-code-') {
@@ -378,4 +379,55 @@ test('outils locaux : fichiers, diff, commande', async () => {
   const result = await runCommand('node --version', { cwd: root });
   assert.equal(result.code, 0);
   assert.match(result.stdout, /^v\d+/);
+});
+
+test('session persistante : reprise, limite de contexte et effacement', () => {
+  const root = tmpDir();
+  const home = tmpDir();
+  const first = createSession({ cwd: root, model: 'gpt-5' });
+  appendSessionTurn(first, { user: 'question 1', assistant: 'réponse 1' });
+  appendSessionTurn(first, { user: 'question 2', assistant: 'réponse 2' });
+  first.home = home;
+  saveSession(first);
+  appendSessionTurn(first, { user: 'question 3', assistant: 'réponse 3' });
+  saveSession(first);
+  const restored = loadSession({ cwd: root, home });
+  assert.equal(restored.messages.length, 6);
+  assert.equal(restored.messages[0].content, 'question 1');
+  assert.equal(sessionApiMessages(restored, { limit: 2 }).length, 2);
+  assert.equal(sessionSummary(restored).messageCount, 6);
+  clearSession({ cwd: root, home });
+  assert.equal(loadSession({ cwd: root, home }).messages.length, 0);
+});
+
+test('agent : mémoire de conversation et remplacement ciblé', async () => {
+  const root = tmpDir();
+  writeFile(root, 'hello.js', 'export const value = 1;\n');
+  const seen = [];
+  let calls = 0;
+  const client = {
+    async complete(messages) {
+      seen.push(messages);
+      calls += 1;
+      if (calls === 1) {
+        return { content: '', tool_calls: [{ id: 'r1', type: 'function', function: { name: 'replace_in_file', arguments: '{"path":"hello.js","old_text":"value = 1","new_text":"value = 2"}' } }] };
+      }
+      return { content: 'Value updated.', tool_calls: [] };
+    },
+  };
+  const result = await runAgent({
+    client,
+    root,
+    task: 'mets value à 2',
+    history: [
+      { role: 'user', content: 'Le fichier hello.js contient value = 1.' },
+      { role: 'assistant', content: 'Compris, je garde ce contexte.' },
+    ],
+    approve: async () => true,
+  });
+  assert.equal(calls, 2);
+  assert.equal(seen[0][0].role, 'system');
+  assert.ok(seen[0].some((message) => message.content === 'Le fichier hello.js contient value = 1.'));
+  assert.match(readFile(root, 'hello.js'), /value = 2/);
+  assert.match(result.summary, /updated/);
 });

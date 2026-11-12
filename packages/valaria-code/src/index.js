@@ -14,6 +14,19 @@ export {
 } from './config.js';
 export { runTui } from './tui.js';
 export { runAgent } from './agent.js';
+export {
+  SESSION_VERSION,
+  MAX_SESSION_MESSAGES,
+  MAX_CONTEXT_MESSAGES,
+  appendSessionTurn,
+  clearSession,
+  createSession,
+  loadSession,
+  saveSession,
+  sessionApiMessages,
+  sessionFile,
+  sessionSummary,
+} from './session.js';
 export { APPROVAL_LABELS, APPROVAL_MODES, approvalRequired, isDangerousCommand, isSensitivePath } from './approval.js';
 export { chooseModel } from './onboarding.js';
 export { playSplash } from './splash.js';
