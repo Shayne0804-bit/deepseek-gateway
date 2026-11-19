@@ -28,9 +28,11 @@
 
   <main id="main">
     <section class="portal-login device-login" aria-labelledby="device-title">
+      <canvas class="ambient-canvas" data-morph="ambient" aria-hidden="true"></canvas>
       <div class="portal-login-copy">
+        <img class="device-mascot" src="/assets/mascot.svg?v={{APP_VERSION}}" alt="" aria-hidden="true" width="108" height="96">
         <p class="hero-kicker">Connexion d’appareil</p>
-        <h1 id="device-title">Autorisez votre terminal.</h1>
+        <h1 id="device-title">Autorisez <span class="grad">votre terminal.</span></h1>
         <p>VALARIA Code demande à se connecter à votre compte. Vérifiez le code affiché dans le terminal avant d’autoriser.</p>
         <ul class="portal-points">
           <li>Le code est valable 10 minutes</li>
@@ -86,6 +88,7 @@
     <span>VALARIA Gateway API</span>
     <span class="site-footer-links"><a href="/portal">Mon espace</a><a href="/">Accueil</a></span>
   </footer>
+  <script src="/assets/morph.js?v={{APP_VERSION}}" defer></script>
   <script src="/assets/device.js?v={{APP_VERSION}}" defer></script>
 </body>
 </html>

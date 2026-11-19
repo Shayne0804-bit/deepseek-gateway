@@ -34,9 +34,10 @@
   <main id="main">
     <!-- ============================== Connexion ========================= -->
     <section id="login-view" class="portal-login" aria-labelledby="login-title">
+      <canvas class="ambient-canvas" data-morph="ambient" aria-hidden="true"></canvas>
       <div class="portal-login-copy">
         <p class="hero-kicker">Espace utilisateur</p>
-        <h1 id="login-title">Vos accès, en un seul endroit.</h1>
+        <h1 id="login-title">Vos accès, <span class="grad">en un seul endroit.</span></h1>
         <p>
           Connectez-vous par clé API ou par email. Nouveau ?
           <a href="/signup">Créer un compte</a>.
@@ -330,6 +331,7 @@
     </span>
   </footer>
 
+  <script src="/assets/morph.js?v={{APP_VERSION}}" defer></script>
   <script src="/assets/portal.js?v={{APP_VERSION}}" defer></script>
 </body>
 </html>

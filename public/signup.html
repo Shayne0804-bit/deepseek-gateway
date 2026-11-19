@@ -33,9 +33,10 @@
 
   <main id="main">
     <section class="portal-login signup-login" aria-labelledby="signup-title">
+      <canvas class="ambient-canvas" data-morph="ambient" aria-hidden="true"></canvas>
       <div class="portal-login-copy">
         <p class="hero-kicker">Créer un compte</p>
-        <h1 id="signup-title">Votre espace, en quelques secondes.</h1>
+        <h1 id="signup-title">Votre espace, <span class="grad">en quelques secondes.</span></h1>
         <p>Un email, un code de vérification, puis votre clé API personnelle.</p>
         <ul class="portal-points">
           <li>Pass d'essai immédiat</li>
@@ -97,6 +98,7 @@
     </span>
   </footer>
 
+  <script src="/assets/morph.js?v={{APP_VERSION}}" defer></script>
   <script src="/assets/signup.js?v={{APP_VERSION}}" defer></script>
 </body>
 </html>

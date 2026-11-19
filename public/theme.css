@@ -2483,3 +2483,133 @@ input[type="checkbox"] { accent-color: var(--accent); }
   .landing-v2 .landing-header::after { display: none; }
   @view-transition { navigation: none; }
 }
+
+/* ==================================================================
+   Alignement sur le site de présentation (site.css) : mêmes couleurs,
+   en-tête flottant, cartes, titres en dégradé et fond de particules.
+   ================================================================== */
+:root {
+  --bg: #060c09;
+  --bg-soft: #09130e;
+  --panel: #0b1611;
+  --panel-2: #09130e;
+  --panel-3: #0f1d16;
+  --border: rgba(220, 255, 235, .1);
+  --border-strong: rgba(220, 255, 235, .17);
+  --line: rgba(220, 255, 235, .09);
+  --radius: 20px;
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+}
+body { background: var(--bg); }
+
+.grad {
+  background: var(--brand-grad);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: text-sheen 8s ease-in-out infinite alternate;
+}
+
+/* Fond de particules (morph.js) sur les écrans d'accès. */
+.ambient-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.6s ease;
+}
+.ambient-canvas.is-ready { opacity: .6; }
+
+/* En-tête : pilule flottante, comme sur la landing. */
+.public-page .site-header {
+  top: 12px;
+  margin-top: 12px;
+  padding: 8px 10px 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(8, 16, 12, .72);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .3);
+}
+.public-page .site-nav a { padding: 6px 12px; border-radius: 999px; }
+.public-page .site-nav a:hover { background: rgba(255, 255, 255, .05); }
+.public-page .site-footer { border-top-color: var(--line); }
+
+/* Cartes : surface sombre presque opaque, lisible au-dessus des particules. */
+.panel,
+.login-card,
+.portal-login-form,
+.payment-card,
+.device-card {
+  border-color: var(--border) !important;
+  border-radius: var(--radius) !important;
+  background: linear-gradient(180deg, rgba(15, 29, 22, .92), rgba(9, 19, 14, .95)) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .04) !important;
+}
+.portal-login-form,
+.payment-card,
+.login-card { position: relative; overflow: hidden; }
+.portal-login-form::before,
+.payment-card::before,
+.login-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(140, 234, 184, .7), rgba(240, 198, 116, .6), transparent);
+  background-size: 200% 100%;
+  animation: edge-run 5s linear infinite;
+}
+@keyframes edge-run { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+
+/* Titres des écrans d'accès : plus grands, révélés comme sur la landing. */
+.portal-login-copy h1 {
+  font-size: clamp(38px, 5vw, 66px) !important;
+  line-height: 1.02 !important;
+  font-weight: 750 !important;
+}
+.portal-login-copy .hero-kicker,
+.payment-card .hero-kicker,
+.login-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--accent);
+  letter-spacing: .14em;
+}
+.portal-login-copy .hero-kicker::before { content: ""; width: 22px; height: 1px; background: currentColor; }
+.portal-points li { transition: transform var(--dur) var(--ease-out); }
+.portal-points li:hover { transform: translateX(4px); }
+
+/* Admin : carte de connexion centrée, titre plus affirmé. */
+.login-card h1 { font-size: 24px !important; letter-spacing: -0.02em !important; }
+.login-screen { min-height: 100svh; }
+
+/* Tableaux de bord (portail et admin) : même grain que la landing. */
+.sidebar {
+  background: rgba(8, 16, 12, .9) !important;
+  border-color: var(--line) !important;
+}
+.stat-card {
+  border-radius: 18px !important;
+  background: linear-gradient(180deg, rgba(15, 29, 22, .9), rgba(9, 19, 14, .95)) !important;
+}
+.topbar h1, .portal-head h1 { font-size: clamp(26px, 3vw, 36px) !important; }
+.nav-item { border-radius: 12px !important; }
+.nav-item.active { background: rgba(140, 234, 184, .08) !important; color: var(--text) !important; }
+
+.device-mascot { display: block; width: 84px; height: auto; margin-bottom: 14px; image-rendering: pixelated; filter: drop-shadow(0 10px 26px rgba(140, 234, 184, .25)); }
+
+@media (max-width: 680px) {
+  .public-page .site-header { top: 8px; margin: 8px 8px 0; border-radius: 22px; padding: 10px 12px; }
+  .ambient-canvas.is-ready { opacity: .35; }
+  .portal-login-copy h1 { font-size: clamp(34px, 10vw, 44px) !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ambient-canvas { transition: none; }
+}

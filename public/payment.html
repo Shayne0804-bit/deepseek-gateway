@@ -28,6 +28,7 @@
 
   <main id="main">
     <section class="portal-login payment-login">
+      <canvas class="ambient-canvas" data-morph="center" aria-hidden="true"></canvas>
       <div class="panel payment-card" id="payment-card" aria-live="polite">
         <p class="hero-kicker">Paiement du pass</p>
         <h1 id="payment-title">Vérification du paiement…</h1>
@@ -59,6 +60,7 @@
     <span class="site-footer-links"><a href="/portal">Mon espace</a><a href="/">Accueil</a></span>
   </footer>
 
+  <script src="/assets/morph.js?v={{APP_VERSION}}" defer></script>
   <script src="/assets/payment.js?v={{APP_VERSION}}" defer></script>
 </body>
 </html>

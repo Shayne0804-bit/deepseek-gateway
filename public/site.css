@@ -277,11 +277,12 @@ code, pre { font-family: var(--mono); }
 @keyframes float-b { to { transform: translate(10vw, -8vh) scale(.92); } }
 
 .hero-canvas {
-  position: absolute;
-  top: 0; right: 0; bottom: 0;
-  width: 62%;
+  position: fixed;
+  inset: 0;
+  width: 100%;
   height: 100%;
   z-index: -1;
+  pointer-events: none;
   opacity: 0;
   transition: opacity 1.2s ease;
 }
@@ -589,6 +590,7 @@ code, pre { font-family: var(--mono); }
   content: ""; position: absolute; inset: 0; z-index: -1;
   background: radial-gradient(60% 50% at 50% 30%, rgba(60, 207, 180, .1), transparent 70%);
 }
+.mascot { width: 96px; height: auto; margin: 0 auto 18px; image-rendering: pixelated; filter: drop-shadow(0 10px 30px rgba(140, 234, 184, .25)); }
 .gallery { perspective: 1400px; }
 .gallery-frame {
   border: 1px solid var(--line-2);
@@ -714,10 +716,8 @@ code, pre { font-family: var(--mono); }
   .header { gap: 10px; }
   .header-end { margin-left: auto; }
   .header-end .status { display: none; }
-  .hero { align-items: start; padding-top: 110px; }
-  .hero-canvas { position: relative; display: block; width: 100%; height: min(46vh, 420px); margin: -10px 0 0; order: -1; }
-  .hero > .wrap { display: flex; flex-direction: column; }
-  .hero-fallback { position: relative; right: auto; top: auto; transform: none; width: 200px; margin: 0 auto 20px; order: -1; }
+  .hero { align-items: start; padding-top: min(46svh, 420px); }
+  .hero-fallback { position: relative; right: auto; top: auto; transform: none; width: 200px; margin: 0 auto 20px; }
   .scroll-cue { display: none; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stat:nth-child(2) { border-right: 0; }
@@ -732,8 +732,7 @@ code, pre { font-family: var(--mono); }
   :root { --wrap: calc(100% - 32px); --radius: 18px; }
   .header { top: 10px; padding: 6px 6px 6px 12px; }
   .header-end .btn { display: none; }
-  .hero { padding-top: 92px; padding-bottom: 60px; min-height: auto; }
-  .hero-canvas { height: 250px; margin-bottom: -6px; }
+  .hero { padding-top: min(46svh, 380px); padding-bottom: 60px; min-height: auto; }
   .pill { margin-bottom: 20px; font-size: 13px; }
   .hero h1 { font-size: clamp(40px, 12vw, 56px); }
   .actions .btn { flex: 1 1 100%; }

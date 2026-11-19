@@ -53,7 +53,7 @@
     <!-- ================================ Hero ================================ -->
     <section class="hero" aria-labelledby="hero-title">
       <div class="aurora" aria-hidden="true"><i></i><i></i></div>
-      <canvas class="hero-canvas" data-morph aria-hidden="true"></canvas>
+      <canvas class="hero-canvas" data-morph="hero" aria-hidden="true"></canvas>
       <img class="hero-fallback" src="/assets/logo-mark.svg?v={{APP_VERSION}}" alt="" aria-hidden="true" width="360" height="360">
       <div class="wrap">
         <div class="hero-copy">
@@ -253,6 +253,7 @@
     <section class="section cli" id="cli" aria-labelledby="cli-title">
       <div class="wrap">
         <div class="section-head section-head--center">
+          <img class="mascot" src="/assets/mascot.svg?v={{APP_VERSION}}" alt="" aria-hidden="true" width="108" height="96" data-reveal="scale">
           <p class="eyebrow" data-reveal>VALARIA Code · terminal</p>
           <h2 id="cli-title" data-reveal style="--d:1">Le terminal, <span class="grad">sans les mauvaises surprises.</span></h2>
           <p class="section-lede" data-reveal style="--d:2">Une interface plein écran, une conversation lisible et une revue de diff qui reste visible. Vous gardez la main sur chaque écriture et chaque commande.</p>
@@ -379,6 +380,7 @@ valaria</pre></div>
     </div>
   </footer>
 
+  <script src="/assets/morph.js?v={{APP_VERSION}}" defer></script>
   <script src="/assets/landing.js?v={{APP_VERSION}}" defer></script>
 </body>
 </html>
