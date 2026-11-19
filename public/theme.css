@@ -1417,7 +1417,7 @@ body.portal-authenticated #portal-app > aside {
 }
 body.portal-authenticated #portal-app > main { position: relative; z-index: 1; }
 @media (max-width: 960px) {
-  body.portal-authenticated #portal-app > aside { position: fixed; z-index: 30; }
+  body.portal-authenticated #portal-app > aside { position: fixed; z-index: 60; }
 }
 
 .guide-footnote {
@@ -2689,3 +2689,9 @@ body { background: var(--bg); }
 }
 .app .sidebar { background: rgba(8, 16, 12, .72) !important; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
 .app .main { position: relative; }
+
+/* Menu mobile des tableaux de bord : toujours au-dessus du voile (z-index 55),
+   sinon le flou du voile passe sur le menu lui-même. Fond presque opaque pour la lisibilité. */
+@media (max-width: 960px) {
+  .app .sidebar { z-index: 60 !important; background: rgba(8, 16, 12, .96) !important; }
+}
