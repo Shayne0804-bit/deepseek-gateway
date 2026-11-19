@@ -525,7 +525,7 @@
     billing: 'Recharger',
     requests: 'Requêtes',
     settings: 'Réglages',
-    guide: 'Guide d’intégration',
+    guide: 'Guide d’utilisation',
   };
 
   function setUserView(view) {
@@ -958,9 +958,9 @@
     return `
       <section class="panel guide-hero">
         <div class="guide-hero-copy">
-          <p class="hero-kicker">Guide d'intégration</p>
-          <h2>VALARIA Code,<br><span class="accent-word">ou l'API en quelques minutes.</span></h2>
-          <p class="guide-lede">Le CLI VALARIA Code se connecte par appareil, sans clé collée dans le terminal. Pour vos scripts, l'API reste compatible OpenAI et Anthropic. Choisissez votre parcours : CLI, SDK, Codex CLI ou Claude Code.</p>
+          <p class="hero-kicker">Guide d'utilisation</p>
+          <h2>Bien démarrer,<br><span class="accent-word">de votre clé au premier appel.</span></h2>
+          <p class="guide-lede">Choisissez votre chemin : VALARIA Code pour coder dans le terminal, un SDK pour vos scripts, ou Claude Code et Codex CLI si vous les utilisez déjà. Tous passent par la même clé et le même crédit.</p>
           <div class="guide-hero-actions">
             <button type="button" class="btn btn-primary" data-guide-copy-target="guide-cli-install">${icon('copy')}Installer VALARIA Code</button>
             <button type="button" class="btn btn-ghost" data-guide-copy-target="guide-base-url">${icon('copy')}Copier l'URL de base</button>
@@ -999,7 +999,7 @@
           <span class="guide-step-index">01</span>
           <div>
             <h3>Créez votre clé API</h3>
-            <p>Une clé <code>sk-dsk-…</code> personnelle, affichée une seule fois.</p>
+            <p>Elle commence par <code>sk-dsk-</code> et ne s'affiche qu'une fois : copiez-la tout de suite.</p>
             <button type="button" class="btn btn-ghost btn-sm" data-guide-view="keys">${icon('key')}Mes clés</button>
           </div>
         </article>
@@ -1007,15 +1007,15 @@
           <span class="guide-step-index">02</span>
           <div>
             <h3>Copiez l'URL de base</h3>
-            <p><code>${esc(base)}</code> — à utiliser dans votre SDK ou votre client HTTP.</p>
+            <p><code>${esc(base)}</code> remplace l'adresse d'OpenAI dans votre SDK ou votre client HTTP.</p>
             <button type="button" class="btn btn-ghost btn-sm" data-guide-copy-target="guide-base-url">${icon('copy')}Copier</button>
           </div>
         </article>
         <article class="guide-step">
           <span class="guide-step-index">03</span>
           <div>
-            <h3>Envoyez votre premier appel</h3>
-            <p>Choisissez un exemple ci-dessous et remplacez la clé.</p>
+            <h3>Faites un premier appel</h3>
+            <p>Prenez un exemple plus bas et remplacez <code>VOTRE_CLE_API</code> par votre clé.</p>
             <a class="btn btn-ghost btn-sm" href="#guide-examples">${icon('arrow')}Voir un exemple</a>
           </div>
         </article>
@@ -1025,8 +1025,8 @@
         <div class="panel-head">
           <div>
             <span class="guide-eyebrow">01 · VALARIA Code</span>
-            <h2>L’agent de code, dans le terminal</h2>
-            <span class="hint">Connexion par appareil, sans clé API collée dans le terminal.</span>
+            <h2>L’agent de code dans votre terminal</h2>
+            <span class="hint">Il se connecte par votre navigateur : vous n’avez aucune clé à coller.</span>
           </div>
           <span class="badge badge-ok">${icon('check')}nouveau</span>
         </div>
@@ -1034,7 +1034,7 @@
           <div class="guide-cli-card">
             <div class="guide-cli-card-head">
               <span class="guide-client-icon">${icon('terminal')}</span>
-              <div><h3>Installer et connecter</h3><p>Node.js 20+ · approuvez l’appareil depuis ce navigateur.</p></div>
+              <div><h3>Installer et connecter</h3><p>Il faut Node.js 20 ou plus récent. Vous autorisez l’appareil depuis ce navigateur.</p></div>
             </div>
             <div class="guide-cli-steps">
               <div class="guide-cli-step">
@@ -1055,7 +1055,7 @@
                     <code id="guide-cli-login">valaria login</code>
                     <button type="button" class="icon-btn" data-guide-copy-target="guide-cli-login" aria-label="Copier valaria login">${icon('copy')}</button>
                   </div>
-                  <p>Le terminal affiche un code et ouvre <code>/device</code>. Connectez-vous, approuvez, puis choisissez Claude, Codex ou DeepSeek.</p>
+                  <p>Le terminal affiche un code et ouvre la page <code>/device</code>. Vérifiez que c’est le même code, autorisez l’appareil, puis choisissez Claude, Codex ou DeepSeek.</p>
                 </div>
               </div>
               <div class="guide-cli-step">
@@ -1066,7 +1066,7 @@
                     <code id="guide-cli-launch">valaria</code>
                     <button type="button" class="icon-btn" data-guide-copy-target="guide-cli-launch" aria-label="Copier valaria">${icon('copy')}</button>
                   </div>
-                  <p>Décrivez une tâche : l’agent lit, propose un patch, puis attend votre validation avant d’écrire ou de lancer une commande.</p>
+                  <p>Lancez-le dans le dossier de votre projet et décrivez la tâche. L’agent lit les fichiers, propose un changement et, en mode Strict, attend votre accord avant d’écrire ou de lancer une commande.</p>
                 </div>
               </div>
             </div>
@@ -1091,47 +1091,47 @@
           </div>
         </div>
         <div class="guide-cli-modes">
-          <div class="guide-cli-mode"><strong>Strict</strong><span>Chaque écriture et commande demandent une approbation.</span></div>
-          <div class="guide-cli-mode"><strong>Sécurisé</strong><span>Approbation seulement pour les fichiers sensibles et commandes dangereuses.</span></div>
-          <div class="guide-cli-mode"><strong>Accès total</strong><span>Aucune approbation ; à utiliser en connaissance de cause.</span></div>
+          <div class="guide-cli-mode"><strong>Strict</strong><span>Vous validez chaque écriture de fichier et chaque commande.</span></div>
+          <div class="guide-cli-mode"><strong>Sécurisé</strong><span>Vous validez seulement les fichiers sensibles (<code>.env</code>, secrets, Docker) et les commandes risquées comme <code>rm -rf</code>.</span></div>
+          <div class="guide-cli-mode"><strong>Accès total</strong><span>L’agent ne demande rien. Réservez ce mode aux projets que vous pouvez restaurer avec Git.</span></div>
         </div>
-        <div class="guide-note">${icon('shield')}<span><strong>Ctrl+G</strong> ou <strong>Alt+M</strong> change de mode. <strong>PgUp/PgDn</strong> parcourt la conversation. <code>/diff off</code> masque le diff ; <code>/diff</code> le réaffiche.</span></div>
+        <div class="guide-note">${icon('shield')}<span><strong>Ctrl+G</strong> ou <strong>Alt+M</strong> change de mode. <strong>PgUp/PgDn</strong> fait défiler la conversation. <code>/diff off</code> masque le diff et <code>/diff</code> le réaffiche. <code>/new</code> repart d’une conversation vide.</span></div>
       </section>
 
       <section class="panel guide-section" id="guide-cases">
         <div class="panel-head">
           <div>
-            <span class="guide-eyebrow">02 · Cas d'usage</span>
-            <h2>Quel guide pour votre usage ?</h2>
-            <span class="hint">Le bon endpoint et le bon modèle, sans mauvaise surprise.</span>
+            <span class="guide-eyebrow">02 · Par où commencer</span>
+            <h2>Quel outil pour quel besoin ?</h2>
+            <span class="hint">Chaque carte mène au bon exemple, avec le bon modèle.</span>
           </div>
         </div>
         <div class="guide-use-grid">
           <article class="guide-use-card">
             <span class="guide-use-icon">${icon('terminal')}</span>
             <h3>VALARIA Code</h3>
-            <p>L’agent de code dans le terminal : lecture, patch, tests, diff et approbations.</p>
+            <p>Pour coder : l’agent lit votre projet, propose des changements et lance les tests.</p>
             <div class="guide-use-meta"><code>npm install -g valaria-code</code></div>
             <a class="btn btn-ghost btn-sm" href="#guide-valaria-code">${icon('arrow')}Voir le guide</a>
           </article>
           <article class="guide-use-card">
             <span class="guide-use-icon">${icon('spark')}</span>
-            <h3>Chat & assistants</h3>
-            <p>Réponses texte, résumés, rédaction, support conversationnel.</p>
+            <h3>Assistants et chat</h3>
+            <p>Pour rédiger, résumer, traduire ou répondre à vos utilisateurs depuis vos scripts.</p>
             <div class="guide-use-meta"><code>${esc(chatModel)}</code></div>
             <button type="button" class="btn btn-ghost btn-sm" data-guide-usecase="node">${icon('arrow')}Voir le guide</button>
           </article>
           <article class="guide-use-card">
             <span class="guide-use-icon">${icon('terminal')}</span>
-            <h3>Code & agents Codex</h3>
-            <p>Génération et refactorisation de code via Codex CLI.</p>
+            <h3>Codex CLI</h3>
+            <p>Pour générer et réécrire du code avec le client en ligne de commande d’OpenAI.</p>
             <div class="guide-use-meta"><code>${esc(codexModel)}</code></div>
             <button type="button" class="btn btn-ghost btn-sm" data-guide-usecase="codex">${icon('arrow')}Voir le guide</button>
           </article>
           <article class="guide-use-card">
             <span class="guide-use-icon">${icon('book')}</span>
             <h3>Claude Code</h3>
-            <p>Clients qui utilisent le protocole Anthropic Messages.</p>
+            <p>Pour le client d’Anthropic et tout outil qui utilise le protocole Messages.</p>
             <div class="guide-use-meta"><code>${esc(anthropicModel)}</code></div>
             <button type="button" class="btn btn-ghost btn-sm" data-guide-usecase="anthropic">${icon('arrow')}Voir le guide</button>
           </article>
@@ -1141,16 +1141,16 @@
       <section class="panel guide-section guide-install" id="guide-install">
         <div class="panel-head">
           <div>
-            <span class="guide-eyebrow">03 · Installation</span>
-            <h2>Installer et lancer un client CLI</h2>
-            <span class="hint">Du <code>npm install</code> au premier prompt, pour Claude Code et Codex CLI.</span>
+            <span class="guide-eyebrow">03 · Clients tiers</span>
+            <h2>Utiliser Claude Code ou Codex CLI</h2>
+            <span class="hint">De l’installation au premier lancement, avec la configuration à copier.</span>
           </div>
         </div>
         <div class="guide-client-grid">
           <article class="guide-client-card">
             <div class="guide-client-head">
               <span class="guide-client-icon">${icon('book')}</span>
-              <div><h3>Claude Code CLI</h3><p>Client officiel Anthropic, installé via npm.</p></div>
+              <div><h3>Claude Code</h3><p>Le client en ligne de commande d’Anthropic, installé avec npm.</p></div>
               <span class="badge badge-muted">JSON</span>
             </div>
             <div class="guide-client-step">
@@ -1167,7 +1167,7 @@
               <span class="guide-client-num">2</span>
               <div>
                 <h4>Configurer <code>~/.claude/settings.json</code></h4>
-                <p class="guide-client-hint">Créez le dossier <code>.claude</code> s'il n'existe pas, puis ajoutez ce JSON. Sous Windows : <code>%USERPROFILE%\\.claude\\settings.json</code>.</p>
+                <p class="guide-client-hint">Créez le dossier <code>.claude</code> s'il n'existe pas, puis collez ce JSON dans le fichier. Sous Windows, le chemin est <code>%USERPROFILE%\\.claude\\settings.json</code>.</p>
                 <div class="guide-config-head"><span>settings.json</span><button type="button" class="btn btn-ghost btn-sm" data-guide-copy-target="guide-claude-settings">${icon('copy')}Copier</button></div>
                 <pre class="guide-config" id="guide-claude-settings"><code>${esc(claudeSettings)}</code></pre>
               </div>
@@ -1180,7 +1180,7 @@
                   <code id="guide-claude-launch">claude</code>
                   <button type="button" class="icon-btn" data-guide-copy-target="guide-claude-launch" aria-label="Copier la commande de lancement Claude Code">${icon('copy')}</button>
                 </div>
-                <p class="guide-client-hint">Lancez la commande dans le dossier de votre projet. Claude Code lit le modèle et la clé depuis <code>settings.json</code>.</p>
+                <p class="guide-client-hint">Lancez-le dans le dossier de votre projet. Claude Code prend l’adresse, la clé et le modèle dans <code>settings.json</code>.</p>
               </div>
             </div>
           </article>
@@ -1188,7 +1188,7 @@
           <article class="guide-client-card">
             <div class="guide-client-head">
               <span class="guide-client-icon">${icon('terminal')}</span>
-              <div><h3>Codex CLI</h3><p>Client officiel OpenAI, installé via npm.</p></div>
+              <div><h3>Codex CLI</h3><p>Le client en ligne de commande d’OpenAI, installé avec npm.</p></div>
               <span class="badge badge-muted">TOML</span>
             </div>
             <div class="guide-client-step">
@@ -1205,7 +1205,7 @@
               <span class="guide-client-num">2</span>
               <div>
                 <h4>Configurer <code>~/.codex/config.toml</code></h4>
-                <p class="guide-client-hint">Créez le dossier <code>.codex</code> s'il n'existe pas. Codex utilise un fichier TOML, pas un JSON. Sous Windows : <code>%USERPROFILE%\\.codex\\config.toml</code>.</p>
+                <p class="guide-client-hint">Créez le dossier <code>.codex</code> s'il n'existe pas. Attention : Codex lit un fichier TOML, pas du JSON. Sous Windows, le chemin est <code>%USERPROFILE%\\.codex\\config.toml</code>.</p>
                 <div class="guide-config-head"><span>config.toml</span><button type="button" class="btn btn-ghost btn-sm" data-guide-copy-target="guide-codex-config">${icon('copy')}Copier</button></div>
                 <pre class="guide-config" id="guide-codex-config"><code>${esc(codexConfig)}</code></pre>
               </div>
@@ -1217,12 +1217,12 @@
                 <div class="guide-config-head"><span>Terminal</span><button type="button" class="btn btn-ghost btn-sm" data-guide-copy-target="guide-codex-launch">${icon('copy')}Copier</button></div>
                 <pre class="guide-config" id="guide-codex-launch"><code>export VALARIA_API_KEY="VOTRE_CLE_API"
 codex</code></pre>
-                <p class="guide-client-hint">Windows PowerShell : <code>$env:VALARIA_API_KEY="VOTRE_CLE_API"</code>, puis <code>codex</code>. Lancez la commande dans le dossier de votre projet.</p>
+                <p class="guide-client-hint">Sous Windows PowerShell, tapez <code>$env:VALARIA_API_KEY="VOTRE_CLE_API"</code> puis <code>codex</code>, depuis le dossier de votre projet.</p>
               </div>
             </div>
           </article>
         </div>
-        <div class="guide-prereq">${icon('help')}<span><strong>Prérequis :</strong> Node.js 20+ et npm. Vérifiez avec <code>node --version</code> et <code>npm --version</code>. Les fichiers de configuration sont propres à chaque client : JSON pour Claude Code, TOML pour Codex CLI.</span></div>
+        <div class="guide-prereq">${icon('help')}<span><strong>Avant de commencer :</strong> il vous faut Node.js 20 ou plus récent, avec npm. Vérifiez avec <code>node --version</code> et <code>npm --version</code>. Chaque client a son propre fichier de configuration : JSON pour Claude Code, TOML pour Codex CLI.</span></div>
       </section>
 
       <div class="guide-layout">
@@ -1230,17 +1230,17 @@ codex</code></pre>
           <p class="guide-toc-title">Sommaire</p>
           <nav class="guide-toc" aria-label="Sommaire du guide">
             <a href="#guide-valaria-code">${icon('terminal')}VALARIA Code</a>
-            <a href="#guide-cases">${icon('spark')}Cas d'usage</a>
-            <a href="#guide-install">${icon('terminal')}Installer un client</a>
-            <a href="#guide-endpoints">${icon('globe')}Points d'accès</a>
+            <a href="#guide-cases">${icon('spark')}Par où commencer</a>
+            <a href="#guide-install">${icon('terminal')}Claude Code et Codex</a>
+            <a href="#guide-endpoints">${icon('globe')}Adresses de l'API</a>
             <a href="#guide-examples">${icon('code')}Premiers exemples</a>
             <a href="#guide-models">${icon('layers')}Modèles</a>
             <a href="#guide-params">${icon('settings')}Paramètres</a>
-            <a href="#guide-errors">${icon('shield')}Erreurs & quotas</a>
+            <a href="#guide-errors">${icon('shield')}Erreurs et limites</a>
             <a href="#guide-faq">${icon('help')}FAQ</a>
           </nav>
           <div class="guide-toc-help">
-            <p class="small muted">Besoin d'un coup de main ?</p>
+            <p class="small muted">Une question sur votre compte ?</p>
             <button type="button" class="btn btn-ghost btn-sm" data-guide-view="settings">${icon('settings')}Réglages</button>
           </div>
         </aside>
@@ -1250,8 +1250,8 @@ codex</code></pre>
             <div class="panel-head">
               <div>
                 <span class="guide-eyebrow">04 · Connexion</span>
-                <h2>Points d'accès</h2>
-                <span class="hint">Deux formats compatibles, une seule clé.</span>
+                <h2>Les deux adresses de l'API</h2>
+                <span class="hint">Deux formats, une seule clé.</span>
               </div>
               <span class="badge badge-ok">${icon('check')}opérationnel</span>
             </div>
@@ -1259,7 +1259,7 @@ codex</code></pre>
               <article class="guide-endpoint">
                 <div class="guide-endpoint-head">
                   <span class="guide-endpoint-icon">${icon('globe')}</span>
-                  <div><h3>OpenAI-compatible</h3><p>SDK OpenAI, Codex CLI, LangChain, LlamaIndex, scripts HTTP.</p></div>
+                  <div><h3>Format OpenAI</h3><p>Pour le SDK OpenAI, Codex CLI, LangChain, LlamaIndex et vos scripts HTTP.</p></div>
                 </div>
                 <div class="guide-kv">
                   <span>Base URL</span>
@@ -1272,7 +1272,7 @@ codex</code></pre>
               <article class="guide-endpoint">
                 <div class="guide-endpoint-head">
                   <span class="guide-endpoint-icon">${icon('terminal')}</span>
-                  <div><h3>Claude Code / Anthropic</h3><p>Pour les clients qui parlent le protocole Anthropic Messages.</p></div>
+                  <div><h3>Format Anthropic</h3><p>Pour Claude Code et les outils qui utilisent le protocole Anthropic Messages.</p></div>
                 </div>
                 <div class="guide-kv">
                   <span>Base URL</span>
@@ -1281,10 +1281,10 @@ codex</code></pre>
                 </div>
                 <div class="guide-kv"><span>Auth</span><code>x-api-key: VOTRE_CLE_API</code></div>
                 <div class="guide-kv"><span>Version</span><code>anthropic-version: 2023-06-01</code></div>
-                <p class="guide-footnote">${icon('help')}<span>« 2023-06-01 » est l'identifiant de version du protocole Messages, pas une date d'expiration. Les SDK Anthropic et Claude Code l'ajoutent automatiquement.</span></p>
+                <p class="guide-footnote">${icon('help')}<span>2023-06-01 est le numéro de version du protocole Messages, pas une date d'expiration. Les SDK Anthropic et Claude Code l'ajoutent tout seuls.</span></p>
               </article>
             </div>
-            <div class="guide-note">${icon('lock')}<span>Votre clé est personnelle. Ne la partagez pas et stockez-la dans un gestionnaire de secrets.</span></div>
+            <div class="guide-note">${icon('lock')}<span>Votre clé est personnelle. Ne la mettez jamais dans un dépôt Git : gardez-la dans une variable d'environnement ou un gestionnaire de secrets.</span></div>
           </section>
 
           <section class="panel guide-section" id="guide-examples">
@@ -1298,14 +1298,14 @@ codex</code></pre>
             </div>
             <div class="guide-sdk-install">
               <div>
-                <span class="guide-sdk-label">Node.js — SDK OpenAI</span>
+                <span class="guide-sdk-label">Node.js · SDK OpenAI</span>
                 <div class="guide-command-row">
                   <code id="guide-sdk-node">npm install openai</code>
                   <button type="button" class="icon-btn" data-guide-copy-target="guide-sdk-node" aria-label="Copier npm install openai">${icon('copy')}</button>
                 </div>
               </div>
               <div>
-                <span class="guide-sdk-label">Python — SDK OpenAI</span>
+                <span class="guide-sdk-label">Python · SDK OpenAI</span>
                 <div class="guide-command-row">
                   <code id="guide-sdk-python">pip install openai</code>
                   <button type="button" class="icon-btn" data-guide-copy-target="guide-sdk-python" aria-label="Copier pip install openai">${icon('copy')}</button>
@@ -1321,14 +1321,14 @@ codex</code></pre>
             </div>
             <div class="guide-code-wrap">
               ${codePanel('curl', 'cURL', curlCode)}
-              ${codePanel('node', 'Node.js — SDK OpenAI', nodeCode)}
-              ${codePanel('python', 'Python — SDK OpenAI', pythonCode)}
-              ${codePanel('codex', 'Codex CLI — ~/.codex/config.toml', codexCode)}
+              ${codePanel('node', 'Node.js · SDK OpenAI', nodeCode)}
+              ${codePanel('python', 'Python · SDK OpenAI', pythonCode)}
+              ${codePanel('codex', 'Codex CLI · ~/.codex/config.toml', codexCode)}
               ${codePanel('anthropic', 'Claude Code / Anthropic', anthropicCode)}
             </div>
             <div class="guide-inline-links">
               <button type="button" class="btn btn-ghost btn-sm" data-guide-view="keys">${icon('key')}Voir ma clé</button>
-              <button type="button" class="btn btn-ghost btn-sm" data-guide-view="settings">${icon('settings')}Points d'accès</button>
+              <button type="button" class="btn btn-ghost btn-sm" data-guide-view="settings">${icon('settings')}Adresses de l'API</button>
             </div>
           </section>
 
@@ -1337,7 +1337,7 @@ codex</code></pre>
               <div>
                 <span class="guide-eyebrow">06 · Modèles</span>
                 <h2>Modèles disponibles</h2>
-                <span class="hint">Les modèles disponibles pour votre compte.</span>
+                <span class="hint">Les modèles autorisés par votre pass.</span>
               </div>
             </div>
             ${models.length ? `<div class="table-wrap"><table class="guide-model-table">
@@ -1348,7 +1348,7 @@ codex</code></pre>
                 <td class="right"><span class="badge badge-ok">disponible</span></td>
               </tr>`).join('')}</tbody>
             </table></div>` : '<div class="empty-state">Aucun modèle autorisé pour le moment.</div>'}
-            <p class="small muted" style="margin:10px 0 0">Utilisez l'identifiant exact comme valeur de <code>model</code>. Les modèles non listés peuvent être refusés par votre pass.</p>
+            <p class="small muted" style="margin:10px 0 0">Copiez l'identifiant exact dans le champ <code>model</code>. Un modèle absent de cette liste peut être refusé.</p>
           </section>
 
           <section class="panel guide-section" id="guide-params">
@@ -1356,16 +1356,16 @@ codex</code></pre>
               <div>
                 <span class="guide-eyebrow">07 · Requête</span>
                 <h2>Paramètres utiles</h2>
-                <span class="hint">Les clés que vous utiliserez le plus souvent.</span>
+                <span class="hint">Les champs de requête que vous utiliserez le plus.</span>
               </div>
             </div>
             <div class="guide-param-grid">
               <div class="guide-param"><code>model</code><p>Identifiant du modèle, par exemple <code>${esc(openaiModel)}</code>.</p></div>
-              <div class="guide-param"><code>messages</code><p>Liste des tours de conversation. Le contenu est du texte.</p></div>
-              <div class="guide-param"><code>stream</code><p><code>true</code> pour recevoir la réponse en SSE, idéal pour un effet de frappe.</p></div>
-              <div class="guide-param"><code>temperature</code><p>Entre 0 et 2. Plus bas = réponses déterministes, plus haut = plus créatives.</p></div>
-              <div class="guide-param"><code>max_tokens</code><p>Plafonné par votre pass. Laissez vide pour utiliser la limite du modèle.</p></div>
-              <div class="guide-param"><code>stream_options</code><p>Ajoutez <code>{"include_usage": true}</code> pour recevoir les tokens en fin de flux.</p></div>
+              <div class="guide-param"><code>messages</code><p>La conversation, message par message, avec le rôle de chacun (<code>system</code>, <code>user</code>, <code>assistant</code>).</p></div>
+              <div class="guide-param"><code>stream</code><p>Mettez <code>true</code> pour recevoir la réponse au fil de l'eau (SSE), mot après mot.</p></div>
+              <div class="guide-param"><code>temperature</code><p>Entre 0 et 2. Plus la valeur est basse, plus les réponses sont stables ; plus elle est haute, plus elles varient.</p></div>
+              <div class="guide-param"><code>max_tokens</code><p>Longueur maximale de la réponse. Votre pass fixe un plafond ; sans valeur, c'est ce plafond qui s'applique.</p></div>
+              <div class="guide-param"><code>stream_options</code><p>Ajoutez <code>{"include_usage": true}</code> pour recevoir le nombre de tokens à la fin du flux.</p></div>
             </div>
           </section>
 
@@ -1373,18 +1373,21 @@ codex</code></pre>
             <div class="panel-head">
               <div>
                 <span class="guide-eyebrow">08 · Diagnostic</span>
-                <h2>Erreurs & quotas</h2>
-                <span class="hint">Les réponses à connaître avant de déboguer.</span>
+                <h2>Erreurs et limites</h2>
+                <span class="hint">Le champ <code>error.code</code> de la réponse dit précisément ce qui bloque.</span>
               </div>
             </div>
             <div class="table-wrap"><table class="guide-model-table">
               <thead><tr><th>Code</th><th>Signification</th><th>Réflexe</th></tr></thead>
               <tbody>
-                <tr><td><code>401</code></td><td>Clé absente ou invalide.</td><td>Vérifiez l'en-tête <code>Authorization</code>.</td></tr>
-                <tr><td><code>403</code></td><td>Accès désactivé ou pass expiré.</td><td>Ouvrez <strong>Mon pass</strong> ou contactez l'administrateur.</td></tr>
-                <tr><td><code>404</code></td><td>Modèle ou route inconnue.</td><td>Utilisez un modèle listé et l'URL de base exacte.</td></tr>
-                <tr><td><code>429</code></td><td>Débit trop élevé.</td><td>Respectez <code>Retry-After</code> et votre limite req/min.</td></tr>
-                <tr><td><code>402</code> / quota</td><td>Quota ou crédit épuisé.</td><td>Consultez <strong>Consommation</strong> et renouvelez votre pass.</td></tr>
+                <tr><td><code>401</code></td><td>Clé absente, invalide ou régénérée depuis.</td><td>Vérifiez l'en-tête <code>Authorization</code> (ou <code>x-api-key</code> au format Anthropic).</td></tr>
+                <tr><td><code>403</code></td><td>Accès désactivé, ou pass arrivé à sa date de fin.</td><td>Ouvrez <strong>Mon pass</strong> pour le renouveler, ou contactez l'administrateur.</td></tr>
+                <tr><td><code>404</code></td><td>Modèle ou adresse inconnus.</td><td>Prenez un modèle de la liste ci-dessus et l'URL de base exacte.</td></tr>
+                <tr><td><code>429</code> · <code>rate_limit_exceeded</code></td><td>Trop de requêtes par minute.</td><td>Attendez le délai indiqué par l'en-tête <code>Retry-After</code>, puis réessayez.</td></tr>
+                <tr><td><code>429</code> · <code>concurrency_limit_exceeded</code></td><td>Trop d'appels en même temps.</td><td>Attendez la fin d'un appel en cours avant d'en lancer un autre.</td></tr>
+                <tr><td><code>429</code> · <code>credit_window_exceeded</code></td><td>Plafond de crédit sur 5 heures atteint.</td><td>Le plafond se libère au fil des heures : réessayez plus tard.</td></tr>
+                <tr><td><code>429</code> · <code>credit_week_exceeded</code></td><td>Plafond de crédit de la semaine atteint.</td><td>Attendez la semaine suivante ou passez à un pass plus grand.</td></tr>
+                <tr><td><code>429</code> · <code>insufficient_quota</code></td><td>Crédit du pass épuisé.</td><td>Consultez <strong>Consommation</strong>, puis renouvelez votre pass.</td></tr>
               </tbody>
             </table></div>
           </section>
@@ -1400,19 +1403,27 @@ codex</code></pre>
             <div class="guide-faq">
               <details open>
                 <summary>Où trouver ma clé API ?</summary>
-                <p>Ouvrez <strong>Mes clés API</strong>. La clé complète est affichée une seule fois à la création ; ensuite seule son empreinte reste visible. Si vous l'avez perdue, régénérez-la.</p>
+                <p>Ouvrez <strong>Mes clés API</strong>. La clé complète ne s'affiche qu'une fois, à sa création ; ensuite, seul son début reste visible. Si vous l'avez perdue, régénérez-la : l'ancienne cesse aussitôt de fonctionner.</p>
               </details>
               <details>
-                <summary>Quel endpoint choisir ?</summary>
-                <p>Utilisez l'endpoint <strong>OpenAI-compatible</strong> pour la majorité des SDK et outils. L'endpoint <strong>Anthropic</strong> est destiné aux clients qui parlent le protocole Messages, comme Claude Code.</p>
+                <summary>Quelle adresse choisir ?</summary>
+                <p>Le <strong>format OpenAI</strong> convient à la plupart des SDK et des outils. Le <strong>format Anthropic</strong> sert aux clients qui utilisent le protocole Messages, comme Claude Code.</p>
               </details>
               <details>
                 <summary>Comment suivre ma consommation ?</summary>
-                <p>La page <strong>Consommation</strong> détaille les tokens et le coût par jour. La page <strong>Requêtes</strong> donne le détail des appels récents et leur latence.</p>
+                <p><strong>Consommation</strong> montre les tokens et le coût jour par jour. <strong>Requêtes</strong> liste vos appels récents, avec le modèle, la durée et le coût de chacun.</p>
+              </details>
+              <details>
+                <summary>Que se passe-t-il à la fin de mon pass ?</summary>
+                <p>Le pass s'arrête à sa date de fin ou quand son crédit est épuisé, au premier des deux. Vos appels sont alors refusés jusqu'au renouvellement. Rien n'est prélevé automatiquement : c'est vous qui renouvelez depuis <strong>Mon pass</strong>.</p>
+              </details>
+              <details>
+                <summary>Comment déconnecter un terminal ?</summary>
+                <p>Ouvrez <strong>Réglages</strong>, section <strong>Appareils connectés</strong>, et révoquez l'appareil. Sur ce terminal, VALARIA Code devra repasser par <code>valaria login</code>.</p>
               </details>
               <details>
                 <summary>Puis-je utiliser le SDK OpenAI ?</summary>
-                <p>Oui. Renseignez votre clé et l'URL de base <code>${esc(base)}</code>. Les autres SDK compatibles OpenAI fonctionnent de la même manière.</p>
+                <p>Oui. Indiquez votre clé et l'URL de base <code>${esc(base)}</code>. Les autres SDK compatibles OpenAI se configurent de la même façon.</p>
               </details>
             </div>
             <div class="guide-foot-actions">
@@ -1424,7 +1435,7 @@ codex</code></pre>
       </div>
 
       <div class="guide-status-bar">
-        <span>${icon('shield')}Connexion chiffrée · ${keyState}</span>
+        <span>${icon('shield')}Votre clé · ${keyState}</span>
         <span class="muted">URL : <code>${esc(base)}</code></span>
       </div>`;
   }

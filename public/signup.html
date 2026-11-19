@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#0a0e0c">
   <meta name="app-version" content="{{APP_VERSION}}">
   <meta name="description" content="Créer un compte VALARIA Gateway API : vérification par email, pass d'essai et clé API personnelle.">
-  <title>Créer un compte — VALARIA Gateway API</title>
+  <title>Créer un compte · VALARIA Gateway API</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/styles.css?v={{APP_VERSION}}">
   <link rel="stylesheet" href="/assets/theme.css?v={{APP_VERSION}}">
@@ -37,10 +37,10 @@
       <div class="portal-login-copy">
         <p class="hero-kicker">Créer un compte</p>
         <h1 id="signup-title">Votre espace, <span class="grad">en quelques secondes.</span></h1>
-        <p>Un email, un code de vérification, puis votre clé API personnelle.</p>
+        <p>Donnez votre email, saisissez le code reçu, et votre espace s’ouvre avec votre clé API personnelle.</p>
         <ul class="portal-points">
-          <li>Pass d'essai immédiat</li>
-          <li>Quotas, crédit et suivi inclus</li>
+          <li>Un pass d’essai offert dès la validation</li>
+          <li>Votre crédit et votre consommation visibles à tout moment</li>
           <li>Aucun prélèvement automatique</li>
         </ul>
         <p class="small muted">
@@ -50,7 +50,7 @@
 
       <div class="panel portal-login-form signup-card">
         <h2>Créer un compte</h2>
-        <p class="small muted">Un code à usage unique sera envoyé à votre adresse email.</p>
+        <p class="small muted">Nous vous envoyons un code à 6 chiffres pour vérifier votre adresse.</p>
         <div id="signup-error" class="login-error" role="alert" aria-live="assertive"></div>
         <div id="signup-turnstile" class="turnstile-slot hidden"></div>
 
@@ -58,12 +58,12 @@
           <label class="field full">
             <span>Nom d'utilisateur</span>
             <input type="text" id="signup-username" name="username" placeholder="votre nom" autocomplete="username" minlength="2" maxlength="40" required>
-            <small>Ce nom sera affiché dans votre espace et sur votre clé API.</small>
+            <small>Il s’affiche dans votre espace et à côté de votre clé API.</small>
           </label>
           <label class="field full">
             <span>Adresse email</span>
             <input type="email" id="signup-email" name="email" placeholder="vous@gmail.com" autocomplete="email" maxlength="254" required>
-            <small>Un pass d'essai est créé après validation. Utilisez une adresse que vous consultez.</small>
+            <small>Utilisez une adresse que vous consultez : c’est aussi par là que vous vous reconnecterez.</small>
           </label>
           <button type="submit" class="btn btn-primary btn-block" id="signup-request-btn">Recevoir mon code</button>
         </form>
@@ -73,7 +73,7 @@
           <label class="field full">
             <span>Code à 6 chiffres</span>
             <input type="text" id="signup-code" name="code" placeholder="000000" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="7" required>
-            <small>Utilisez le dernier code reçu : un nouveau code annule le précédent.</small>
+            <small>Saisissez le dernier code reçu. Chaque nouvel envoi annule le précédent.</small>
           </label>
           <button type="submit" class="btn btn-primary btn-block" id="signup-verify-btn">Créer mon compte</button>
           <div class="auth-links">

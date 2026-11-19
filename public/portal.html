@@ -6,8 +6,8 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#0a0e0c">
   <meta name="app-version" content="{{APP_VERSION}}">
-  <meta name="description" content="Espace utilisateur VALARIA Gateway API : quotas, consommation et dernières requêtes de votre clé API.">
-  <title>Mon espace — VALARIA Gateway API</title>
+  <meta name="description" content="Votre espace VALARIA : clé API, crédit restant, consommation et appareils connectés.">
+  <title>Mon espace · VALARIA Gateway API</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/styles.css?v={{APP_VERSION}}">
   <link rel="stylesheet" href="/assets/theme.css?v={{APP_VERSION}}">
@@ -39,17 +39,17 @@
         <p class="hero-kicker">Espace utilisateur</p>
         <h1 id="login-title">Vos accès, <span class="grad">en un seul endroit.</span></h1>
         <p>
-          Connectez-vous par clé API ou par email. Nouveau ?
-          <a href="/signup">Créer un compte</a>.
+          Connectez-vous avec votre clé API ou avec un code reçu par email.
+          Pas encore de compte ? <a href="/signup">Créez-le en une minute</a>.
         </p>
         <ul class="portal-points">
-          <li>Quotas et crédit restants</li>
-          <li>Dernières requêtes et consommation</li>
-          <li>Clé API et fin de pass</li>
+          <li>Votre crédit restant et vos limites</li>
+          <li>Vos dernières requêtes et leur coût</li>
+          <li>Vos clés et vos appareils connectés</li>
         </ul>
         <p class="small muted">
-          Pass de 7, 14 ou 30 jours, renouvelable manuellement, arrêté à sa date de fin ou au crédit site épuisé,
-          sans reconduction automatique.
+          Un pass dure 7, 14 ou 30 jours. Il s’arrête à sa date de fin ou quand le crédit est épuisé,
+          et ne se renouvelle jamais tout seul : c’est vous qui décidez de le prolonger.
         </p>
       </div>
       <div class="panel portal-login-form">
@@ -64,7 +64,7 @@
             <label class="field full">
               <span>Clé API</span>
               <input type="password" id="portal-key" name="key" placeholder="sk-dsk-…" autocomplete="off" spellcheck="false" required>
-              <small>Votre clé commence par <code>sk-dsk-</code>. Besoin d'un compte ? <a href="/signup">Créer un compte</a>.</small>
+              <small>Votre clé commence par <code>sk-dsk-</code>. Vous l’avez perdue ? Connectez-vous par email, puis régénérez-la.</small>
             </label>
             <button type="submit" class="btn btn-primary btn-block">Ouvrir mon espace</button>
           </form>
@@ -76,7 +76,7 @@
             <label class="field full">
               <span>Adresse email</span>
               <input type="email" id="email-address" name="email" placeholder="vous@example.com" autocomplete="email" maxlength="254" required>
-              <small>Un code à usage unique sera envoyé à cette adresse.</small>
+              <small>Nous vous envoyons un code à 6 chiffres, valable une seule fois.</small>
             </label>
             <button type="submit" class="btn btn-primary btn-block" id="email-request-btn">Recevoir un code</button>
           </form>
@@ -85,7 +85,7 @@
             <label class="field full">
               <span>Code à 6 chiffres</span>
               <input type="text" id="email-code" name="code" placeholder="000000" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="7" required>
-              <small>Valable quelques minutes, à usage unique.</small>
+              <small>Le code expire au bout de quelques minutes. Seul le dernier code reçu fonctionne.</small>
             </label>
             <button type="submit" class="btn btn-primary btn-block" id="email-verify-btn">Valider le code</button>
             <div class="auth-links">
@@ -120,7 +120,7 @@
           <button class="nav-item" data-user-view="billing"><span class="btn-icon" data-icon="pass" aria-hidden="true"></span>Recharger<span class="nav-badge">bientôt</span></button>
           <button class="nav-item" data-user-view="requests"><span class="btn-icon" data-icon="list" aria-hidden="true"></span>Requêtes</button>
           <button class="nav-item" data-user-view="settings"><span class="btn-icon" data-icon="settings" aria-hidden="true"></span>Réglages</button>
-          <button class="nav-item" data-user-view="guide"><span class="btn-icon" data-icon="book" aria-hidden="true"></span>Guide d'intégration</button>
+          <button class="nav-item" data-user-view="guide"><span class="btn-icon" data-icon="book" aria-hidden="true"></span>Guide d’utilisation</button>
         </nav>
         <div class="sidebar-foot">
           <div class="provider-pill">
@@ -155,10 +155,10 @@
           <div class="panel-head">
             <div>
               <h2 id="no-key-title">Votre clé API est créée</h2>
-              <span class="hint">Conservez-la maintenant.</span>
+              <span class="hint">Copiez-la avant de quitter cette page.</span>
             </div>
           </div>
-          <p id="no-key-copy">Copiez-la et conservez-la en lieu sûr : elle ne sera plus jamais affichée en entier.</p>
+          <p id="no-key-copy">Copiez-la et gardez-la en lieu sûr. Pour votre sécurité, nous ne pourrons plus jamais l’afficher en entier.</p>
           <div id="key-error" class="login-error" role="alert" aria-live="assertive"></div>
           <div id="new-key-box">
             <div class="alert warn"><strong>Copiez cette clé maintenant :</strong> elle ne sera plus jamais affichée en entier.</div>
@@ -184,7 +184,7 @@
               </section>
               <section class="panel">
                 <div class="panel-head">
-                  <div><h2>Consommation — 30 derniers jours</h2><span class="hint" id="portal-chart-hint"></span></div>
+                  <div><h2>Consommation sur 30 jours</h2><span class="hint" id="portal-chart-hint"></span></div>
                 </div>
                 <div id="portal-chart"></div>
               </section>
@@ -200,13 +200,13 @@
           <section class="user-panel hidden" data-user-panel="pass">
             <section class="panel">
               <div class="panel-head">
-                <div><h2>Mon pass</h2><span class="hint">Niveau actif et niveaux disponibles.</span></div>
+                <div><h2>Mon pass</h2><span class="hint">Votre pass actuel et ce qu’il vous reste.</span></div>
               </div>
               <div id="portal-plan-current"></div>
             </section>
             <section class="panel">
               <div class="panel-head">
-                <div><h2>Niveaux de pass</h2><span class="hint">Chaque pass dure 7, 14 ou 30 jours, sans reconduction automatique ; vous le renouvelez manuellement.</span></div>
+                <div><h2>Niveaux de pass</h2><span class="hint">Chaque pass dure 7, 14 ou 30 jours. Rien n’est prélevé automatiquement : vous renouvelez quand vous voulez.</span></div>
               </div>
               <div class="plan-grid" id="portal-plan-grid"></div>
               <p class="small muted plan-currency-note" id="plan-currency-note"></p>
@@ -220,7 +220,7 @@
           <section class="user-panel hidden" data-user-panel="keys">
             <section class="panel">
               <div class="panel-head">
-                <div><h2>Ma clé API</h2><span class="hint">Identifiant et état de votre accès.</span></div>
+                <div><h2>Ma clé API</h2><span class="hint">Le début de votre clé et son état.</span></div>
                 <div class="panel-head-actions">
                   <button type="button" class="btn btn-ghost btn-sm" id="rotate-key-btn"><span class="btn-icon" data-icon="refresh" aria-hidden="true"></span>Régénérer ma clé</button>
                 </div>
@@ -229,7 +229,7 @@
             </section>
             <section class="panel">
               <div class="panel-head"><div><h2>Sécurité</h2></div></div>
-              <p class="muted">Votre clé est affichée une seule fois à la création. La régénération invalide immédiatement l'ancienne. Ne la partagez pas et stockez-la dans un gestionnaire de secrets.</p>
+              <p class="muted">Votre clé n’est affichée qu’une fois, à sa création. Si vous la régénérez, l’ancienne cesse de fonctionner tout de suite. Ne la partagez pas et rangez-la dans un gestionnaire de mots de passe.</p>
             </section>
           </section>
 
@@ -253,7 +253,7 @@
 
           <section class="user-panel hidden" data-user-panel="settings">
             <section class="panel">
-              <div class="panel-head"><div><h2>Profil</h2><span class="hint">Nom affiché dans votre espace.</span></div></div>
+              <div class="panel-head"><div><h2>Profil</h2><span class="hint">Le nom affiché dans votre espace.</span></div></div>
               <form id="profile-form" class="form-grid" novalidate>
                 <label class="field full"><span>Nom affiché</span>
                   <input type="text" name="displayName" maxlength="80" required>
@@ -270,7 +270,7 @@
             </section>
             <section class="panel">
               <div class="panel-head">
-                <div><h2>Appareils connectés</h2><span class="hint">Terminaux autorisés à utiliser VALARIA Code.</span></div>
+                <div><h2>Appareils connectés</h2><span class="hint">Les terminaux où VALARIA Code est connecté à votre compte.</span></div>
                 <button type="button" class="btn btn-ghost btn-sm" id="refresh-devices"><span class="btn-icon" data-icon="refresh" aria-hidden="true"></span>Actualiser</button>
               </div>
               <div id="portal-devices"></div>
@@ -290,14 +290,14 @@
               <div class="panel-head">
                 <div>
                   <h2>Recharger mon crédit</h2>
-                  <span class="hint">Pay as you go — recharge libre, sans engagement.</span>
+                  <span class="hint">Rechargez le montant de votre choix, sans abonnement.</span>
                 </div>
                 <span class="badge badge-ok" id="billing-badge">Pay as you go</span>
               </div>
               <div class="alert" id="billing-alert">
                 Rechargez votre crédit site en mobile money. Le crédit acheté n’expire pas.
               </div>
-              <p class="small muted">Choisissez un montant prédéfini ou saisissez un montant personnalisé.</p>
+              <p class="small muted">Choisissez un montant ou saisissez le vôtre.</p>
               <div class="billing-amounts" id="billing-amounts" aria-label="Montants prédéfinis">
                 <button type="button" class="billing-amount" data-billing-base="1000">1 000 FCFA</button>
                 <button type="button" class="billing-amount" data-billing-base="3000">3 000 FCFA</button>
@@ -308,7 +308,7 @@
               <label class="field full billing-custom">
                 <span id="billing-custom-label">Montant personnalisé (FCFA)</span>
                 <input type="number" id="billing-custom-input" min="1000" step="500" placeholder="ex : 10 000">
-                <small>Minimum 1 000 FCFA — le crédit site sera ajouté à votre solde.</small>
+                <small>Minimum 1 000 FCFA. Le crédit est ajouté à votre solde dès le paiement confirmé.</small>
               </label>
               <p class="small muted" id="billing-currency-note"></p>
               <button type="button" class="btn btn-primary btn-block" id="billing-buy">Recharger mon crédit</button>
@@ -325,7 +325,7 @@
 </main>
 
   <footer class="site-footer">
-    <span>VALARIA Gateway API · passerelle auto-hébergée</span>
+    <span>VALARIA Gateway API</span>
     <span class="site-footer-links">
       <a href="/">Accueil</a>
     </span>

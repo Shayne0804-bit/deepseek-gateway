@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#0a0e0c">
   <meta name="app-version" content="{{APP_VERSION}}">
-  <title>Connecter un appareil — VALARIA Gateway API</title>
+  <title>Connecter un appareil · VALARIA Gateway API</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/styles.css?v={{APP_VERSION}}">
   <link rel="stylesheet" href="/assets/theme.css?v={{APP_VERSION}}">
@@ -33,13 +33,13 @@
         <img class="device-mascot" src="/assets/mascot.svg?v={{APP_VERSION}}" alt="" aria-hidden="true" width="108" height="96">
         <p class="hero-kicker">Connexion d’appareil</p>
         <h1 id="device-title">Autorisez <span class="grad">votre terminal.</span></h1>
-        <p>VALARIA Code demande à se connecter à votre compte. Vérifiez le code affiché dans le terminal avant d’autoriser.</p>
+        <p>VALARIA Code demande l’accès à votre compte. Comparez le code affiché dans votre terminal avec celui de cette page avant d’autoriser.</p>
         <ul class="portal-points">
           <li>Le code est valable 10 minutes</li>
-          <li>Vous pouvez révoquer l’appareil plus tard</li>
-          <li>Aucune clé API n’est exposée</li>
+          <li>Vous pourrez déconnecter cet appareil depuis vos réglages</li>
+          <li>Votre clé API n’est jamais envoyée au terminal</li>
         </ul>
-        <p class="small muted">Vous pouvez fermer cette page après autorisation.</p>
+        <p class="small muted">Une fois l’appareil autorisé, vous pouvez fermer cette page.</p>
       </div>
 
       <div class="panel portal-login-form device-card">
@@ -51,14 +51,14 @@
 
         <div id="device-login-required" class="hidden">
           <h2>Connectez-vous d’abord</h2>
-          <p class="small muted">Pour approuver cet appareil, connectez-vous à votre espace VALARIA.</p>
+          <p class="small muted">Pour autoriser cet appareil, connectez-vous d’abord à votre espace VALARIA.</p>
           <p class="device-code-preview">Code demandé : <strong id="device-login-code">—</strong></p>
           <a class="btn btn-primary btn-block" id="device-login-link" href="/portal">Se connecter</a>
-          <p class="small muted device-help">Après connexion, revenez sur cette page : le code sera conservé.</p>
+          <p class="small muted device-help">Après la connexion, vous revenez ici automatiquement, avec le même code.</p>
         </div>
 
         <div id="device-approve-panel" class="hidden">
-          <h2>Approuver cet appareil</h2>
+          <h2>Autoriser cet appareil</h2>
           <p class="small muted" id="device-account"></p>
           <form id="device-approve-form" novalidate>
             <label class="field full">
@@ -77,7 +77,7 @@
         <div id="device-success" class="hidden">
           <div class="device-success-mark">✓</div>
           <h2>Appareil autorisé</h2>
-          <p class="small muted">Vous pouvez revenir à votre terminal. VALARIA Code recevra son accès automatiquement.</p>
+          <p class="small muted">Retournez dans votre terminal : VALARIA Code reçoit son accès tout seul, sans rien copier.</p>
           <a class="btn btn-ghost btn-block" href="/portal">Ouvrir mon espace</a>
         </div>
       </div>

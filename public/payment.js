@@ -90,7 +90,7 @@
       setStatus('failed', 'Lien de paiement invalide', 'Aucune commande à vérifier.');
       return;
     }
-    setStatus('pending', 'Vérification du paiement…', 'Nous vérifions le statut réel auprès de SasPay.');
+    setStatus('pending', 'Vérification du paiement…', 'Nous vérifions votre paiement auprès de SasPay. Gardez cette page ouverte.');
     try {
       const data = await api('/portal/api/pass/confirm');
       const order = data.order || {};
@@ -108,7 +108,7 @@
         actions.classList.remove('hidden');
         return;
       }
-      setStatus('pending', 'Paiement en attente', 'Le paiement n’est pas encore confirmé par SasPay. Actualisez dans quelques instants.');
+      setStatus('pending', 'Paiement en attente', 'SasPay n’a pas encore confirmé le paiement. Actualisez dans quelques instants.');
       actions.classList.remove('hidden');
       if (!timer) timer = setInterval(confirm, 5000);
     } catch (err) {
@@ -117,7 +117,7 @@
         actions.classList.remove('hidden');
         return;
       }
-      setStatus('pending', 'Vérification en cours', err.message || 'Impossible de vérifier le statut pour le moment.');
+      setStatus('pending', 'Vérification en cours', err.message || 'Vérification impossible pour le moment. Réessayez dans quelques instants.');
       actions.classList.remove('hidden');
     }
   }

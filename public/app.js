@@ -10,15 +10,15 @@
     logs: 'Journaux',
     audit: "Journal d'audit",
     settings: 'Réglages',
-    guide: 'Guide pour votre ami',
+    guide: 'Guide à partager',
   };
   const VIEW_SUBS = {
-    overview: 'Activité, consommation et état des quotas.',
+    overview: 'L’activité de la passerelle, la consommation et l’état des quotas.',
     clients: 'Créez une clé par personne ou par projet, avec ses propres limites.',
-    logs: 'Les 100 dernières requêtes traitées par la passerelle.',
-    audit: 'Traçabilité des actions d’administration (connexions, clés, réglages).',
-    settings: 'Clé DeepSeek originale, URL publique, budget, tarifs et mot de passe.',
-    guide: 'À transmettre tel quel à votre ami.',
+    logs: 'Chaque requête traitée par la passerelle, 100 par page.',
+    audit: 'Qui s’est connecté à la console, et quelles clés et quels réglages ont changé.',
+    settings: 'Clé du fournisseur, URL publique, budget, tarifs et mot de passe.',
+    guide: 'Un guide prêt à envoyer à la personne qui utilisera la clé.',
   };
   const PERIOD_LABELS = { daily: 'par jour', monthly: 'par mois', total: 'total' };
   const STATUS_LABELS = {
@@ -890,7 +890,7 @@
   function showKeyModal(apiKey, client) {
     const apiUrl = apiBaseUrl();
     openModal({
-      title: 'Clé créée — copiez-la maintenant',
+      title: 'Clé créée : copiez-la maintenant',
       bodyHtml: `
         <div class="alert warn"><strong>Cette clé ne sera plus jamais affichée en entier.</strong> Copiez-la et transmettez-la à votre ami par un canal sûr.</div>
         <div class="key-reveal">
@@ -903,7 +903,7 @@
         <div class="setting-row"><span class="k">Modèle conseillé</span><span class="v">deepseek-flash</span></div>
         <p class="muted small" style="margin:16px 0 0">
           Votre ami utilise cette clé comme <code>api_key</code> et l'URL ci-dessus comme <code>base_url</code>.
-          Consultez l'onglet <strong>Guide pour votre ami</strong> pour les exemples prêts à copier.
+          Consultez l'onglet <strong>Guide à partager</strong> pour les exemples prêts à copier.
         </p>`,
       footerHtml: '<button type="button" class="btn btn-primary" data-close>J\'ai copié la clé</button>',
     });
@@ -954,7 +954,7 @@
     $('#view').innerHTML = `
       <section class="panel">
         <div class="panel-head">
-          <div><h2>Journal des requêtes</h2><span class="hint">${fmtInt(state.logs.total)} requête(s) — 100 par page</span></div>
+          <div><h2>Journal des requêtes</h2><span class="hint">${fmtInt(state.logs.total)} requête(s), 100 par page</span></div>
           <div class="panel-head-actions">
             ${filter}
             <a class="btn btn-ghost btn-sm" href="/admin/api/export/logs.csv" download>Exporter CSV</a>
@@ -983,7 +983,7 @@
     $('#view').innerHTML = `
       <section class="panel">
         <div class="panel-head">
-          <div><h2>Journal d'audit</h2><span class="hint">${fmtInt(state.audit?.total || 0)} événement(s) — connexions, clés, réglages</span></div>
+          <div><h2>Journal d'audit</h2><span class="hint">${fmtInt(state.audit?.total || 0)} événement(s) : connexions, clés et réglages</span></div>
           <div class="panel-head-actions"><button class="btn btn-ghost btn-sm" data-action="refresh-audit">Actualiser</button></div>
         </div>
         ${rows.length
@@ -1028,7 +1028,7 @@
           </div>
         </div>
         ${provider.configured
-          ? `<div class="alert ok">Clé actuelle : <span class="mono">${esc(provider.masked)}</span> — elle est stockée ${provider.source === 'env' ? 'dans <code>.env</code>' : 'dans la base locale, <strong>chiffrée (AES-256-GCM)</strong>'}.</div>`
+          ? `<div class="alert ok">Clé actuelle : <span class="mono">${esc(provider.masked)}</span>. Elle est stockée ${provider.source === 'env' ? 'dans <code>.env</code>' : 'dans la base locale, <strong>chiffrée (AES-256-GCM)</strong>'}.</div>`
           : `<div class="alert danger">Aucune clé originale configurée : les requêtes seront refusées (503). Ajoutez-la ci-dessous ou dans <code>.env</code>.</div>`}
         <form data-form="settings-provider">
           <div class="form-grid">
@@ -1062,7 +1062,7 @@
           <div class="inline-form">
             <label class="field"><span>URL publique</span>
               <input name="publicBaseUrl" value="${esc(s.publicBaseUrl)}" placeholder="${esc(window.location.origin)}" ${s.publicBaseUrlSource === 'env' ? 'disabled' : ''}>
-              <small>Ex : <code>https://api.mondomaine.fr</code> — vide = adresse actuelle du navigateur.</small>
+              <small>Par exemple <code>https://api.mondomaine.fr</code>. Laissez vide pour utiliser l’adresse affichée dans le navigateur.</small>
             </label>
             <button type="submit" class="btn btn-primary">Enregistrer</button>
           </div>
@@ -1165,7 +1165,7 @@
         <div class="alert warn">
           <strong>Facturation forcée : <span class="mono">${esc(s.billedModel || 'désactivée')}</span>.</strong>
           ${s.billedModel
-            ? `Tous les noms exposés — y compris <span class="mono">deepseek-v4-pro</span> et les alias Claude —
+            ? `Tous les noms exposés, y compris <span class="mono">deepseek-v4-pro</span> et les alias Claude,
                sont réellement envoyés à <span class="mono">${esc(s.billedModel)}</span>. Le v4-pro n'est jamais appelé.
                Le client voit le nom demandé et le modèle facturé via
                <span class="mono">x-gateway-requested-model</span> / <span class="mono">x-gateway-billed-model</span> ;
@@ -1192,7 +1192,7 @@
         <div class="panel-head">
           <div>
             <h2>Mot de passe du panneau</h2>
-            <span class="hint">${s.admin?.passwordSource === 'panel' ? 'Mot de passe personnalisé.' : 'Mot de passe initial — pensez à le changer.'}</span>
+            <span class="hint">${s.admin?.passwordSource === 'panel' ? 'Mot de passe personnalisé.' : 'Mot de passe initial : changez-le dès que possible.'}</span>
           </div>
           ${s.admin?.passwordSource === 'panel' ? '<span class="badge badge-ok">Personnalisé</span>' : '<span class="badge badge-warn">Initial</span>'}
         </div>
@@ -1403,7 +1403,7 @@
                 depuis <strong>Réglages → Alias de modèles</strong>.<br>
                 <strong>Claude Desktop n'accepte que https://</strong> : activez le HTTPS local
                 (<span class="mono">tools/generate-local-tls.ps1</span> + variables <span class="mono">TLS_*</span> dans <code>.env</code>),
-                utilisez l'URL Railway, ou un tunnel Cloudflare — voir le README.
+                utilisez l'URL Railway ou un tunnel Cloudflare (voir le README).
               </div>
             </div>
           </div>

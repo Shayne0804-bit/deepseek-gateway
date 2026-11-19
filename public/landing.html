@@ -6,8 +6,8 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#060c09">
   <meta name="app-version" content="{{APP_VERSION}}">
-  <meta name="description" content="VALARIA Gateway : API compatible OpenAI/Anthropic et VALARIA Code, l’agent de code dans le terminal. Clés individuelles, quotas, crédit et suivi des requêtes.">
-  <title>VALARIA Gateway — API et agent de code dans le terminal</title>
+  <meta name="description" content="Une clé personnelle pour utiliser Claude, Codex et DeepSeek depuis vos outils, avec votre crédit et vos limites toujours visibles. Et VALARIA Code, l’agent qui code avec vous dans le terminal.">
+  <title>VALARIA Gateway · API d’IA et agent de code dans le terminal</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="/assets/fonts/plus-jakarta-sans-latin-var.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/assets/site.css?v={{APP_VERSION}}">
@@ -59,7 +59,7 @@
         <div class="hero-copy">
           <a class="pill" href="#cli" data-in style="--d:0">
             <span class="pill-tag">Nouveau</span>
-            VALARIA Code, l’agent dans le terminal
+            VALARIA Code, l’agent de code du terminal
             <span class="arrow" aria-hidden="true">→</span>
           </a>
           <h1 id="hero-title">
@@ -68,13 +68,13 @@
             <span class="line"><span class="grad" style="--d:3">Un agent dans le terminal.</span></span>
           </h1>
           <p class="lede" data-in style="--d:5">
-            VALARIA Gateway relie vos outils à une clé fournisseur unique. Pour vos scripts, une API
-            compatible OpenAI et Anthropic. Pour votre code, VALARIA Code lit, modifie et teste votre
-            projet depuis le terminal.
+            Une seule clé personnelle pour appeler Claude, Codex et DeepSeek depuis vos scripts,
+            avec une API compatible OpenAI et Anthropic. Pour votre code, VALARIA Code lit votre
+            projet, propose les changements et attend votre accord avant d’écrire.
           </p>
           <div class="actions" data-in style="--d:6">
             <a class="btn btn-primary" href="/signup">Créer mon compte <span class="arrow" aria-hidden="true">→</span></a>
-            <a class="btn" href="#cli">Voir VALARIA Code</a>
+            <a class="btn" href="#cli">Découvrir VALARIA Code</a>
           </div>
           <div class="install" data-in style="--d:7">
             <span aria-hidden="true">$</span>
@@ -98,10 +98,10 @@
     <section class="section" aria-label="En chiffres" style="padding-bottom:0">
       <div class="wrap">
         <div class="stats" data-reveal>
-          <div class="stat"><strong><span data-count="2">2</span></strong><span>protocoles compatibles, OpenAI et Anthropic</span></div>
+          <div class="stat"><strong><span data-count="2">2</span></strong><span>formats d’API acceptés : OpenAI et Anthropic</span></div>
           <div class="stat"><strong><span data-count="3">3</span></strong><span>familles de modèles : Claude, Codex, DeepSeek</span></div>
-          <div class="stat"><strong><span data-count="3">3</span></strong><span>modes d’approbation dans le terminal</span></div>
-          <div class="stat"><strong><span data-count="0">0</span></strong><span>clé API à coller dans le terminal</span></div>
+          <div class="stat"><strong><span data-count="3">3</span></strong><span>niveaux d’approbation dans VALARIA Code</span></div>
+          <div class="stat"><strong><span data-count="0">0</span></strong><span>clé API à coller dans votre terminal</span></div>
         </div>
       </div>
     </section>
@@ -110,15 +110,15 @@
     <section class="section" id="surfaces" aria-labelledby="surfaces-title">
       <div class="wrap">
         <div class="section-head">
-          <p class="eyebrow" data-reveal>Deux surfaces, un même contrôle</p>
+          <p class="eyebrow" data-reveal>Deux façons de travailler</p>
           <h2 id="surfaces-title" data-reveal style="--d:1">Une API pour vos scripts.<br><span class="grad">Un agent pour votre code.</span></h2>
-          <p class="section-lede" data-reveal style="--d:2">Branchez vos outils existants sans changer de SDK, ou confiez une tâche complète à VALARIA Code dans le terminal. Les quotas et la sécurité restent au même endroit.</p>
+          <p class="section-lede" data-reveal style="--d:2">Gardez vos outils actuels en changeant seulement l’URL de base, ou confiez une tâche entière à VALARIA Code. Dans les deux cas, votre crédit et votre historique sont au même endroit.</p>
         </div>
         <div class="surfaces">
           <article class="surface spot" data-reveal="scale" data-spot>
             <div class="surface-top"><span class="chip chip--jade">API</span><span class="chip">OpenAI · Anthropic</span></div>
-            <h3>La passerelle</h3>
-            <p>Une seule clé fournisseur côté serveur. Chaque personne reçoit une clé dérivée, avec ses quotas, son crédit et son historique.</p>
+            <h3>L’API</h3>
+            <p>Votre clé fonctionne avec le SDK OpenAI, le protocole Anthropic Messages et cURL. La clé du fournisseur reste sur notre serveur : vous n’en avez jamais besoin.</p>
             <div class="term" data-term>
               <div class="term-bar"><i></i><i></i><i></i><span>requête API</span><b>POST</b></div>
 <pre><span class="l" style="--l:0"><span class="t-dim">$</span> curl https://api.valariamenu.com/v1/chat/completions \</span><span class="l" style="--l:1">  -H "Authorization: Bearer sk-dsk-…" \</span><span class="l" style="--l:2">  -d '{"model":"claude-opus-5.5","messages":[…]}'</span><span class="l" style="--l:3"> </span><span class="l t-ok" style="--l:4">HTTP/1.1 200 OK · 312 ms</span><span class="l" style="--l:5"><span class="t-dim">x-quota-tokens-remaining:</span> <span class="t-amb">1 987 412</span></span><span class="l" style="--l:6"><span class="t-dim">{"usage":{"total_tokens":118}}</span></span></pre>
@@ -127,9 +127,9 @@
           <article class="surface spot" data-reveal="scale" data-spot style="--d:1">
             <div class="surface-top"><span class="chip chip--jade">CLI</span><span class="chip">Focus · Studio · Compact</span></div>
             <h3>VALARIA Code</h3>
-            <p>Un agent de code complet, connecté par appareil. Il lit, propose un diff, demande votre validation et exécute les tests dans le dossier du projet.</p>
+            <p>Un agent qui travaille dans le dossier de votre projet. Il lit les fichiers, vous montre le diff, attend votre accord, puis lance les tests. Il se connecte par votre navigateur, sans clé API.</p>
             <div class="term" data-term>
-              <div class="term-bar"><i></i><i></i><i></i><span>valaria-code — terminal</span><b>en ligne</b></div>
+              <div class="term-bar"><i></i><i></i><i></i><span>valaria · terminal</span><b>en ligne</b></div>
 <pre><span class="l" style="--l:0"><span class="t-ok">❯</span> corrige le test de connexion qui échoue une fois sur cinq</span><span class="l" style="--l:1"><span class="t-amb">▌ VALARIA</span> Je lis le fichier, puis je prépare un patch.</span><span class="l t-dim" style="--l:2">› Lecture tests/login.test.js</span><span class="l t-dim" style="--l:3">› Écriture proposée · tests/login.test.js</span><span class="l t-add" style="--l:4">+ await page.waitForCookie("session")</span><span class="l t-del" style="--l:5">− await page.waitForTimeout(250)</span><span class="l" style="--l:6">Approuver ? <span class="t-ok">[O/n]</span> <span class="caret">▌</span></span></pre>
             </div>
           </article>
@@ -142,7 +142,7 @@
       <div class="wrap">
         <div class="section-head">
           <p class="eyebrow" data-reveal>Fonctionnement</p>
-          <h2 id="trajet-title" data-reveal style="--d:1">Le trajet d’une requête,<br>étape par étape.</h2>
+          <h2 id="trajet-title" data-reveal style="--d:1">Ce qui se passe quand vous envoyez une requête.</h2>
         </div>
         <div class="story">
           <div class="story-visual" aria-hidden="true">
@@ -157,24 +157,24 @@
           </div>
           <ol class="story-steps">
             <li class="story-step" data-step>
-              <p class="num">01 — Départ</p>
+              <p class="num">01 · Envoi</p>
               <h3>Votre outil envoie la requête.</h3>
-              <p>SDK OpenAI, protocole Anthropic Messages, cURL ou VALARIA Code : vous changez seulement l’URL de base. Le reste de votre code ne bouge pas.</p>
+              <p>SDK OpenAI, Anthropic Messages, cURL ou VALARIA Code : seule l’URL de base change. Le reste de votre code reste identique.</p>
             </li>
             <li class="story-step" data-step>
-              <p class="num">02 — Identité</p>
-              <h3>Une clé qui n’appartient qu’à vous.</h3>
-              <p>La requête porte votre clé dérivée <code>sk-dsk-…</code>, ou le jeton d’appareil <code>vlt_…</code> dans le terminal. Révocable à tout moment, sans toucher aux autres.</p>
+              <p class="num">02 · Identification</p>
+              <h3>La passerelle vous reconnaît.</h3>
+              <p>La requête porte votre clé <code>sk-dsk-…</code> ou, depuis VALARIA Code, le jeton d’appareil <code>vlt_…</code>. Vous pouvez révoquer l’un ou l’autre sans couper vos autres accès.</p>
             </li>
             <li class="story-step" data-step>
-              <p class="num">03 — Contrôle</p>
-              <h3>La passerelle vérifie et mesure.</h3>
-              <p>Quotas de requêtes et de tokens, crédit restant, débit et concurrence. Chaque appel est inscrit au ledger : modèle, coût, heure.</p>
+              <p class="num">03 · Contrôle</p>
+              <h3>Votre pass est vérifié.</h3>
+              <p>La passerelle contrôle la date de fin, le crédit restant, le nombre de requêtes par minute et les appels en parallèle. Si une limite est atteinte, vous recevez un message qui dit laquelle.</p>
             </li>
             <li class="story-step" data-step>
-              <p class="num">04 — Réponse</p>
-              <h3>Le fournisseur répond, la clé maîtresse reste au serveur.</h3>
-              <p>La réponse revient en streaming avec vos quotas à jour dans les en-têtes. Personne ne voit jamais la clé fournisseur.</p>
+              <p class="num">04 · Réponse</p>
+              <h3>La réponse revient avec vos compteurs à jour.</h3>
+              <p>Le modèle répond, en streaming si vous le demandez. Les en-têtes <code>x-quota-…</code> indiquent ce qu’il vous reste et l’appel s’ajoute à votre historique, avec son coût.</p>
             </li>
           </ol>
         </div>
@@ -185,16 +185,16 @@
     <section class="section" id="capacites" aria-labelledby="capacites-title">
       <div class="wrap">
         <div class="section-head section-head--center">
-          <p class="eyebrow" data-reveal>Sous le capot</p>
-          <h2 id="capacites-title" data-reveal style="--d:1">Les détails qui évitent<br>les mauvaises surprises.</h2>
-          <p class="section-lede" data-reveal style="--d:2">Chaque accès est mesuré, limité et révocable. Partagez une capacité API sans jamais donner la clé maîtresse.</p>
+          <p class="eyebrow" data-reveal>Sécurité et contrôle</p>
+          <h2 id="capacites-title" data-reveal style="--d:1">Votre accès et votre budget restent sous contrôle.</h2>
+          <p class="section-lede" data-reveal style="--d:2">Chaque accès a ses propres limites et peut être coupé à tout moment. Vous partagez l’usage de l’API sans jamais donner la clé du fournisseur.</p>
         </div>
         <div class="bento">
           <article class="cap cap--wide spot" data-reveal data-spot>
             <div class="cap-body">
               <span class="cap-idx">01</span>
-              <h3>Clés dérivées</h3>
-              <p>Une clé par personne ou par projet. Régénérez-la ou révoquez-la sans toucher à la clé fournisseur.</p>
+              <h3>Une clé par personne</h3>
+              <p>Chaque personne ou chaque projet a sa propre clé, de 1 à 25 selon le pass. Vous la régénérez ou la révoquez quand vous voulez, sans toucher aux autres.</p>
               <span class="cap-tag">sk-dsk-…</span>
             </div>
             <div class="cap-visual" aria-hidden="true">
@@ -207,21 +207,21 @@
           </article>
           <article class="cap spot" data-reveal data-spot style="--d:1">
             <span class="cap-idx">02</span>
-            <h3>Quotas lisibles</h3>
-            <p>Requêtes, tokens et crédit suivis pour chaque clé, avec débit et concurrence limités.</p>
+            <h3>Des limites visibles</h3>
+            <p>Crédit restant, plafond sur 5 heures et plafond de la semaine s’affichent dans votre espace.</p>
             <span class="cap-tag">x-quota-*</span>
           </article>
           <article class="cap spot" data-reveal data-spot>
             <span class="cap-idx">03</span>
-            <h3>Coûts réels</h3>
-            <p>Chaque requête alimente un ledger. Vous savez ce qui a été consommé, quand et sur quel modèle.</p>
+            <h3>Le coût de chaque appel</h3>
+            <p>Chaque requête est enregistrée avec son modèle, ses tokens et son coût. Vous voyez où part votre crédit, jour après jour.</p>
             <span class="cap-tag">ledger</span>
           </article>
           <article class="cap cap--wide spot" data-reveal data-spot style="--d:1">
             <div class="cap-body">
               <span class="cap-idx">04</span>
-              <h3>Auth appareil</h3>
-              <p>VALARIA Code ne demande pas votre clé API dans le terminal. Le navigateur approuve un jeton révocable, après vérification du code affiché.</p>
+              <h3>Connexion par appareil</h3>
+              <p>VALARIA Code ne vous demande jamais de clé API. Le terminal affiche un code, vous le comparez dans votre navigateur, puis vous approuvez l’appareil.</p>
               <span class="cap-tag">vlt_…</span>
             </div>
             <div class="cap-visual" aria-hidden="true">
@@ -231,8 +231,8 @@
           <article class="cap cap--wide spot" data-reveal data-spot>
             <div class="cap-body">
               <span class="cap-idx">05</span>
-              <h3>Contrôle progressif</h3>
-              <p>Strict, Sécurisé ou Accès total. L’agent s’adapte à votre niveau de confiance et à la tâche, au clavier avec Ctrl+G.</p>
+              <h3>Trois niveaux d’approbation</h3>
+              <p>En Strict, vous validez chaque écriture et chaque commande. En Sécurisé, seulement les fichiers sensibles et les commandes risquées. En Accès total, l’agent ne demande rien. Ctrl+G passe de l’un à l’autre.</p>
               <span class="cap-tag">Ctrl+G</span>
             </div>
             <div class="cap-visual" aria-hidden="true">
@@ -241,8 +241,8 @@
           </article>
           <article class="cap spot" data-reveal data-spot style="--d:1">
             <span class="cap-idx">06</span>
-            <h3>Reprise possible</h3>
-            <p>Les appareils sont listés dans votre espace. Un terminal perdu se révoque en un clic.</p>
+            <h3>Appareils révocables</h3>
+            <p>Vos terminaux connectés sont listés dans votre espace. Un ordinateur perdu ou prêté se déconnecte en un clic.</p>
             <span class="cap-tag">révocable</span>
           </article>
         </div>
@@ -254,31 +254,31 @@
       <div class="wrap">
         <div class="section-head section-head--center">
           <img class="mascot" src="/assets/mascot.svg?v={{APP_VERSION}}" alt="" aria-hidden="true" width="108" height="96" data-reveal="scale">
-          <p class="eyebrow" data-reveal>VALARIA Code · terminal</p>
-          <h2 id="cli-title" data-reveal style="--d:1">Le terminal, <span class="grad">sans les mauvaises surprises.</span></h2>
-          <p class="section-lede" data-reveal style="--d:2">Une interface plein écran, une conversation lisible et une revue de diff qui reste visible. Vous gardez la main sur chaque écriture et chaque commande.</p>
+          <p class="eyebrow" data-reveal>VALARIA Code</p>
+          <h2 id="cli-title" data-reveal style="--d:1">Un agent de code <span class="grad">qui demande avant d’agir.</span></h2>
+          <p class="section-lede" data-reveal style="--d:2">VALARIA Code s’ouvre en plein écran dans votre terminal. La conversation reste lisible, le diff reste affiché pendant tout le travail, et vous décidez de ce qui est écrit.</p>
         </div>
         <div class="gallery" data-gallery>
           <div class="gallery-frame">
-            <div class="gallery-bar"><i></i><i></i><i></i><span data-gallery-title>VALARIA Code — Focus</span><span class="count"><span data-gallery-index>01</span> / 05</span></div>
+            <div class="gallery-bar"><i></i><i></i><i></i><span data-gallery-title>VALARIA Code · Focus</span><span class="count"><span data-gallery-index>01</span> / 05</span></div>
             <div class="slides">
-              <figure class="slide is-active" data-gallery-slide data-title="VALARIA Code — Focus" data-caption="Focus : conversation et diff permanent, sans panneau compte.">
+              <figure class="slide is-active" data-gallery-slide data-title="VALARIA Code · Focus" data-caption="Focus : la conversation à gauche, le diff toujours visible à droite.">
                 <img src="/assets/valaria-code-focus.png?v={{APP_VERSION}}" alt="VALARIA Code en mode Focus avec la conversation et le diff permanent." loading="lazy" width="1600" height="900">
               </figure>
-              <figure class="slide" data-gallery-slide data-title="VALARIA Code — Studio" data-caption="Studio : compte, pass et quotas à gauche, conversation au centre, diff à droite.">
+              <figure class="slide" data-gallery-slide data-title="VALARIA Code · Studio" data-caption="Studio : votre compte et votre crédit à gauche, la conversation au centre, le diff à droite.">
                 <img src="/assets/valaria-code-studio.png?v={{APP_VERSION}}" alt="VALARIA Code en mode Studio avec compte et diff permanent." loading="lazy" width="1600" height="900">
               </figure>
-              <figure class="slide" data-gallery-slide data-title="VALARIA Code — Diff" data-caption="Revue de diff : fichiers en haut, lignes ajoutées et supprimées en dessous.">
+              <figure class="slide" data-gallery-slide data-title="VALARIA Code · Diff" data-caption="Revue du diff : les fichiers modifiés en haut, les lignes ajoutées et supprimées en dessous.">
                 <img src="/assets/valaria-code-diff.png?v={{APP_VERSION}}" alt="Revue de diff de VALARIA Code avec fichiers et lignes modifiées." loading="lazy" width="1600" height="900">
               </figure>
-              <figure class="slide" data-gallery-slide data-title="VALARIA Code — Approbation" data-caption="Avant d’écrire, l’agent affiche le patch et attend votre décision.">
+              <figure class="slide" data-gallery-slide data-title="VALARIA Code · Approbation" data-caption="Avant d’écrire, l’agent affiche le changement et attend votre réponse.">
                 <img src="/assets/valaria-code-approval.png?v={{APP_VERSION}}" alt="Approbation d’un patch dans VALARIA Code." loading="lazy" width="1600" height="900">
               </figure>
-              <figure class="slide" data-gallery-slide data-title="VALARIA Code — Démarrage" data-caption="Le splash VALARIA : logo, dégradé et scanline au lancement.">
+              <figure class="slide" data-gallery-slide data-title="VALARIA Code · Démarrage" data-caption="L’écran d’accueil animé, au lancement de VALARIA Code.">
                 <img src="/assets/valaria-code-splash.png?v={{APP_VERSION}}" alt="Animation de démarrage de VALARIA Code." loading="lazy" width="1600" height="900">
               </figure>
             </div>
-            <div class="gallery-caption"><span data-gallery-caption>Focus : conversation et diff permanent, sans panneau compte.</span></div>
+            <div class="gallery-caption"><span data-gallery-caption>Focus : la conversation à gauche, le diff toujours visible à droite.</span></div>
           </div>
           <div class="thumbs" role="tablist" aria-label="Captures de VALARIA Code">
             <button type="button" class="thumb is-active" role="tab" aria-selected="true" data-gallery-thumb="0">Focus</button>
@@ -289,9 +289,9 @@
           </div>
         </div>
         <div class="features">
-          <div class="feature" data-reveal><span>01</span><b>Voit le projet</b><p>Lit les fichiers utiles avant de proposer une modification.</p></div>
-          <div class="feature" data-reveal style="--d:1"><span>02</span><b>Montre le diff</b><p>Fichiers modifiés en haut, lignes ajoutées et supprimées en bas.</p></div>
-          <div class="feature" data-reveal style="--d:2"><span>03</span><b>Attend votre décision</b><p>Strict, Sécurisé ou Accès total, au clavier.</p></div>
+          <div class="feature" data-reveal><span>01</span><b>Il lit avant d’écrire</b><p>L’agent ouvre les fichiers utiles et les consignes du projet (<code>AGENTS.md</code>, <code>VALARIA.md</code>, <code>CLAUDE.md</code>) avant de proposer un changement.</p></div>
+          <div class="feature" data-reveal style="--d:1"><span>02</span><b>Le diff reste à l’écran</b><p>Vous voyez les fichiers modifiés et chaque ligne ajoutée ou supprimée, pendant tout le travail.</p></div>
+          <div class="feature" data-reveal style="--d:2"><span>03</span><b>Il se souvient du projet</b><p>La conversation est sauvegardée par dossier. Au lancement suivant, l’agent reprend là où vous vous étiez arrêtés.</p></div>
         </div>
       </div>
     </section>
@@ -301,28 +301,28 @@
       <div class="wrap">
         <div class="section-head">
           <p class="eyebrow" data-reveal>Démarrer</p>
-          <h2 id="demarrer-title" data-reveal style="--d:1">Trois étapes, deux chemins.</h2>
-          <p class="section-lede" data-reveal style="--d:2">Créez votre espace, puis choisissez l’API pour vos outils ou le CLI pour votre terminal.</p>
+          <h2 id="demarrer-title" data-reveal style="--d:1">Prêt en trois étapes.</h2>
+          <p class="section-lede" data-reveal style="--d:2">Créez votre compte, puis branchez l’API, VALARIA Code, ou les deux.</p>
         </div>
         <ol class="steps" data-steps>
           <li class="step" data-reveal>
             <span class="step-num">01</span>
-            <h3>Créez votre espace</h3>
-            <p>Vérification email, clé personnelle et pass actif. Une seule clé fournisseur reste côté serveur.</p>
+            <h3>Créez votre compte</h3>
+            <p>Indiquez votre email et saisissez le code reçu. Votre espace s’ouvre avec votre clé personnelle.</p>
             <a class="link" href="/signup">Créer mon compte <span class="arrow" aria-hidden="true">→</span></a>
           </li>
           <li class="step" data-reveal style="--d:2">
             <span class="step-num">02</span>
-            <h3>Branchez l’API ou le CLI</h3>
-            <p>Pour l’API : URL de base et clé. Pour le CLI : <code>npm install -g valaria-code</code>, puis <code>valaria login</code>.</p>
+            <h3>Branchez votre outil</h3>
+            <p>Pour l’API, copiez l’URL de base et votre clé. Pour le terminal, installez VALARIA Code puis lancez <code>valaria login</code>.</p>
             <div class="term"><pre>npm install -g valaria-code
 valaria login
 valaria</pre></div>
           </li>
           <li class="step" data-reveal style="--d:4">
             <span class="step-num">03</span>
-            <h3>Travaillez avec vos limites</h3>
-            <p>Quotas, crédit et appareils restent visibles dans votre espace. Vous pouvez révoquer un accès à tout moment.</p>
+            <h3>Suivez votre consommation</h3>
+            <p>Crédit restant, historique des requêtes et appareils connectés sont dans votre espace. Vous coupez un accès quand vous voulez.</p>
             <a class="link" href="/portal">Ouvrir mon espace <span class="arrow" aria-hidden="true">→</span></a>
           </li>
         </ol>
@@ -336,8 +336,8 @@ valaria</pre></div>
           <div class="cta-inner">
             <div>
               <p class="eyebrow">Commencer</p>
-              <h2 id="cta-title">Votre prochain projet commence <span class="grad">dans le terminal.</span></h2>
-              <p>Installez VALARIA Code ou passez par l’API. Le même espace garde vos accès, vos quotas et votre historique.</p>
+              <h2 id="cta-title">Créez votre compte, <span class="grad">lancez votre premier appel.</span></h2>
+              <p>Passez par l’API ou installez VALARIA Code. Un seul espace garde vos clés, votre crédit et votre historique.</p>
               <div class="actions">
                 <a class="btn btn-primary" href="/signup">Créer mon compte <span class="arrow" aria-hidden="true">→</span></a>
                 <a class="btn" href="/portal">Ouvrir mon espace</a>
@@ -354,7 +354,7 @@ valaria</pre></div>
                 <code>https://api.valariamenu.com/v1</code>
                 <button type="button" class="copy-btn" data-copy="https://api.valariamenu.com/v1" aria-label="Copier l’URL de base de l’API">Copier</button>
               </div>
-              <small>Puis <code>valaria login</code> pour approuver l’appareil et choisir Claude, Codex ou DeepSeek.</small>
+              <small>Ensuite, <code>valaria login</code> relie ce terminal à votre compte, et vous choisissez Claude, Codex ou DeepSeek.</small>
             </div>
           </div>
         </div>
@@ -375,7 +375,7 @@ valaria</pre></div>
           <a href="/portal">Mon espace</a>
         </nav>
       </div>
-      <p class="footer-note">Une clé fournisseur, des accès individuels, des quotas lisibles.</p>
+      <p class="footer-note">L’API et l’agent de code de VALARIA, avec un seul compte.</p>
       <div class="wordmark" aria-hidden="true">VALARIA</div>
     </div>
   </footer>
