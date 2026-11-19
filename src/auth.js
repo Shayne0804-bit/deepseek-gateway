@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { promisify } from 'node:util';
 import {
   cleanupAdminSessions,
   deleteAdminSession,
@@ -64,6 +65,24 @@ export function verifyPassword(password, stored) {
       r: SCRYPT_R,
       p: SCRYPT_P,
     });
+    return crypto.timingSafeEqual(expected, actual);
+  } catch {
+    return false;
+  }
+}
+
+const scryptAsync = promisify(crypto.scrypt);
+
+/** Variante non bloquante (connexion admin) : scrypt ne gele pas la boucle d'evenements. */
+export async function verifyPasswordAsync(password, stored) {
+  try {
+    const parts = String(stored).split('$');
+    if (parts.length !== 4 || parts[0] !== 'scrypt') return false;
+    const n = Number.parseInt(parts[1], 10);
+    const salt = Buffer.from(parts[2], 'base64');
+    const expected = Buffer.from(parts[3], 'base64');
+    if (!Number.isFinite(n) || !salt.length || !expected.length) return false;
+    const actual = await scryptAsync(String(password), salt, expected.length, { N: n, r: SCRYPT_R, p: SCRYPT_P });
     return crypto.timingSafeEqual(expected, actual);
   } catch {
     return false;

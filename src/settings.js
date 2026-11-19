@@ -5,7 +5,7 @@ import {
   getSetting,
   setSetting,
 } from './db.js';
-import { hashPassword, verifyPassword, generateAdminPassword } from './auth.js';
+import { hashPassword, verifyPassword, verifyPasswordAsync, generateAdminPassword } from './auth.js';
 import { decryptSecret, encryptSecret, isEncryptedSecret } from './secrets.js';
 
 /* ------------------------------ provider ------------------------------- */
@@ -130,7 +130,7 @@ export async function getAdminPasswordSource(db) {
 export async function checkAdminPassword(db, password) {
   const stored = await getSetting(db, 'admin_password_hash', '');
   if (!stored) return false;
-  return verifyPassword(String(password ?? ''), stored);
+  return verifyPasswordAsync(String(password ?? ''), stored);
 }
 
 export async function changeAdminPassword(db, newPassword) {

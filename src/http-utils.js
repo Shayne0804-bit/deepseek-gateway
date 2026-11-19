@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 /** Petites aides HTTP partagees (reponses JSON, lecture du corps, cookies, erreurs). */
 
 export class HttpError extends Error {
@@ -154,10 +156,19 @@ export function clientIp(req, trustProxy = false, trustCloudflare = false) {
     if (cloudflareIp) return cloudflareIp;
   }
   if (trustProxy) {
-    const forwarded = String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim();
+    // Element le plus a droite : celui ajoute par le proxy de confiance.
+    // Les elements de gauche sont fournis par le client et falsifiables.
+    const forwarded = String(req.headers['x-forwarded-for'] ?? '').split(',').map((s) => s.trim()).filter(Boolean).at(-1);
     if (forwarded) return forwarded;
   }
   return req.socket?.remoteAddress ?? 'unknown';
+}
+
+/** Compare deux secrets en temps constant. */
+export function safeEqual(a, b) {
+  const left = Buffer.from(String(a ?? ''), 'utf8');
+  const right = Buffer.from(String(b ?? ''), 'utf8');
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
 
 export function bearerToken(req) {
@@ -166,15 +177,17 @@ export function bearerToken(req) {
   return match ? match[1].trim() : null;
 }
 
-export function hostHeader(req) {
-  return String(req.headers['x-forwarded-host'] ?? req.headers.host ?? '').split(',')[0].trim();
+/** X-Forwarded-Host n'est pris en compte que derriere un proxy de confiance. */
+export function hostHeader(req, trustProxy = false) {
+  const raw = trustProxy ? (req.headers['x-forwarded-host'] ?? req.headers.host) : req.headers.host;
+  return String(raw ?? '').split(',')[0].trim();
 }
 
-export function originAllowed(req) {
+export function originAllowed(req, trustProxy = false) {
   const origin = req.headers.origin;
   if (!origin) return true; // clients non-navigateur (curl, SDK)
   try {
-    return new URL(origin).host === hostHeader(req);
+    return new URL(origin).host === hostHeader(req, trustProxy);
   } catch {
     return false;
   }

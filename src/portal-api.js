@@ -76,6 +76,7 @@ import { lookupIpqsEmail, lookupIpqsIp, verifyHcaptcha, verifyTurnstile } from '
 import {
   bearerToken,
   clientIp,
+  hostHeader,
   HttpError,
   isHttpsRequest,
   originAllowed,
@@ -147,9 +148,7 @@ async function availableModelIds(db) {
 
 function requestOrigin(req, config) {
   if (config.publicBaseUrl) return config.publicBaseUrl.replace(/\/+$/, '');
-  const host = String(req.headers['x-forwarded-host'] ?? req.headers.host ?? '')
-    .split(',')[0]
-    .trim();
+  const host = hostHeader(req, config.trustProxy);
   const proto = isHttpsRequest(req, config.trustProxy) ? 'https' : 'http';
   return `${proto}://${host}`;
 }
@@ -173,7 +172,21 @@ export function createPortalApi({ config, db, log, mailer = null }) {
   const emailSendWindow = new Map();
   const fraudIpCache = new Map();
   const fraudEmailCache = new Map();
+  const deviceApproveAttempts = new Map();
   const FRAUD_CACHE_MS = 10 * 60 * 1000;
+
+  /** Purge periodique des compteurs en memoire (appelee par la maintenance). */
+  function prune() {
+    const now = Date.now();
+    for (const map of [loginAttempts, deviceStartAttempts, deviceTokenAttempts, emailRequestAttempts,
+      emailVerifyAttempts, emailSendWindow, deviceApproveAttempts]) {
+      for (const [key, entry] of map) if (now - entry.first > LOGIN_WINDOW_MS) map.delete(key);
+    }
+    for (const [key, last] of emailLastSend) if (now - last > LOGIN_WINDOW_MS) emailLastSend.delete(key);
+    for (const map of [fraudIpCache, fraudEmailCache]) {
+      for (const [key, entry] of map) if (now - entry.at > FRAUD_CACHE_MS) map.delete(key);
+    }
+  }
 
   async function fraudIp(ip) {
     const cached = fraudIpCache.get(ip);
@@ -246,7 +259,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       portalError(res, 403, 'Requête refusée.', 'csrf');
       return false;
     }
-    if (!originAllowed(req)) {
+    if (!originAllowed(req, config.trustProxy)) {
       portalError(res, 403, 'Origine non autorisée.', 'csrf_origin');
       return false;
     }
@@ -279,8 +292,6 @@ export function createPortalApi({ config, db, log, mailer = null }) {
 
   /** IP reelle derriere Cloudflare si TRUST_CLOUDFLARE=1, sinon proxy standard. */
   function requestIp(req) {
-    const cloudflareIp = String(req.headers['cf-connecting-ip'] ?? '').trim();
-    if (config.trustCloudflare && cloudflareIp) return cloudflareIp;
     return clientIp(req, config.trustProxy, config.trustCloudflare);
   }
 
@@ -780,6 +791,20 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     return order;
   }
 
+  const MAX_PENDING_ORDERS = 5;
+
+  /** Plafond de commandes en attente par client (evite d'inonder le rapprochement). */
+  async function tooManyPendingOrders(clientId) {
+    const pending = (await listClientPaymentOrders(db, clientId, 20)).filter((order) => order.status === 'pending');
+    if (pending.length < MAX_PENDING_ORDERS) return false;
+    // Les checkouts abandonnes passent en echec/expire apres verification SasPay.
+    let stillPending = 0;
+    for (const order of pending) {
+      if ((await reconcilePaymentOrder(order))?.status === 'pending') stillPending += 1;
+    }
+    return stillPending >= MAX_PENDING_ORDERS;
+  }
+
   async function reconcilePendingPaymentOrders(limit = 10) {
     const orders = await listPendingPaymentOrders(db, limit);
     for (const order of orders) {
@@ -802,6 +827,13 @@ export function createPortalApi({ config, db, log, mailer = null }) {
       sendJson(res, 400, { ok: false });
       return;
     }
+    // La commande citee est rapprochee en priorite (statut toujours reverifie
+    // aupres de SasPay), puis les plus recentes en attente.
+    const data = event.data ?? event;
+    const orderId = data?.metadata?.order_id ?? data?.order_id ?? null;
+    if (typeof orderId === 'string' && orderId) {
+      await reconcilePaymentOrder(await getPaymentOrder(db, orderId));
+    }
     await reconcilePendingPaymentOrders(10);
     sendJson(res, 200, { ok: true });
   }
@@ -822,7 +854,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 403, 'Requête refusée.', 'csrf');
           return;
         }
-        if (!originAllowed(req)) {
+        if (!originAllowed(req, config.trustProxy)) {
           portalError(res, 403, 'Origine non autorisée.', 'csrf_origin');
           return;
         }
@@ -936,15 +968,29 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         return;
       }
 
-      if (route === '/device/approve' && method === 'POST') {
+      // Detail d'une demande d'appareil avant approbation (anti-hameconnage).
+      if ((route === '/device/info' || route === '/device/approve') && method === 'POST') {
         const current = await sessionFromRequest(req);
         if (!current) {
           portalError(res, 401, 'Connectez-vous au portail pour approuver cet appareil.', 'unauthorized');
           return;
         }
         if (!requireCsrf(req, res)) return;
+        if (!hitWindow(deviceApproveAttempts, current.client.id, 30, LOGIN_WINDOW_MS)) {
+          portalError(res, 429, 'Trop de tentatives. Réessayez dans quelques minutes.', 'too_many_attempts');
+          return;
+        }
         const body = await readJsonBody(req, 4 * 1024);
         const normalized = normalizeUserCode(body.user_code);
+        if (route === '/device/info') {
+          const row = normalized.length === 8 ? await getDeviceCodeByUserCodeHash(db, sha256(normalized)) : null;
+          if (!row || row.status !== 'pending' || new Date(row.expires_at).getTime() <= Date.now()) {
+            portalError(res, 404, 'Code invalide, expiré ou déjà utilisé.', 'device_code_rejected');
+            return;
+          }
+          sendJson(res, 200, { device_name: row.device_name || 'Appareil CLI', created_at: row.created_at });
+          return;
+        }
         if (normalized.length !== 8) {
           portalError(res, 400, 'Code d’appareil invalide.', 'invalid_device_code');
           return;
@@ -1058,9 +1104,8 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           sendJson(res, 200, emailCodeMessage());
           return;
         }
-        if (!client) {
-          await enforceSignupPolicy(req, email, body.deviceId);
-        }
+        // Les regles d'inscription (IP, appareil, VPN) sont appliquees a la
+        // verification du code : les appliquer ici revelerait si le compte existe.
         const send = reserveEmailSend(email);
         if (!send.ok) {
           audit(req, 'portal.email.request.rate_limited', client?.name ?? null);
@@ -1144,8 +1189,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         // Reponse identique que le compte existe ou non : le code est verifie
         // avant toute creation de compte.
         const client = await findClientByEmail(db, email);
-        await incrementPortalEmailCodeAttempts(db, record.id);
-        if (Number(record.attempts) + 1 > MAX_CODE_ATTEMPTS) {
+        if (!await incrementPortalEmailCodeAttempts(db, record.id, MAX_CODE_ATTEMPTS)) {
           await deletePortalEmailCode(db, record.id);
           audit(req, 'portal.email.failed');
           portalError(res, 401, 'Trop de tentatives. Demandez un nouveau code.', 'too_many_attempts');
@@ -1204,8 +1248,8 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         await assertTurnstile(req, body.captchaToken ?? body.turnstileToken);
         const existing = await findClientByEmail(db, email);
         // Compte existant : le meme parcours envoie un code de connexion.
-        // Aucun message ne revele l'existence du compte.
-        if (!existing) await enforceSignupPolicy(req, email, body.deviceId);
+        // Aucun message ne revele l'existence du compte : les regles
+        // d'inscription sont appliquees a la verification du code.
         const send = reserveEmailSend(email);
         if (!send.ok) {
           audit(req, 'portal.signup.rate_limited');
@@ -1284,8 +1328,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 401, 'Code expiré ou déjà utilisé. Demandez un nouveau code.', 'expired_code');
           return;
         }
-        await incrementPortalEmailCodeAttempts(db, record.id);
-        if (Number(record.attempts) + 1 > MAX_CODE_ATTEMPTS) {
+        if (!await incrementPortalEmailCodeAttempts(db, record.id, MAX_CODE_ATTEMPTS)) {
           await deletePortalEmailCode(db, record.id);
           portalError(res, 401, 'Trop de tentatives. Demandez un nouveau code.', 'too_many_attempts');
           return;
@@ -1481,6 +1524,10 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           portalError(res, 401, 'Session invalide.', 'unauthorized');
           return;
         }
+        if (await tooManyPendingOrders(client.id)) {
+          portalError(res, 429, 'Trop de paiements en attente. Terminez ou attendez l’expiration des précédents.', 'too_many_pending_orders');
+          return;
+        }
         const country = context.country && context.country.length === 2
           ? context.country
           : CURRENCY_COUNTRY[context.currency];
@@ -1546,6 +1593,10 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         const client = await getClientById(db, current.client.id);
         if (!client) {
           portalError(res, 401, 'Session invalide.', 'unauthorized');
+          return;
+        }
+        if (await tooManyPendingOrders(client.id)) {
+          portalError(res, 429, 'Trop de paiements en attente. Terminez ou attendez l’expiration des précédents.', 'too_many_pending_orders');
           return;
         }
         const order = {
@@ -1619,7 +1670,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
     }
   }
 
-  return { handle };
+  return { handle, prune };
 }
 
 

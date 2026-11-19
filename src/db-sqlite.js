@@ -307,8 +307,12 @@ export function getActivePortalEmailCode(db, email) {
     .get(String(email).toLowerCase());
 }
 
-export function incrementPortalEmailCodeAttempts(db, id) {
-  db.prepare('UPDATE portal_email_codes SET attempts = attempts + 1 WHERE id = ?').run(id);
+/** Compte un essai de facon atomique ; false si le plafond est deja atteint. */
+export function incrementPortalEmailCodeAttempts(db, id, maxAttempts) {
+  const result = db
+    .prepare('UPDATE portal_email_codes SET attempts = attempts + 1 WHERE id = ? AND attempts < ?')
+    .run(id, maxAttempts);
+  return result.changes === 1;
 }
 
 export function deletePortalEmailCode(db, id) {

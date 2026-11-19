@@ -109,10 +109,10 @@ export async function insertPortalEmailCode(db, code) {
 export async function getActivePortalEmailCode(db, email) {
   return dbDriver(db) === 'mongo' ? mongo.getActivePortalEmailCode(db, email) : sqlite.getActivePortalEmailCode(db, email);
 }
-export async function incrementPortalEmailCodeAttempts(db, id) {
+export async function incrementPortalEmailCodeAttempts(db, id, maxAttempts) {
   return dbDriver(db) === 'mongo'
-    ? mongo.incrementPortalEmailCodeAttempts(db, id)
-    : sqlite.incrementPortalEmailCodeAttempts(db, id);
+    ? mongo.incrementPortalEmailCodeAttempts(db, id, maxAttempts)
+    : sqlite.incrementPortalEmailCodeAttempts(db, id, maxAttempts);
 }
 export async function deletePortalEmailCode(db, id) {
   return dbDriver(db) === 'mongo' ? mongo.deletePortalEmailCode(db, id) : sqlite.deletePortalEmailCode(db, id);

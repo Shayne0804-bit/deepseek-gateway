@@ -18,6 +18,30 @@
     return raw.length > 4 ? `${raw.slice(0, 4)}-${raw.slice(4)}` : raw;
   }
 
+  /** Affiche l'appareil qui demande l'acces avant toute approbation. */
+  async function showDeviceInfo(value) {
+    const info = $('#device-info');
+    const userCode = formatCode(value);
+    if (userCode.length !== 9) {
+      info.textContent = '';
+      return;
+    }
+    try {
+      const res = await fetch('/portal/api/device/info', {
+        method: 'POST',
+        headers: { ...CSRF, 'content-type': 'application/json', accept: 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ user_code: userCode }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error?.message || `Erreur HTTP ${res.status}`);
+      const minutes = Math.max(0, Math.round((Date.now() - Date.parse(data.created_at)) / 60000));
+      info.textContent = `Appareil demandeur : « ${data.device_name} », demande créée il y a ${minutes} min.`;
+    } catch (error) {
+      info.textContent = error.message;
+    }
+  }
+
   async function getSession() {
     const res = await fetch('/portal/api/me', { headers: { accept: 'application/json' }, credentials: 'same-origin' });
     if (res.status === 401) return null;
@@ -33,6 +57,10 @@
     if (userCode.length !== 9) {
       showError('Entrez le code complet affiché dans le terminal (format XXXX-XXXX).');
       input.focus();
+      return;
+    }
+    if (!$('#device-confirm').checked) {
+      showError('Confirmez que vous avez lancé cette connexion vous-même.');
       return;
     }
     const button = $('#device-approve-btn');
@@ -73,7 +101,10 @@
     const input = $('#device-code');
     input.value = formatCode(code);
     $('#device-login-code').textContent = code ? formatCode(code) : '—';
-    input.addEventListener('input', () => { input.value = formatCode(input.value); });
+    input.addEventListener('input', () => {
+      input.value = formatCode(input.value);
+      showDeviceInfo(input.value);
+    });
     $('#device-approve-form').addEventListener('submit', approve);
     try {
       const me = await getSession();
@@ -86,6 +117,7 @@
       }
       $('#device-account').textContent = `Connecté en tant que ${me.client?.name || 'utilisateur'}${me.client?.email ? ` · ${me.client.email}` : ''}.`;
       $('#device-approve-panel').classList.remove('hidden');
+      showDeviceInfo(input.value);
       input.focus();
     } catch (error) {
       $('#device-loading').classList.add('hidden');

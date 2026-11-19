@@ -63,9 +63,13 @@
               <span>Code affiché dans le terminal</span>
               <input type="text" id="device-code" name="code" placeholder="XXXX-XXXX" maxlength="12" autocomplete="one-time-code" spellcheck="false" required>
             </label>
+            <p class="small" id="device-info" aria-live="polite"></p>
+            <label class="field full device-confirm">
+              <span><input type="checkbox" id="device-confirm" required> J’ai lancé moi-même cette connexion dans mon terminal et le code affiché correspond.</span>
+            </label>
             <button type="submit" class="btn btn-primary btn-block" id="device-approve-btn">Autoriser l’appareil</button>
           </form>
-          <p class="small muted device-help">Si ce code ne vient pas de vous, refusez et fermez cette page.</p>
+          <p class="small muted device-help"><strong>Attention :</strong> autoriser donne à cet appareil l’accès à votre compte et à votre crédit pendant 90 jours. Si quelqu’un vous a envoyé ce lien, n’autorisez pas.</p>
         </div>
 
         <div id="device-success" class="hidden">

@@ -63,7 +63,6 @@ async function statusEmbed(site, fetchImpl) {
       .setTitle('VALARIA Gateway is online')
       .addFields(
         { name: 'Version', value: `\`${data.version || '—'}\``, inline: true },
-        { name: 'Database', value: `\`${data.database || '—'}\``, inline: true },
         { name: 'Gateway', value: data.providerConfigured ? 'configured' : 'not configured', inline: true },
       )
       .setFooter({ text: 'VALARIA Status' })

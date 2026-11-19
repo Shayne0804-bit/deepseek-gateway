@@ -96,8 +96,9 @@ function countryFromTimezone(tz) {
   return entry ? entry[0] : null;
 }
 
-export function detectCountry(req, locale = '', timezone = '') {
-  const cfCountry = validCountry(req?.headers?.['cf-ipcountry']);
+/** CF-IPCountry n'est lu que derriere Cloudflare (sinon falsifiable). */
+export function detectCountry(req, locale = '', timezone = '', trustCloudflare = false) {
+  const cfCountry = trustCloudflare ? validCountry(req?.headers?.['cf-ipcountry']) : null;
   if (cfCountry && COUNTRY_CURRENCY[cfCountry]) return cfCountry;
   // La timezone est un meilleur indice de localisation que la langue du
   // navigateur; Cloudflare reste prioritaire car il connait l'IP reelle.
@@ -150,7 +151,7 @@ export async function getExchangeRates(config = {}) {
 }
 
 export async function currencyContext(req, { locale = '', timezone = '', config = {} } = {}) {
-  const country = detectCountry(req, locale, timezone);
+  const country = detectCountry(req, locale, timezone, Boolean(config.trustCloudflare));
   let currency = currencyFromCountry(country) || 'EUR';
   const rates = await getExchangeRates(config);
   let rate = Number(rates.rates[currency]);

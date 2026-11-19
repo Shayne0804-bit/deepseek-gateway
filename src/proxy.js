@@ -64,6 +64,23 @@ export function normalizeProxyPath(rawPathname) {
   return pathname;
 }
 
+/**
+ * Seuls ces endpoints (POST) sont relayes avec la cle fournisseur maitre.
+ * Tout le reste (fichiers, batchs, DELETE...) est refuse : ces ressources
+ * seraient partagees entre tous les clients et non facturees.
+ */
+const FORWARDED_POST_PATHS = new Set([
+  '/v1/chat/completions', '/chat/completions',
+  '/v1/completions', '/completions',
+  '/beta/completions', '/beta/chat/completions',
+  '/v1/responses', '/responses',
+  '/anthropic/v1/messages', '/anthropic/v1/messages/count_tokens',
+]);
+
+export function isForwardedEndpoint(method, pathname) {
+  return method === 'POST' && FORWARDED_POST_PATHS.has(pathname);
+}
+
 /** Vrai pour les endpoints de decouverte de modeles (OpenAI ou Anthropic). */
 export function isModelsPath(pathname) {
   return pathname === '/models' || pathname === '/v1/models' || pathname === '/anthropic/v1/models';
@@ -231,6 +248,11 @@ export function createProxyHandler({ config, db, log, resolveProvider }) {
         ...cors,
         'cache-control': 'public, max-age=60',
       });
+      return;
+    }
+
+    if (!isForwardedEndpoint(req.method, pathname)) {
+      sendApiError(res, 404, `Endpoint non pris en charge : ${req.method} ${pathname}.`, 'invalid_request_error', 'unsupported_endpoint', cors);
       return;
     }
 

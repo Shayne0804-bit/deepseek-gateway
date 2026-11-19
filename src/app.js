@@ -26,13 +26,13 @@ import { createPortalApi } from './portal-api.js';
 import { createMailer } from './mailer.js';
 import { createProxyHandler, isProxyPath } from './proxy.js';
 import { DEFAULT_PRICING } from './pricing.js';
-import { getDiscordStatus } from './discord/status.js';
 import { IpRateLimiter } from './limits.js';
 import {
   applySecurityHeaders,
   clientIp,
   corsHeaders,
   isHttpsRequest,
+  safeEqual,
   sendJson,
 } from './http-utils.js';
 
@@ -305,6 +305,14 @@ export async function startGateway(overrides = {}) {
         warnings.push('Inscription derriere proxy : activez TRUST_CLOUDFLARE=1 pour utiliser la vraie IP client (1 compte/IP).');
       }
     }
+    if (config.trustCloudflare && !config.originSecret && !loopback) {
+      warnings.push(
+        "TRUST_CLOUDFLARE=1 sans ORIGIN_SECRET : CF-Connecting-IP est falsifiable si l'origine est joignable hors Cloudflare.",
+      );
+    }
+    if (!config.adminTotpSecret && !loopback) {
+      warnings.push('ADMIN_TOTP_SECRET vide : la console admin est protegee par mot de passe seul.');
+    }
     return warnings;
   }
 
@@ -325,6 +333,14 @@ export async function startGateway(overrides = {}) {
       return;
     }
     const pathname = url.pathname.replace(/\/{2,}/g, '/');
+
+    // Requete qui contourne Cloudflare (domaine Railway direct) : refusee.
+    // /healthz reste ouvert pour le healthcheck interne de la plateforme.
+    if (config.originSecret && pathname !== '/healthz' && pathname !== '/readyz'
+      && !safeEqual(req.headers['x-origin-secret'], config.originSecret)) {
+      sendJson(res, 403, { error: { message: 'Acces direct refuse.', type: 'permission_error', code: 'origin_forbidden' } });
+      return;
+    }
 
     const isApi = isProxyPath(pathname);
     const isAdminApi = pathname.startsWith('/admin/api');
@@ -352,19 +368,14 @@ export async function startGateway(overrides = {}) {
 
     if (pathname === '/healthz' || pathname === '/readyz') {
       const provider = await resolveProvider(db, config);
+      // Reponse publique minimale : les avertissements de configuration et
+      // l'etat Discord restent dans les logs serveur.
       sendJson(res, 200, {
         ok: true,
         name: 'valaria-gateway',
         version: APP_VERSION,
         uptimeSeconds: Math.round(process.uptime()),
-        database: config.dbDriver,
         providerConfigured: Boolean(provider.apiKey),
-        discord: {
-          enabled: Boolean(config.discordEnabled),
-          configured: Boolean(config.discordToken && config.discordGuildId),
-          ...getDiscordStatus(),
-        },
-        warnings: startupWarnings,
       });
       return;
     }
@@ -458,6 +469,8 @@ export async function startGateway(overrides = {}) {
         await cleanupPortalSessions(db, nowIso);
         await cleanupPortalEmailCodes(db, nowIso);
         ipLimiter.prune();
+        adminApi.prune();
+        portalApi.prune();
         if (config.usageRetentionDays > 0) {
           const cutoff = new Date(Date.now() - config.usageRetentionDays * 86_400_000).toISOString();
           const deleted = await deleteUsageLogsBefore(db, cutoff);

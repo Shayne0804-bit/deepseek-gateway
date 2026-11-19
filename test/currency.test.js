@@ -10,11 +10,13 @@ import { detectCountry, FALLBACK_RATES, convertFromEur } from '../src/currency.j
 const silentLogger = { debug() {}, info() {}, warn() {}, error() {} };
 
 test('detection pays : Cloudflare, locale puis timezone', () => {
-  assert.equal(detectCountry({ headers: { 'cf-ipcountry': 'CI' } }, '', ''), 'CI');
+  assert.equal(detectCountry({ headers: { 'cf-ipcountry': 'CI' } }, '', '', true), 'CI');
+  // Hors Cloudflare, l'en-tete est ignore (falsifiable).
+  assert.equal(detectCountry({ headers: { 'cf-ipcountry': 'CI' } }, '', ''), null);
   assert.equal(detectCountry({ headers: {} }, 'fr-SN', ''), 'SN');
   assert.equal(detectCountry({ headers: {} }, 'en-US', ''), 'US');
   assert.equal(detectCountry({ headers: {} }, '', 'Africa/Lagos'), 'NG');
-  assert.equal(detectCountry({ headers: { 'cf-ipcountry': 'XX' } }, '', ''), null);
+  assert.equal(detectCountry({ headers: { 'cf-ipcountry': 'XX' } }, '', '', true), null);
 });
 
 test('conversion EUR vers devise locale', () => {

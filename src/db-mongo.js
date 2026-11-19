@@ -495,8 +495,13 @@ export async function getActivePortalEmailCode(handle, email) {
   return stripMongoId(row);
 }
 
-export async function incrementPortalEmailCodeAttempts(handle, id) {
-  await getCollection(handle, 'portal_email_codes').updateOne({ id }, { $inc: { attempts: 1 } });
+/** Compte un essai de facon atomique ; false si le plafond est deja atteint. */
+export async function incrementPortalEmailCodeAttempts(handle, id, maxAttempts) {
+  const result = await getCollection(handle, 'portal_email_codes').updateOne(
+    { id, attempts: { $lt: maxAttempts } },
+    { $inc: { attempts: 1 } },
+  );
+  return result.modifiedCount === 1;
 }
 
 export async function deletePortalEmailCode(handle, id) {

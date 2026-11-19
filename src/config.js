@@ -172,7 +172,7 @@ export function loadConfig(overrides = {}) {
     exchangeRatesUrl: overrides.exchangeRatesUrl ?? raw('EXCHANGE_RATES_URL') ?? 'https://open.er-api.com/v6/latest/EUR',
     otpExpiresMinutes: intOr(raw('OTP_EXPIRES_MINUTES'), 10),
     otpCooldownSeconds: overrides.otpCooldownSeconds ?? intOr(raw('OTP_COOLDOWN_SECONDS'), 30),
-    otpMaxPerEmail: overrides.otpMaxPerEmail ?? intOr(raw('OTP_MAX_PER_EMAIL'), 0),
+    otpMaxPerEmail: overrides.otpMaxPerEmail ?? intOr(raw('OTP_MAX_PER_EMAIL'), 5),
     otpMaxPerIp: overrides.otpMaxPerIp ?? intOr(raw('OTP_MAX_PER_IP'), 10),
     // Inscription autonome par email + pass d'essai cree automatiquement.
     signupEnabled: overrides.signupEnabled ?? boolOr(raw('SIGNUP_ENABLED'), true),
@@ -235,6 +235,9 @@ export function loadConfig(overrides = {}) {
     fraudFailClosed: overrides.fraudFailClosed ?? boolOr(raw('FRAUD_FAIL_CLOSED'), true),
     fraudTimeoutMs: overrides.fraudTimeoutMs ?? intOr(raw('FRAUD_TIMEOUT_MS'), 5000),
     trustCloudflare: overrides.trustCloudflare ?? boolOr(raw('TRUST_CLOUDFLARE'), false),
+    // Secret ajoute par Cloudflare (Transform Rule « x-origin-secret ») : refuse
+    // toute requete qui contourne Cloudflare (domaine Railway direct, IP brute).
+    originSecret: overrides.originSecret ?? raw('ORIGIN_SECRET') ?? '',
     ipIntelEnabled: overrides.ipIntelEnabled ?? boolOr(raw('IP_INTEL_ENABLED'), false),
     ipIntelUrl: overrides.ipIntelUrl
       ?? raw('IP_INTEL_URL')
@@ -278,7 +281,7 @@ export function loadConfig(overrides = {}) {
     config.otpCooldownSeconds = 30;
   }
   if (!Number.isFinite(config.otpMaxPerEmail) || config.otpMaxPerEmail < 0 || config.otpMaxPerEmail > 50) {
-    config.otpMaxPerEmail = 0;
+    config.otpMaxPerEmail = 5;
   }
   if (!Number.isFinite(config.otpMaxPerIp) || config.otpMaxPerIp < 1 || config.otpMaxPerIp > 50) {
     config.otpMaxPerIp = 10;

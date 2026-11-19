@@ -77,6 +77,8 @@ import {
 const CSRF_HEADER = 'x-requested-with';
 const CSRF_VALUE = 'dsk-admin';
 const MAX_LOGIN_ATTEMPTS = 10;
+// Plafond global, toutes IP confondues : borne le brute-force distribue.
+const MAX_GLOBAL_LOGIN_FAILURES = 50;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
 function adminError(res, status, message, code = null) {
@@ -278,6 +280,19 @@ function validateHttpUrl(value, label) {
 
 export function createAdminApi({ config, db, log, mailer }) {
   const loginAttempts = new Map();
+  let globalFailures = { first: 0, count: 0 };
+
+  function globalLoginLocked() {
+    if (Date.now() - globalFailures.first > LOGIN_WINDOW_MS) return false;
+    return globalFailures.count >= MAX_GLOBAL_LOGIN_FAILURES;
+  }
+
+  function prune() {
+    const now = Date.now();
+    for (const [key, entry] of loginAttempts) {
+      if (now - entry.first > LOGIN_WINDOW_MS) loginAttempts.delete(key);
+    }
+  }
 
   async function requireSession(req) {
     const cookies = parseCookies(req.headers.cookie);
@@ -307,6 +322,8 @@ export function createAdminApi({ config, db, log, mailer }) {
 
   function recordLoginFailure(ip) {
     const now = Date.now();
+    if (now - globalFailures.first > LOGIN_WINDOW_MS) globalFailures = { first: now, count: 1 };
+    else globalFailures.count += 1;
     const entry = loginAttempts.get(ip);
     if (!entry || now - entry.first > LOGIN_WINDOW_MS) {
       loginAttempts.set(ip, { first: now, count: 1 });
@@ -330,7 +347,9 @@ export function createAdminApi({ config, db, log, mailer }) {
   }
 
   function csvCell(value) {
-    const text = value == null ? '' : String(value);
+    let text = value == null ? '' : String(value);
+    // Anti-injection de formules (Excel/LibreOffice) : valeurs choisies par les clients.
+    if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
     return /[";\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   }
 
@@ -410,7 +429,7 @@ export function createAdminApi({ config, db, log, mailer }) {
       // ------------------------------ public ------------------------------
       if (route === '/login' && method === 'POST') {
         const ip = clientIp(req, config.trustProxy, config.trustCloudflare);
-        if (loginRateLimited(ip)) {
+        if (loginRateLimited(ip) || globalLoginLocked()) {
           audit(req, 'admin.login.rate_limited', 'admin');
           adminError(res, 429, 'Trop de tentatives. Reessayez dans quelques minutes.', 'too_many_attempts');
           return;
@@ -470,7 +489,7 @@ export function createAdminApi({ config, db, log, mailer }) {
           adminError(res, 403, 'Requete refusee (en-tete de securite manquant).', 'csrf');
           return;
         }
-        if (!originAllowed(req)) {
+        if (!originAllowed(req, config.trustProxy)) {
           adminError(res, 403, 'Origine non autorisee.', 'csrf_origin');
           return;
         }
@@ -909,7 +928,7 @@ export function createAdminApi({ config, db, log, mailer }) {
     }
   }
 
-  return { handle, readSettingsView };
+  return { handle, readSettingsView, prune };
 }
 
 

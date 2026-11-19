@@ -166,17 +166,19 @@ test('clé API : une seule création, régénération possible', async () => {
   }
 });
 
-test('pas de plafond d envois par email (cooldown court en test)', async () => {
+test('plafond de 5 envois par email (cooldown court en test)', async () => {
   const { started, mailer } = await startServer();
   try {
-    for (let i = 0; i < 6; i += 1) {
-      const res = await portalPost(started.url, '/signup/request', { email: 'illimite@gmail.com' });
+    for (let i = 0; i < 5; i += 1) {
+      const res = await portalPost(started.url, '/signup/request', { email: 'plafond@gmail.com' });
       assert.equal(res.status, 200, `envoi ${i + 1}`);
       const body = await res.json();
       assert.equal(body.sent, true);
-      assert.equal(body.max_sends, 0);
+      assert.equal(body.max_sends, 5);
     }
-    assert.equal(mailer.sent.length, 6, 'chaque demande doit envoyer un email');
+    const sixth = await portalPost(started.url, '/signup/request', { email: 'plafond@gmail.com' });
+    assert.equal(sixth.status, 429);
+    assert.equal(mailer.sent.length, 5, 'le 6e envoi est refuse');
   } finally {
     await started.close();
   }
@@ -288,10 +290,13 @@ test('inscription : un seul compte par IP', async () => {
     const verify = await portalPost(started.url, '/signup/verify', { email: 'premier-ip@gmail.com', code: mailer.sent.at(-1).code });
     assert.equal(verify.status, 200);
 
+    // La demande ne revele pas si le compte existe : la regle IP est
+    // appliquee a la verification du code (anti-enumeration).
     const second = await portalPost(started.url, '/signup/request', { email: 'second-ip@gmail.com' });
-    assert.equal(second.status, 403);
-    assert.equal((await second.json()).error.code, 'signup_ip_limit');
-    assert.equal(mailer.sent.length, 1, 'aucun email pour le second compte');
+    assert.equal(second.status, 200);
+    const secondVerify = await portalPost(started.url, '/signup/verify', { email: 'second-ip@gmail.com', code: mailer.sent.at(-1).code });
+    assert.equal(secondVerify.status, 403);
+    assert.equal((await secondVerify.json()).error.code, 'signup_ip_limit');
   } finally {
     await started.close();
   }

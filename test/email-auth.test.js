@@ -149,7 +149,7 @@ test('email OTP : anti-spam, unicité et clé API toujours valide', async () => 
     const firstData = await firstRequest.json();
     assert.equal(firstData.sent, true);
     assert.equal(firstData.sends_in_window, 1);
-    assert.equal(firstData.max_sends, 0, 'pas de plafond par email');
+    assert.equal(firstData.max_sends, 5, 'plafond par defaut : 5 codes par email / 15 min');
     assert.ok(firstData.resend_in_seconds > 0);
     const code = mailer.sent[0].code;
     const before = mailer.sent.length;
