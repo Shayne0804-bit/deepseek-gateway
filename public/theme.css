@@ -2213,3 +2213,273 @@ body.portal-authenticated #portal-app > main { position: relative; z-index: 1; }
 .landing-v2 .cli-band { padding-top: clamp(56px, 6vw, 84px); padding-bottom: clamp(56px, 6vw, 84px); }
 .landing-v2 .cli-band-inner { max-width: none; }
 .landing-v2 .control-band { padding-top: 8px; padding-bottom: 8px; }
+
+/* ==================================================================
+   Refonte 2026-11 : système de mouvement, typographie, mobile.
+   Dernière couche : elle prime sur tout ce qui précède.
+   ================================================================== */
+:root {
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-spring: cubic-bezier(.34, 1.4, .5, 1);
+  --dur-fast: 160ms;
+  --dur: 280ms;
+  --dur-slow: 640ms;
+  --cyan: #3ccfb4;
+  --brand-grad: linear-gradient(100deg, #e4ffee 0%, #8ceab8 40%, #3ccfb4 70%, #f0c674 100%);
+}
+
+/* Transitions entre pages (navigateurs compatibles, sinon ignoré). */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: vt-out 180ms ease-in both; }
+::view-transition-new(root) { animation: vt-in 320ms var(--ease-out) both; }
+@keyframes vt-out { to { opacity: 0; transform: translateY(-6px); } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(10px); } }
+
+/* --- typographie : approche lisible, plus d'espaces mangés --- */
+h1, h2 { letter-spacing: -0.028em !important; word-spacing: 0.02em; text-wrap: balance; }
+h3, h4 { letter-spacing: -0.015em !important; }
+.landing-v2 .hero h1 { line-height: 1 !important; }
+.landing-v2 .hero h1 span {
+  background: var(--brand-grad);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  animation: text-sheen 7s ease-in-out infinite alternate;
+}
+@keyframes text-sheen { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+
+/* --- en-tête : verre dépoli + logo vivant --- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(9, 17, 13, .82);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+.site-brand .brand-logo,
+.brand .brand-logo,
+.login-logo { transition: transform var(--dur) var(--ease-spring), filter var(--dur); }
+.site-brand:hover .brand-logo,
+.brand:hover .brand-logo { transform: rotate(-8deg) scale(1.08); filter: drop-shadow(0 0 10px rgba(127, 227, 170, .35)); }
+.login-logo { animation: logo-float 5s ease-in-out infinite; }
+@keyframes logo-float { 50% { transform: translateY(-4px); } }
+
+.site-nav a { position: relative; transition: color var(--dur-fast); }
+.site-nav a::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -4px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--brand-grad);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--dur) var(--ease-out);
+}
+.site-nav a:hover::after,
+.site-nav a:focus-visible::after { transform: scaleX(1); }
+
+.site-status .dot.ok { animation: dot-ping 2.4s ease-out infinite; }
+@keyframes dot-ping {
+  0% { box-shadow: 0 0 0 0 rgba(127, 227, 170, .45); }
+  70%, 100% { box-shadow: 0 0 0 7px rgba(127, 227, 170, 0); }
+}
+
+/* --- boutons : relief, reflet, pression --- */
+.btn {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    background-color var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast),
+    box-shadow var(--dur), transform var(--dur-fast) var(--ease-out);
+}
+.btn:hover:not(:disabled) { transform: translateY(-1px); }
+.btn:active:not(:disabled) { transform: translateY(0) scale(.97); transition-duration: 80ms; }
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .45) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 700ms var(--ease-out);
+}
+.btn-primary:hover::after { transform: translateX(120%); }
+.btn-primary:hover:not(:disabled) { box-shadow: 0 14px 34px rgba(110, 218, 163, .24), inset 0 1px 0 rgba(255, 255, 255, .42); }
+.btn:disabled { cursor: not-allowed; }
+.icon-btn, .auth-tab, .terminal-thumb { transition: background-color var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast), transform var(--dur-fast) var(--ease-out); }
+.icon-btn:active, .auth-tab:active, .terminal-thumb:active { transform: scale(.95); }
+
+/* --- champs : halo au focus --- */
+input, select, textarea { transition: border-color var(--dur-fast), box-shadow var(--dur), background-color var(--dur-fast); }
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 4px rgba(127, 227, 170, .14) !important;
+  outline: none;
+}
+input[type="checkbox"] { accent-color: var(--accent); }
+
+/* --- cartes : survol vivant --- */
+.panel, .stat-card, .surface-card, .capability, .console-card, .plan-card, .onboarding-step, .cta-side, .login-card {
+  transition: border-color var(--dur), box-shadow var(--dur), transform var(--dur) var(--ease-out), background-color var(--dur);
+}
+.panel:hover, .onboarding-step:hover { border-color: var(--border-strong); }
+.stat-card:hover, .surface-card:hover, .plan-card:hover, .cta-side:hover {
+  transform: translateY(-3px);
+  border-color: rgba(127, 227, 170, .38);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .32), 0 0 0 1px rgba(127, 227, 170, .06);
+}
+.capability { position: relative; }
+.capability::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%; height: 2px;
+  background: var(--brand-grad);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+.capability:hover::before { transform: scaleX(1); }
+.capability-index { display: inline-block; transition: transform var(--dur) var(--ease-out); }
+.capability:hover .capability-index { transform: translateX(4px); }
+
+/* --- entrées de page : apparition en cascade --- */
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes fade-in { from { opacity: 0; } }
+
+.portal-login-copy > *,
+.portal-login-form,
+.payment-card,
+.login-card,
+.hero-v2-copy > * { animation: rise var(--dur-slow) var(--ease-out) both; }
+.portal-login-copy > :nth-child(2), .hero-v2-copy > :nth-child(2) { animation-delay: 70ms; }
+.portal-login-copy > :nth-child(3), .hero-v2-copy > :nth-child(3) { animation-delay: 140ms; }
+.portal-login-copy > :nth-child(4), .hero-v2-copy > :nth-child(4) { animation-delay: 210ms; }
+.portal-login-copy > :nth-child(n+5), .hero-v2-copy > :nth-child(n+5) { animation-delay: 280ms; }
+.portal-login-form { animation-delay: 160ms; }
+
+/* Onglets du portail et vues de la console : chaque affichage rejoue l'entrée. */
+.user-panel > *,
+#view > *,
+[role="tabpanel"] { animation: rise 420ms var(--ease-out) both; }
+.user-panel > :nth-child(2), #view > :nth-child(2) { animation-delay: 60ms; }
+.user-panel > :nth-child(3), #view > :nth-child(3) { animation-delay: 120ms; }
+.user-panel > :nth-child(n+4), #view > :nth-child(n+4) { animation-delay: 180ms; }
+.stat-grid > * { animation: pop-in 480ms var(--ease-out) both; }
+.stat-grid > :nth-child(2) { animation-delay: 60ms; }
+.stat-grid > :nth-child(3) { animation-delay: 120ms; }
+.stat-grid > :nth-child(n+4) { animation-delay: 180ms; }
+
+/* Révélation au défilement de la landing : cascade dans les grilles. */
+.landing-v2 [data-reveal] { transition-duration: var(--dur-slow); transition-timing-function: var(--ease-out); }
+.landing-v2 .surface-grid > [data-reveal]:nth-child(2),
+.landing-v2 .capability-grid > [data-reveal]:nth-child(3n+2),
+.landing-v2 .site-steps > [data-reveal]:nth-child(2) { transition-delay: 90ms; }
+.landing-v2 .capability-grid > [data-reveal]:nth-child(3n),
+.landing-v2 .site-steps > [data-reveal]:nth-child(3) { transition-delay: 180ms; }
+
+/* Navigation latérale (console + portail) : indicateur glissant. */
+.nav-item { position: relative; transition: background-color var(--dur-fast), color var(--dur-fast), padding-left var(--dur) var(--ease-out); }
+.nav-item::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 22%; bottom: 22%;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--brand-grad);
+  transform: scaleY(0);
+  transition: transform var(--dur) var(--ease-spring);
+}
+.nav-item.active::before { transform: scaleY(1); }
+.sidebar { transition: transform 320ms var(--ease-out) !important; }
+.nav-backdrop { animation: fade-in var(--dur) both; backdrop-filter: blur(3px); }
+
+/* Fenêtres modales et notifications. */
+.modal-backdrop:not(.hidden) { animation: fade-in 220ms ease-out both; backdrop-filter: blur(4px); }
+.modal-backdrop:not(.hidden) .modal { animation: pop-in 320ms var(--ease-spring) both; }
+.toast { animation: toast-in 380ms var(--ease-spring) both; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: none; } }
+.login-error:not(:empty) { animation: shake 360ms ease-out both; }
+@keyframes shake { 20% { transform: translateX(-4px); } 40% { transform: translateX(4px); } 60% { transform: translateX(-2px); } 80% { transform: translateX(2px); } }
+
+/* Connexion d'appareil : l'encart d'informations apparaît en douceur. */
+#device-info:not(.hidden) { animation: rise 420ms var(--ease-out) both; }
+
+/* Liste à puces suivie d'un paragraphe : l'air manquait. */
+.portal-login-copy ul + p { margin-top: 16px; }
+
+/* Paiement : carte centrée (la grille 2 colonnes l'écrasait). */
+.payment-page .payment-login { display: block; width: min(560px, 100%); max-width: none; margin: clamp(32px, 8vh, 96px) auto; }
+.payment-page .payment-card { padding: clamp(22px, 4vw, 36px); }
+.payment-page .payment-card h1 { font-size: clamp(26px, 4vw, 36px); line-height: 1.1; margin: 4px 0; }
+.payment-spinner { border-width: 3px; border-top-color: var(--accent); border-right-color: var(--cyan); }
+
+/* Barre de progression liée au défilement (landing). */
+@supports (animation-timeline: scroll()) {
+  .landing-v2 .landing-header::after {
+    content: "";
+    position: absolute;
+    left: 0; bottom: -1px;
+    width: 100%; height: 2px;
+    background: var(--brand-grad);
+    transform-origin: left;
+    animation: scroll-progress linear both;
+    animation-timeline: scroll(root);
+  }
+  @keyframes scroll-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+}
+
+/* --- mobile : navigation toujours accessible, cibles tactiles >= 40 px --- */
+@media (max-width: 720px) {
+  .landing-v2 .site-header { flex-wrap: wrap; row-gap: 10px; }
+  .landing-v2 .site-nav {
+    display: flex !important;
+    order: 3;
+    width: 100%;
+    margin: 0;
+    padding: 2px 0 4px;
+    overflow-x: auto;
+    -webkit-mask-image: linear-gradient(90deg, #000 86%, transparent);
+    mask-image: linear-gradient(90deg, #000 86%, transparent);
+  }
+}
+@media (max-width: 680px) {
+  .site-header { position: relative; }
+  .site-nav { gap: 8px !important; scrollbar-width: none; }
+  .site-nav::-webkit-scrollbar { display: none; }
+  .site-nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .035);
+    white-space: nowrap;
+    font-size: 13px !important;
+  }
+  .site-nav a::after { content: none; }
+  .site-nav a:active { background: rgba(127, 227, 170, .12); }
+  .btn { min-height: 44px; }
+  .stat-card:hover, .surface-card:hover, .plan-card:hover, .cta-side:hover { transform: none; }
+  #toasts { left: 12px; right: 12px; bottom: 12px; max-width: none; }
+}
+
+/* --- mouvement réduit : tout s'arrête, le contenu reste visible --- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  .landing-v2 .landing-header::after { display: none; }
+  @view-transition { navigation: none; }
+}

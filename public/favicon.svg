@@ -1,15 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none" role="img" aria-label="VALARIA Gateway">
   <defs>
-    <linearGradient id="vnode-a" x1="22" y1="22" x2="76" y2="72" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#C5FAD8"/>
-      <stop offset=".55" stop-color="#7FE3AA"/>
-      <stop offset="1" stop-color="#48BD82"/>
+    <linearGradient id="vg-tile" x1="0" y1="0" x2="96" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#12241B"/>
+      <stop offset="1" stop-color="#08100C"/>
+    </linearGradient>
+    <linearGradient id="vg-stroke" x1="24" y1="26" x2="72" y2="70" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E4FFEE"/>
+      <stop offset=".5" stop-color="#7FE3AA"/>
+      <stop offset="1" stop-color="#3CCFB4"/>
     </linearGradient>
   </defs>
-  <rect x="1.5" y="1.5" width="93" height="93" rx="26" fill="#0E1712" stroke="#2E4638" stroke-width="2"/>
-  <path d="M23 25 48 69 73 25" stroke="url(#vnode-a)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="48" cy="69" r="6.5" fill="#F0C674"/>
-  <path d="M17 16c17-10 45-10 62 0" stroke="#7FE3AA" stroke-opacity=".45" stroke-width="2.5" stroke-linecap="round"/>
-  <circle cx="17" cy="16" r="2.5" fill="#F0C674"/>
-  <circle cx="79" cy="16" r="2.5" fill="#7FE3AA"/>
+  <rect x="1.5" y="1.5" width="93" height="93" rx="28" fill="url(#vg-tile)" stroke="#2C4A3A" stroke-width="2"/>
+  <path d="M48 12a36 36 0 0 1 31.2 18" stroke="#7FE3AA" stroke-opacity=".7" stroke-width="3" stroke-linecap="round"/>
+  <path d="M24 26 48 68 72 26" stroke="url(#vg-stroke)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="48" cy="68" r="8.5" fill="#F0C674" stroke="#08100C" stroke-width="3"/>
 </svg>
