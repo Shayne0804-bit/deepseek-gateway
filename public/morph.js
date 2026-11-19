@@ -1,6 +1,6 @@
 /* Morphose VALARIA : nuage de particules WebGL qui forme le V, puis
    sphère, V, galaxie. Sans dépendance. Monté automatiquement sur tout
-   <canvas data-morph="hero|ambient|center">. Mouvement réduit : image fixe. */
+   <canvas data-morph="hero|ambient|center|field">. Mouvement réduit : image fixe. */
 (() => {
   'use strict';
 
@@ -19,6 +19,8 @@
     ambient: { desktop: 3400, mobile: 1500, f: 3.4, fMobile: 2.4, offsetX: 0.42, base: 0.12, scroll: false },
     // Variante centrée (carte unique au milieu : admin, paiement).
     center: { desktop: 3400, mobile: 1500, f: 3.6, fMobile: 2.4, offsetX: 0, base: 0.12, scroll: false },
+    // Tableaux de bord : nébuleuse légère et dispersée, ouverte longtemps, donc moins de particules.
+    field: { desktop: 3200, mobile: 1300, f: 3.3, fMobile: 2.2, offsetX: 0.1, base: 0.32, scroll: false, size: 1.5 },
   };
 
   function startMorph(cv, opts) {
@@ -184,7 +186,7 @@
       gl.uniform1f(U.uT, t);
       gl.uniform1f(U.uScat, scat);
       gl.uniform1f(U.uAspect, cv.width / cv.height);
-      gl.uniform1f(U.uSize, (small.matches ? 2.6 : 3.2) * dpr);
+      gl.uniform1f(U.uSize, (small.matches ? 2.6 : 3.2) * dpr * (opts.size || 1));
       gl.uniform1f(U.uF, narrow.matches ? opts.fMobile : opts.f);
       gl.uniform1f(U.uOff, narrow.matches ? 0 : opts.offsetX);
     gl.uniform1f(U.uOffY, narrow.matches ? (opts.offsetYMobile || 0) : 0);
