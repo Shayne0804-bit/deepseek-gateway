@@ -63,6 +63,8 @@
 
   const fmtInt = (value) => NF.format(Number(value) || 0);
   const fmtUsd = (value) => `${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(Number(value) || 0)} $`;
+  const fmtUsd2 = (value) => `${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value) || 0)} $`;
+  const COUNT_FORMATS = { int: fmtInt, usd: fmtUsd2, days: (v) => `${fmtInt(v)} j` };
   const fmtCompact = (value) => {
     const n = Number(value) || 0;
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)} M`;
@@ -537,6 +539,7 @@
     document.querySelectorAll('[data-user-view]').forEach((item) => {
       item.classList.toggle('active', item.dataset.userView === normalized);
     });
+    animateCounts(document.querySelector(`[data-user-panel="${normalized}"]`), COUNT_FORMATS);
     const title = $('#portal-title');
     if (title) title.textContent = USER_VIEWS[normalized];
     const profileStatus = $('#profile-status');
@@ -817,7 +820,9 @@
       ['statut', status],
       ['créée le', fmtDate(me.client.createdAt)],
       ['fin du pass', me.client.expiresAt ? fmtDate(me.client.expiresAt) : 'sans date de fin'],
-      ['période', PERIOD_LABELS[me.client.period] || me.client.period],
+      me.plan
+        ? ['pass', `${me.plan.name}${me.plan.durationDays ? ` · ${me.plan.durationDays} jours` : ''}`]
+        : ['période', PERIOD_LABELS[me.client.period] || me.client.period],
     ];
     return `<dl class="spec-list">${rows.map(([key, value]) => `<div class="spec-row"><dt>${esc(key)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>`;
   }
@@ -1475,13 +1480,34 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
       <tbody>${rows}</tbody></table></div>`;
   }
 
-  function quotaCard(label, quota, formatter) {
+  /* Compteurs animés : les nombres montent de 0 à leur valeur quand la vue s'affiche. */
+  const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function animateCounts(root, formatters) {
+    if (!root) return;
+    for (const el of root.querySelectorAll('[data-count]')) {
+      const target = Number(el.dataset.count) || 0;
+      const format = formatters[el.dataset.fmt] || ((v) => String(Math.round(v)));
+      if (REDUCED_MOTION || target === 0) { el.textContent = format(target); continue; }
+      const start = performance.now();
+      const step = (now) => {
+        const k = Math.min(1, (now - start) / 900);
+        el.textContent = format(target * (1 - Math.pow(1 - k, 3)));
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }
+  }
+
+  const countSpan = (value, kind) => `<span data-count="${Number(value) || 0}" data-fmt="${kind}">${COUNT_FORMATS[kind](value)}</span>`;
+
+  function quotaCard(label, quota, kind) {
+    const formatter = COUNT_FORMATS[kind];
     const limit = quota.limit;
     const used = quota.used ?? 0;
     if (!limit) {
       return `<article class="stat-card quota-card">
         <div class="stat-label">${esc(label)}</div>
-        <div class="stat-value">${formatter(used)}</div>
+        <div class="stat-value">${countSpan(used, kind)}</div>
         <div class="quota-bar quota-bar-unlimited"><span></span></div>
         <div class="small muted">non plafonné</div>
       </article>`;
@@ -1490,9 +1516,9 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     const level = pct >= 100 ? 'danger' : pct >= 80 ? 'warn' : 'ok';
     return `<article class="stat-card quota-card">
       <div class="stat-label">${esc(label)}</div>
-      <div class="stat-value">${formatter(used)} <span class="stat-sub">/ ${formatter(limit)}</span></div>
-      <div class="quota-bar ${level}"><span style="width:${pct}%"></span></div>
-      <div class="small muted">restant : ${formatter(Math.max(0, quota.remaining ?? 0))}</div>
+      <div class="stat-value">${countSpan(used, kind)} <span class="stat-sub">/ ${formatter(limit)}</span></div>
+      <div class="quota-bar ${level}" role="img" aria-label="${pct} % utilisé"><span style="width:${pct}%"></span></div>
+      <div class="small muted">restant : ${formatter(Math.max(0, quota.remaining ?? 0))} · ${pct} % utilisé</div>
     </article>`;
   }
 
@@ -1502,14 +1528,14 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
       return `<article class="stat-card quota-card">
         <div class="stat-label">Fin du pass</div>
         <div class="stat-value pass-date">Sans date</div>
-        <div class="small muted">arrêt à l'épuisement du quota</div>
+        <div class="small muted">s’arrête quand le crédit est épuisé</div>
       </article>`;
     }
     const days = Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000);
     const dateLabel = expiresAt.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
     return `<article class="stat-card quota-card">
       <div class="stat-label">Fin du pass</div>
-      <div class="stat-value">${days > 0 ? `${fmtInt(days)} j` : 'Terminé'}</div>
+      <div class="stat-value">${days > 0 ? countSpan(days, 'days') : 'Terminé'}</div>
       <div class="small muted">${days > 0 ? `jusqu'au ${dateLabel}` : 'pass expiré'}</div>
     </article>`;
   }
@@ -1532,28 +1558,37 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
       const h = value > 0 ? Math.max(2, (value / max) * (H - padB - padT)) : 0;
       const x = index * slot + (slot - barW) / 2;
       const y = H - padB - h;
-      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="1" fill="url(#portalGrad)"></rect>`;
+      const row = series[index] || {};
+      const label = row.day ? DAY_LABEL.format(new Date(`${row.day}T00:00:00Z`)) : '';
+      return `<rect class="chart-bar" style="--i:${index};--base:${H - padB}px" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="url(#portalGrad)"><title>${esc(label)} : ${fmtInt(value)} tokens, ${fmtInt(row.requests)} requêtes, ${fmtUsd(row.cost)}</title></rect>`;
+    }).join('');
+    const grid = [0.5, 1].map((f) => {
+      const y = (H - padB - f * (H - padB - padT)).toFixed(1);
+      return `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="rgba(220,255,235,.07)" stroke-dasharray="3 5"></line>`;
     }).join('');
     const first = series[0]?.day ? DAY_LABEL.format(new Date(`${series[0].day}T00:00:00Z`)) : '';
     const last = series[n - 1]?.day ? DAY_LABEL.format(new Date(`${series[n - 1].day}T00:00:00Z`)) : '';
     return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Consommation quotidienne en tokens sur 30 jours, ${fmtInt(total)} tokens au total">
       <defs>
         <linearGradient id="portalGrad" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0%" stop-color="#1a7a43"></stop>
-          <stop offset="100%" stop-color="#3ee97f"></stop>
+          <stop offset="0%" stop-color="#3ccfb4" stop-opacity=".45"></stop>
+          <stop offset="100%" stop-color="#8ceab8"></stop>
         </linearGradient>
       </defs>
-      <line x1="0" y1="${H - padB}" x2="${W}" y2="${H - padB}" stroke="#1d3b28" stroke-width="1"></line>
+      ${grid}
+      <line x1="0" y1="${H - padB}" x2="${W}" y2="${H - padB}" stroke="rgba(220,255,235,.14)" stroke-width="1"></line>
       ${bars}
-      <text x="0" y="${H - 6}" fill="#5d8769" font-size="11" font-family="monospace">${first}</text>
-      <text x="${W}" y="${H - 6}" text-anchor="end" fill="#5d8769" font-size="11" font-family="monospace">${last}</text>
-      <text x="4" y="${padT + 4}" fill="#5d8769" font-size="11" font-family="monospace">max ${fmtCompact(max)}</text>
+      <text x="0" y="${H - 6}" fill="#9fb4a7" font-size="11" font-family="monospace">${first}</text>
+      <text x="${W}" y="${H - 6}" text-anchor="end" fill="#9fb4a7" font-size="11" font-family="monospace">${last}</text>
+      <text x="4" y="${padT + 4}" fill="#9fb4a7" font-size="11" font-family="monospace">max ${fmtCompact(max)} tokens/jour</text>
     </svg>`;
   }
 
   function limitsMarkup(me) {
     const rows = [
-      ['période', PERIOD_LABELS[me.client.period] || me.client.period],
+      me.plan
+        ? ['pass', `${me.plan.name}${me.plan.durationDays ? ` · ${me.plan.durationDays} jours` : ''}`]
+        : ['période', PERIOD_LABELS[me.client.period] || me.client.period],
       ['débit', me.limits.rpmLimit ? `${fmtInt(me.limits.rpmLimit)} req/min` : 'non limité'],
       ['sortie max', me.limits.maxOutputTokens ? `${fmtInt(me.limits.maxOutputTokens)} tokens` : 'non plafonnée'],
       ['depuis', fmtDate(me.client.createdAt)],
@@ -1616,17 +1651,20 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
   function renderMe(me) {
     state.me = me;
     showApp();
-    $('#portal-sub').textContent = `${me.client.name}${me.client.email ? ` · ${me.client.email}` : ` · clé ${me.client.keyPrefix}`} · ${PERIOD_LABELS[me.client.period] || me.client.period}`;
-    $('#portal-version').textContent = `v${me.server?.version ?? ''}`;
+    const accessLabel = me.plan ? `pass ${me.plan.name}` : (PERIOD_LABELS[me.client.period] || me.client.period);
+    $('#portal-sub').textContent = `${me.client.name}${me.client.email ? ` · ${me.client.email}` : ` · clé ${me.client.keyPrefix}`} · ${accessLabel}`;
+    $('#portal-version').textContent = me.server?.version ?? '';
 
     const passLine = $('#portal-pass');
     if (me.client.expiresAt) {
       const expiresAt = new Date(me.client.expiresAt);
       const daysLeft = Math.ceil((expiresAt.getTime() - Date.now()) / 86_400_000);
-      passLine.textContent = `Pass actif jusqu’au ${fmtDate(me.client.expiresAt)} · arrêt aussi au quota.`;
+      passLine.textContent = daysLeft > 0
+        ? `Pass actif jusqu’au ${fmtDate(me.client.expiresAt)}. Il s’arrête plus tôt si le crédit est épuisé.`
+        : `Pass terminé le ${fmtDate(me.client.expiresAt)}. Renouvelez-le dans Mon pass pour continuer.`;
       passLine.classList.toggle('pass-expired', daysLeft <= 0);
     } else {
-      passLine.textContent = 'Accès sans date de fin · arrêt à l’épuisement du quota.';
+      passLine.textContent = 'Accès sans date de fin. Il s’arrête quand le crédit est épuisé.';
       passLine.classList.remove('pass-expired');
     }
 
@@ -1659,13 +1697,13 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
 
     const q = me.quota;
     const cards = [
-      quotaCard('Requêtes', q.requests, fmtInt),
-      quotaCard('Crédit site', q.usd, fmtUsd),
+      quotaCard('Requêtes', q.requests, 'int'),
+      quotaCard('Crédit du pass', q.usd, 'usd'),
     ];
-    if (me.limits?.credit5h) cards.push(quotaCard('Crédit / 5 h', me.limits.credit5h, fmtUsd));
-    if (me.limits?.creditWeek) cards.push(quotaCard('Crédit / semaine', me.limits.creditWeek, fmtUsd));
+    if (me.limits?.credit5h) cards.push(quotaCard('Crédit sur 5 h', me.limits.credit5h, 'usd'));
+    if (me.limits?.creditWeek) cards.push(quotaCard('Crédit sur 7 jours', me.limits.creditWeek, 'usd'));
     cards.push(passCard(me));
-    if (Number(me.client?.walletUsd) > 0) cards.push(quotaCard('Wallet PAYG', { used: 0, limit: me.client.walletUsd, remaining: me.client.walletUsd }, fmtUsd));
+    if (Number(me.client?.walletUsd) > 0) cards.push(quotaCard('Crédit rechargé', { used: 0, limit: me.client.walletUsd, remaining: me.client.walletUsd }, 'usd'));
     $('#portal-quotas').innerHTML = cards.join('');
 
     const series = me.usage?.series ?? [];
@@ -1690,7 +1728,8 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
       paintIcons(guideRoot);
     }
 
-    $('#portal-logs-hint').textContent = `${fmtInt(me.usage?.totals?.requests ?? 0)} requêtes · ${fmtInt(me.usage?.today?.requests ?? 0)} aujourd'hui`;
+    const totalRequests = me.usage?.totals?.requests ?? 0;
+    $('#portal-logs-hint').textContent = `${fmtInt(totalRequests)} requêtes · ${fmtInt(me.usage?.today?.requests ?? 0)} aujourd'hui${totalRequests > 25 ? ' · les 25 plus récentes affichées' : ''}`;
     $('#portal-recent-hint').textContent = `${fmtInt(me.usage?.today?.requests ?? 0)} aujourd'hui`;
     $('#portal-logs').innerHTML = '<div class="muted small">Chargement des requêtes…</div>';
     $('#portal-recent-logs').innerHTML = '<div class="muted small">Chargement des requêtes…</div>';

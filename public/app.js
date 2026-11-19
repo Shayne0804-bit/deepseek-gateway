@@ -372,6 +372,7 @@
       state.overview = data;
       updateProviderPill(data.provider?.configured, data.provider?.source);
       renderOverview(data);
+      animateCounts($('#view'), COUNT_FORMATS);
     } else if (view === 'clients') {
       const data = await api('/clients');
       state.clients = data.clients;
@@ -423,6 +424,27 @@
   }
 
   /* ----------------------------- composants ----------------------------- */
+
+  /* Compteurs animés : les nombres montent de 0 à leur valeur quand la vue s'affiche. */
+  const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function animateCounts(root, formatters) {
+    if (!root) return;
+    for (const el of root.querySelectorAll('[data-count]')) {
+      const target = Number(el.dataset.count) || 0;
+      const format = formatters[el.dataset.fmt] || ((v) => String(Math.round(v)));
+      if (REDUCED_MOTION || target === 0) { el.textContent = format(target); continue; }
+      const start = performance.now();
+      const step = (now) => {
+        const k = Math.min(1, (now - start) / 900);
+        el.textContent = format(target * (1 - Math.pow(1 - k, 3)));
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }
+  }
+
+  const COUNT_FORMATS = { int: fmtInt, compact: fmtCompact, usd: fmtUsd };
+  const countSpan = (value, kind) => `<span data-count="${Number(value) || 0}" data-fmt="${kind}">${COUNT_FORMATS[kind](value)}</span>`;
 
   function statCard(label, value, foot) {
     return `<div class="stat-card">
@@ -563,9 +585,9 @@
       ${providerAlert}
       ${budgetAlert}
       <section class="stat-grid">
-        ${statCard('Requêtes (30 jours)', fmtInt(requests30), `${fmtInt(data.today?.requests || 0)} aujourd'hui`)}
-        ${statCard('Tokens (30 jours)', fmtCompact(tokens30), `${fmtCompact(data.today?.tokens || 0)} aujourd'hui`)}
-        ${statCard('Crédit site consommé (30 jours)', fmtUsd(cost30), `${fmtUsd(data.today?.cost || 0)} aujourd'hui`)}
+        ${statCard('Requêtes (30 jours)', countSpan(requests30, 'int'), `${fmtInt(data.today?.requests || 0)} aujourd'hui`)}
+        ${statCard('Tokens (30 jours)', countSpan(tokens30, 'compact'), `${fmtCompact(data.today?.tokens || 0)} aujourd'hui`)}
+        ${statCard('Crédit site consommé (30 jours)', countSpan(cost30, 'usd'), `${fmtUsd(data.today?.cost || 0)} aujourd'hui`)}
         ${statCard('Clés actives', `${fmtInt(counts.clientsEnabled || 0)} / ${fmtInt(counts.clientsTotal || 0)}`, `${fmtInt(counts.clientsExhausted || 0)} épuisée(s)`)}
       </section>
 
@@ -669,21 +691,21 @@
       const h = row.tokens > 0 ? Math.max(2, (row.tokens / max) * (H - padB - padT)) : 0;
       const x = padL + i * slot + (slot - barW) / 2;
       const y = H - padB - h;
-      return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="1" fill="url(#barGrad)"><title>${esc(shortDay(row.day))} — ${fmtInt(row.tokens)} tokens, ${fmtInt(row.requests)} requêtes, ${fmtUsd(row.cost)}</title></rect>`;
+      return `<rect class="chart-bar" style="--i:${i};--base:${H - padB}px" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="url(#barGrad)"><title>${esc(shortDay(row.day))} : ${fmtInt(row.tokens)} tokens, ${fmtInt(row.requests)} requêtes, ${fmtUsd(row.cost)}</title></rect>`;
     }).join('');
     const labels = series.map((row, i) => {
       if (i % 5 !== 0 && i !== n - 1) return '';
-      return `<text x="${(padL + i * slot + slot / 2).toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="9" fill="#5d8769" font-family="Consolas, monospace">${esc(shortDay(row.day))}</text>`;
+      return `<text x="${(padL + i * slot + slot / 2).toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="9" fill="#9fb4a7" font-family="Consolas, monospace">${esc(shortDay(row.day))}</text>`;
     }).join('');
     return `<div class="chart">
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Consommation de tokens par jour">
         <defs>
           <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#3ee97f"/>
-            <stop offset="1" stop-color="#1f9e57" stop-opacity="0.35"/>
+            <stop offset="0" stop-color="#8ceab8"/>
+            <stop offset="1" stop-color="#3ccfb4" stop-opacity="0.4"/>
           </linearGradient>
         </defs>
-        <line x1="${padL}" y1="${H - padB}" x2="${W}" y2="${H - padB}" stroke="#14341f" stroke-width="1"/>
+        <line x1="${padL}" y1="${H - padB}" x2="${W}" y2="${H - padB}" stroke="rgba(220,255,235,.14)" stroke-width="1"/>
         ${bars}
         ${labels}
       </svg>

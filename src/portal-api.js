@@ -1463,7 +1463,9 @@ export function createPortalApi({ config, db, log, mailer = null }) {
           // Les utilisateurs ne doivent pas voir le modele reellement facture.
           rows: data.rows.map((row) => ({
             createdAt: row.createdAt,
-            requestedModel: row.requestedModel || null,
+            // Sans réécriture, requested_model est vide et model est le modèle demandé :
+            // on peut l'afficher sans révéler de modèle facturé différent.
+            requestedModel: row.requestedModel || row.model || null,
             promptTokens: row.promptTokens,
             completionTokens: row.completionTokens,
             totalTokens: row.totalTokens,
