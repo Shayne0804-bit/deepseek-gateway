@@ -1,17 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none" role="img" aria-label="VALARIA Gateway">
-  <defs>
-    <linearGradient id="vg-tile" x1="0" y1="0" x2="96" y2="96" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#12241B"/>
-      <stop offset="1" stop-color="#08100C"/>
-    </linearGradient>
-    <linearGradient id="vg-stroke" x1="24" y1="26" x2="72" y2="70" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#E4FFEE"/>
-      <stop offset=".5" stop-color="#7FE3AA"/>
-      <stop offset="1" stop-color="#3CCFB4"/>
-    </linearGradient>
-  </defs>
-  <rect x="1.5" y="1.5" width="93" height="93" rx="28" fill="url(#vg-tile)" stroke="#2C4A3A" stroke-width="2"/>
-  <path d="M48 12a36 36 0 0 1 31.2 18" stroke="#7FE3AA" stroke-opacity=".7" stroke-width="3" stroke-linecap="round"/>
-  <path d="M24 26 48 68 72 26" stroke="url(#vg-stroke)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="48" cy="68" r="8.5" fill="#F0C674" stroke="#08100C" stroke-width="3"/>
+  <title>VALARIA Gateway</title>
+  <rect x="1.5" y="1.5" width="93" height="93" rx="26" fill="#0A140F" stroke="#24402F" stroke-width="2"/>
+  <circle class="core" cx="48" cy="74" r="9" fill="#F0C674" opacity=".22"/>
+  <circle cx="22.2" cy="23.0" r="3" fill="#E4FFEE"/>
+  <circle cx="30.8" cy="23.0" r="3" fill="#8CEAB8"/>
+  <circle cx="65.2" cy="23.0" r="3" fill="#3CCFB4"/>
+  <circle cx="73.8" cy="23.0" r="3" fill="#8CEAB8"/>
+  <circle cx="17.9" cy="30.4" r="3" fill="#8CEAB8"/>
+  <circle cx="26.5" cy="30.4" r="3" fill="#8CEAB8"/>
+  <circle cx="35.1" cy="30.4" r="3" fill="#E4FFEE"/>
+  <circle cx="60.9" cy="30.4" r="3" fill="#3CCFB4"/>
+  <circle cx="69.5" cy="30.4" r="3" fill="#3CCFB4"/>
+  <circle cx="78.1" cy="30.4" r="3" fill="#8CEAB8"/>
+  <circle cx="22.2" cy="37.9" r="3" fill="#8CEAB8"/>
+  <circle cx="30.8" cy="37.9" r="3" fill="#8CEAB8"/>
+  <circle cx="39.4" cy="37.9" r="3" fill="#E4FFEE"/>
+  <circle cx="56.6" cy="37.9" r="3" fill="#3CCFB4"/>
+  <circle cx="65.2" cy="37.9" r="3" fill="#3CCFB4"/>
+  <circle cx="73.8" cy="37.9" r="3" fill="#8CEAB8"/>
+  <circle cx="26.5" cy="45.3" r="3" fill="#8CEAB8"/>
+  <circle cx="35.1" cy="45.3" r="3" fill="#8CEAB8"/>
+  <circle cx="60.9" cy="45.3" r="3" fill="#8CEAB8"/>
+  <circle cx="69.5" cy="45.3" r="3" fill="#3CCFB4"/>
+  <circle cx="30.8" cy="52.8" r="3" fill="#8CEAB8"/>
+  <circle cx="39.4" cy="52.8" r="3" fill="#E4FFEE"/>
+  <circle cx="56.6" cy="52.8" r="3" fill="#3CCFB4"/>
+  <circle cx="65.2" cy="52.8" r="3" fill="#3CCFB4"/>
+  <circle cx="35.1" cy="60.2" r="3" fill="#E4FFEE"/>
+  <circle cx="43.7" cy="60.2" r="3" fill="#8CEAB8"/>
+  <circle cx="52.3" cy="60.2" r="3" fill="#3CCFB4"/>
+  <circle cx="60.9" cy="60.2" r="3" fill="#8CEAB8"/>
+  <circle cx="39.4" cy="67.7" r="3.4" fill="#F0C674"/>
+  <circle cx="48.0" cy="67.7" r="3.4" fill="#F0C674"/>
+  <circle cx="56.6" cy="67.7" r="3.4" fill="#F0C674"/>
+  <circle cx="43.7" cy="75.1" r="3.4" fill="#F0C674"/>
+  <circle cx="52.3" cy="75.1" r="3.4" fill="#F0C674"/>
 </svg>

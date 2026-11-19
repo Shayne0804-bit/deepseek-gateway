@@ -70,6 +70,7 @@ const ASSETS = {
   '/': { file: 'landing.html', type: 'text/html; charset=utf-8' },
   '/index.html': { file: 'landing.html', type: 'text/html; charset=utf-8' },
   '/assets/landing.js': { file: 'landing.js', type: 'text/javascript; charset=utf-8' },
+  '/assets/site.css': { file: 'site.css', type: 'text/css; charset=utf-8' },
   // Console d'administration
   '/admin': { file: 'index.html', type: 'text/html; charset=utf-8' },
   '/admin/': { file: 'index.html', type: 'text/html; charset=utf-8' },
