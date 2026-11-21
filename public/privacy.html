@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#060c09">
+  <meta name="app-version" content="{{APP_VERSION}}">
+  <meta name="description" content="Quelles données VALARIA Gateway collecte, pourquoi, combien de temps elles sont gardées, avec qui elles sont partagées et comment exercer vos droits.">
+  <title>Confidentialité · VALARIA Gateway</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/site.css?v={{APP_VERSION}}">
+</head>
+<body>
+  <a class="skip-link" href="#main">Aller au contenu</a>
+  <div class="progress" aria-hidden="true"></div>
+
+  <header class="header" data-header>
+    <a class="brand" href="/">
+      <img src="/assets/logo-mark.svg?v={{APP_VERSION}}" alt="" width="32" height="32">
+      <span>VALARIA</span>
+    </a>
+    <nav class="nav" aria-label="Navigation principale">
+      <a href="/#surfaces">Produit</a>
+      <a href="/#trajet">Fonctionnement</a>
+      <a href="/#capacites">Sécurité</a>
+      <a href="/#cli">VALARIA Code</a>
+    </nav>
+    <div class="header-end">
+      <a class="btn btn-primary btn-sm" href="/portal">Mon espace</a>
+      <button type="button" class="burger" data-menu-toggle aria-expanded="false" aria-controls="menu">
+        <i></i><i></i><span class="sr-only">Ouvrir le menu</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="menu" id="menu" data-menu inert>
+    <a href="/" style="--i:0">Accueil</a>
+    <a href="/#surfaces" style="--i:1">Produit</a>
+    <a href="/#cli" style="--i:2">VALARIA Code</a>
+    <a href="/signup" style="--i:3">Créer un compte</a>
+    <a class="btn btn-primary" href="/portal">Ouvrir mon espace <span class="arrow" aria-hidden="true">→</span></a>
+  </div>
+
+  <main id="main" class="legal">
+    <section class="legal-hero">
+      <div class="aurora" aria-hidden="true"><i></i><i></i></div>
+      <div class="wrap">
+        <p class="eyebrow" data-in style="--d:0">Confidentialité</p>
+        <h1 data-in style="--d:1">Vos données, <span class="grad">expliquées simplement.</span></h1>
+        <p class="lede" data-in style="--d:2">Cette page décrit les données que VALARIA Gateway traite quand vous utilisez le site, l’API ou VALARIA Code : lesquelles, pourquoi, combien de temps, avec qui, et comment exercer vos droits.</p>
+        <p class="legal-date" data-in style="--d:3">Dernière mise à jour : 21 novembre 2026</p>
+      </div>
+    </section>
+
+    <div class="wrap legal-layout">
+      <aside class="legal-toc" aria-label="Sommaire">
+        <p>Sommaire</p>
+        <nav>
+          <a href="#essentiel">L’essentiel</a>
+          <a href="#responsable">Responsable</a>
+          <a href="#donnees">Données collectées</a>
+          <a href="#contenu">Contenu de vos requêtes</a>
+          <a href="#finalites">Pourquoi nous les utilisons</a>
+          <a href="#destinataires">Prestataires</a>
+          <a href="#conservation">Durées de conservation</a>
+          <a href="#cookies">Cookies et stockage local</a>
+          <a href="#securite">Sécurité</a>
+          <a href="#droits">Vos droits</a>
+          <a href="#divers">Autres points</a>
+        </nav>
+      </aside>
+
+      <div class="legal-body">
+        <section id="essentiel" class="legal-section" data-reveal>
+          <h2>L’essentiel</h2>
+          <div class="legal-cards">
+            <div class="legal-card">
+              <strong>Le minimum pour faire tourner le service</strong>
+              <p>Un nom d’utilisateur, un email, votre consommation et ce qu’il faut pour protéger le service contre les abus.</p>
+            </div>
+            <div class="legal-card">
+              <strong>Le contenu de vos requêtes n’est pas stocké</strong>
+              <p>Vos messages et les réponses des modèles transitent par la passerelle sans être enregistrés dans nos journaux.</p>
+            </div>
+            <div class="legal-card">
+              <strong>Ni publicité, ni revente</strong>
+              <p>Nous ne vendons pas vos données, nous n’affichons pas de publicité et le site n’utilise aucun outil de mesure d’audience.</p>
+            </div>
+            <div class="legal-card">
+              <strong>Vous gardez la main</strong>
+              <p>Vous pouvez consulter, corriger ou faire supprimer vos données, et révoquer vos clés et vos appareils depuis votre espace.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="responsable" class="legal-section" data-reveal>
+          <h2>Qui est responsable de vos données</h2>
+          <p>Le responsable du traitement est {{PRIVACY_CONTROLLER}}, qui exploite le service VALARIA Gateway accessible depuis ce site.</p>
+          <p>Pour toute question sur vos données ou pour exercer vos droits, écrivez à {{PRIVACY_CONTACT}}.</p>
+        </section>
+
+        <section id="donnees" class="legal-section" data-reveal>
+          <h2>Les données que nous collectons</h2>
+          <div class="legal-table">
+            <table>
+              <thead><tr><th>Catégorie</th><th>Données</th><th>Quand</th></tr></thead>
+              <tbody>
+                <tr><td>Compte</td><td>Nom d’utilisateur, adresse email, date de création, pass choisi, crédit et dates de validité, nom affiché si vous le modifiez.</td><td>À l’inscription et quand vous utilisez votre espace.</td></tr>
+                <tr><td>Clés API</td><td>Le début de votre clé (par exemple <code>sk-dsk-a91f…</code>) et une empreinte de la clé. La clé complète n’est jamais enregistrée.</td><td>À la création ou à la régénération d’une clé.</td></tr>
+                <tr><td>Appareils VALARIA Code</td><td>Nom de l’appareil, dates de connexion et de dernière utilisation, empreinte du jeton d’appareil (jamais le jeton lui-même).</td><td>Quand vous autorisez un terminal.</td></tr>
+                <tr><td>Journal d’usage</td><td>Pour chaque requête : date, modèle demandé, nombre de tokens, coût, statut de la réponse et durée. Aucun contenu.</td><td>À chaque appel de l’API ou de VALARIA Code.</td></tr>
+                <tr><td>Paiements</td><td>Pass ou montant acheté, devise, pays, statut et identifiant de la transaction chez notre prestataire de paiement. Nous ne recevons ni numéro de carte ni code de paiement mobile.</td><td>Quand vous achetez un pass ou rechargez du crédit.</td></tr>
+                <tr><td>Connexion par email</td><td>Une empreinte du code à 6 chiffres, sa date d’expiration et le nombre d’essais.</td><td>Quand vous demandez un code.</td></tr>
+                <tr><td>Protection contre les abus</td><td>Adresse IP, empreinte d’un identifiant d’appareil aléatoire (ou, à défaut, du type de navigateur et de la langue), et résultat de la vérification anti-robot.</td><td>À l’inscription.</td></tr>
+                <tr><td>Pays</td><td>Le pays déduit de votre connexion, pour afficher les prix dans votre devise.</td><td>Sur la page des pass et au paiement.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="contenu" class="legal-section" data-reveal>
+          <h2>Le contenu de vos requêtes</h2>
+          <p>Quand vous envoyez une requête, son contenu (vos messages, le code ou les fichiers que vous y joignez) est transmis au fournisseur du modèle pour produire la réponse, puis la réponse vous est renvoyée. VALARIA Gateway n’enregistre ni l’un ni l’autre : seul le journal d’usage décrit plus haut est conservé.</p>
+          <p>Le fournisseur du modèle traite ce contenu selon ses propres conditions. Évitez d’envoyer des informations sensibles (mots de passe, données de santé, données d’autres personnes) si ce n’est pas nécessaire.</p>
+          <p>VALARIA Code garde l’historique de vos conversations <strong>sur votre ordinateur</strong>, dans le dossier <code>~/.valaria/</code>. Il ne nous est pas envoyé en dehors des requêtes que vous faites. Vous pouvez l’effacer à tout moment avec <code>/new</code> ou en supprimant ce dossier.</p>
+        </section>
+
+        <section id="finalites" class="legal-section" data-reveal>
+          <h2>Pourquoi nous utilisons ces données</h2>
+          <div class="legal-table">
+            <table>
+              <thead><tr><th>Usage</th><th>Fondement</th></tr></thead>
+              <tbody>
+                <tr><td>Créer votre compte, vous connecter, fournir l’API et VALARIA Code</td><td>Exécution du service que vous avez demandé</td></tr>
+                <tr><td>Calculer votre consommation, appliquer les limites de votre pass, afficher votre historique</td><td>Exécution du service</td></tr>
+                <tr><td>Traiter vos paiements et garder une trace des transactions</td><td>Exécution du service et obligations comptables</td></tr>
+                <tr><td>Vous envoyer les codes de connexion et les messages liés à votre compte</td><td>Exécution du service</td></tr>
+                <tr><td>Empêcher les inscriptions abusives, les robots et la fraude, protéger le service</td><td>Intérêt légitime à sécuriser le service</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Nous n’utilisons pas vos données pour de la publicité, du profilage commercial ou des décisions automatisées qui produiraient un effet juridique à votre égard.</p>
+        </section>
+
+        <section id="destinataires" class="legal-section" data-reveal>
+          <h2>Les prestataires qui interviennent</h2>
+          <p>Vos données ne sont accessibles qu’à l’exploitant du service et aux prestataires nécessaires à son fonctionnement, chacun pour sa mission. Selon la configuration du service, il s’agit de :</p>
+          <ul class="legal-list">
+            <li><strong>Le fournisseur des modèles d’IA</strong> : reçoit le contenu de vos requêtes pour produire les réponses.</li>
+            <li><strong>SasPay</strong> : traite les paiements. Le paiement se fait sur sa page ; nous recevons seulement le résultat.</li>
+            <li><strong>Le service d’envoi d’emails</strong> (Resend ou un serveur SMTP) : reçoit votre adresse email pour vous envoyer les codes de connexion.</li>
+            <li><strong>Cloudflare Turnstile ou hCaptcha</strong> : vérification anti-robot sur la page d’inscription, si elle est activée.</li>
+            <li><strong>IPQualityScore</strong> : vérifie la réputation de l’adresse IP et la validité de l’email à l’inscription, si la vérification est activée.</li>
+            <li><strong>L’hébergeur et le réseau</strong> (Railway, Cloudflare) : font tourner le service et acheminent le trafic.</li>
+          </ul>
+          <p>Les taux de change sont récupérés auprès d’open.er-api.com sans qu’aucune donnée personnelle ne lui soit transmise. Certains prestataires peuvent traiter les données en dehors de votre pays ; nous ne leur transmettons que ce dont ils ont besoin.</p>
+        </section>
+
+        <section id="conservation" class="legal-section" data-reveal>
+          <h2>Combien de temps nous les gardons</h2>
+          <div class="legal-table">
+            <table>
+              <thead><tr><th>Données</th><th>Durée</th></tr></thead>
+              <tbody>
+                <tr><td>Compte, clés et pass</td><td>Tant que votre compte existe. Elles sont supprimées avec le compte.</td></tr>
+                <tr><td>Journal d’usage</td><td>Selon la durée fixée par l’exploitant, et au plus tard jusqu’à la suppression du compte.</td></tr>
+                <tr><td>Codes de connexion par email</td><td>Quelques minutes, puis effacés automatiquement.</td></tr>
+                <tr><td>Codes de connexion d’appareil</td><td>10 minutes.</td></tr>
+                <tr><td>Jetons d’appareil VALARIA Code</td><td>90 jours au plus, ou jusqu’à leur révocation.</td></tr>
+                <tr><td>Session de votre espace</td><td>7 jours au plus, ou jusqu’à la déconnexion.</td></tr>
+                <tr><td>Données anti-abus de l’inscription</td><td>Le temps de la fenêtre de contrôle (30 jours par défaut), puis effacées automatiquement.</td></tr>
+                <tr><td>Paiements</td><td>La durée imposée par les obligations comptables.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="cookies" class="legal-section" data-reveal>
+          <h2>Cookies et stockage local</h2>
+          <p>Le site n’utilise que ce qui est nécessaire à son fonctionnement. Il n’y a ni cookie publicitaire, ni outil de mesure d’audience, c’est pourquoi aucun bandeau de consentement n’est affiché.</p>
+          <div class="legal-table">
+            <table>
+              <thead><tr><th>Nom</th><th>Rôle</th><th>Durée</th></tr></thead>
+              <tbody>
+                <tr><td><code>dsk_portal</code></td><td>Garde votre session ouverte dans votre espace. Inaccessible aux scripts de la page.</td><td>7 jours au plus</td></tr>
+                <tr><td><code>dsk_admin</code></td><td>Session de la console d’administration (administrateurs uniquement).</td><td>Quelques heures</td></tr>
+                <tr><td><code>valaria_device_id</code></td><td>Identifiant aléatoire enregistré dans votre navigateur (stockage local) pour limiter les inscriptions abusives.</td><td>Jusqu’à ce que vous l’effaciez</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Si la vérification anti-robot est activée, Cloudflare ou hCaptcha peuvent déposer leurs propres cookies techniques sur la page d’inscription.</p>
+        </section>
+
+        <section id="securite" class="legal-section" data-reveal>
+          <h2>Comment nous protégeons vos données</h2>
+          <ul class="legal-list">
+            <li>Les échanges avec le site et l’API sont chiffrés (HTTPS).</li>
+            <li>Les clés API, jetons d’appareil et codes de connexion sont enregistrés sous forme d’empreinte : même nous ne pouvons pas les relire.</li>
+            <li>La clé du fournisseur de modèles reste sur le serveur et n’est jamais transmise aux utilisateurs.</li>
+            <li>Les cookies de session ne sont pas lisibles par les scripts et ne sont envoyés qu’à ce site.</li>
+            <li>Vous pouvez régénérer votre clé et déconnecter un appareil à tout moment depuis votre espace.</li>
+          </ul>
+          <p>Aucun système n’est infaillible. En cas de violation de données susceptible de vous affecter, nous vous en informerons dans les délais prévus par la loi.</p>
+        </section>
+
+        <section id="droits" class="legal-section" data-reveal>
+          <h2>Vos droits</h2>
+          <p>Selon la loi qui s’applique à vous, notamment le RGPD si vous êtes dans l’Union européenne, ou la loi de protection des données de votre pays, vous pouvez :</p>
+          <ul class="legal-list">
+            <li><strong>accéder</strong> à vos données et en obtenir une copie ;</li>
+            <li><strong>les corriger</strong> : votre nom affiché se modifie directement dans <strong>Réglages</strong> ;</li>
+            <li><strong>les faire supprimer</strong>, avec votre compte ;</li>
+            <li><strong>vous opposer</strong> à certains traitements ou demander leur <strong>limitation</strong> ;</li>
+            <li><strong>récupérer</strong> vos données dans un format lisible par une machine.</li>
+          </ul>
+          <p>Pour exercer ces droits, écrivez à {{PRIVACY_CONTACT}} depuis l’adresse email de votre compte. Nous vous répondons dans un délai d’un mois.</p>
+          <p>Si vous estimez que vos droits ne sont pas respectés, vous pouvez saisir l’autorité de protection des données de votre pays, par exemple l’ARTCI en Côte d’Ivoire, la CDP au Sénégal, l’APDP au Bénin ou la CNIL en France.</p>
+        </section>
+
+        <section id="divers" class="legal-section" data-reveal>
+          <h2>Autres points</h2>
+          <h3>Âge minimum</h3>
+          <p>Le service s’adresse aux personnes majeures. Nous ne collectons pas sciemment de données sur des mineurs ; si vous pensez que c’est le cas, contactez-nous pour que nous les supprimions.</p>
+          <h3>Modifications de cette page</h3>
+          <p>Nous pouvons mettre cette page à jour quand le service évolue. La date en haut de page indique la dernière version. En cas de changement important, nous vous préviendrons par email ou dans votre espace.</p>
+        </section>
+
+        <div class="legal-end" data-reveal>
+          <p>Une question sur vos données ?</p>
+          <a class="btn btn-primary" href="/portal">Ouvrir mon espace <span class="arrow" aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-top">
+        <a class="brand" href="/"><img src="/assets/logo-mark.svg?v={{APP_VERSION}}" alt="" width="32" height="32"><span>VALARIA Gateway API</span></a>
+        <nav class="footer-links" aria-label="Pied de page">
+          <a href="/">Accueil</a>
+          <a href="/signup">Créer un compte</a>
+          <a href="/portal">Mon espace</a>
+          <a href="/confidentialite" aria-current="page">Confidentialité</a>
+        </nav>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/assets/landing.js?v={{APP_VERSION}}" defer></script>
+</body>
+</html>

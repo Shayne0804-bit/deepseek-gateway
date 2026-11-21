@@ -709,6 +709,42 @@ code, pre { font-family: var(--mono); }
   @keyframes rise-mark { from { transform: translateY(40%); opacity: 0; } }
 }
 
+/* ------------------------- page de confidentialité -------------------- */
+.legal-hero { position: relative; padding: 150px 0 56px; overflow: hidden; isolation: isolate; border-bottom: 1px solid var(--line); }
+.legal-hero h1 { font-size: clamp(38px, 6vw, 72px); margin-bottom: 20px; }
+.legal-hero .lede { margin-bottom: 18px; }
+.legal-date { color: var(--muted); font-family: var(--mono); font-size: 13px; }
+.legal-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: clamp(30px, 5vw, 70px); padding: 56px 0 100px; align-items: start; }
+.legal-toc { position: sticky; top: 100px; padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: rgba(11, 22, 17, .7); }
+.legal-toc p { margin: 0 0 10px; color: var(--jade); font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+.legal-toc nav { display: grid; gap: 2px; }
+.legal-toc a { padding: 7px 10px; border-radius: 9px; color: var(--muted); font-size: 14px; transition: color .2s, background-color .2s; }
+.legal-toc a:hover, .legal-toc a.is-current { color: var(--text); background: rgba(140, 234, 184, .07); }
+.legal-body { max-width: 760px; }
+.legal-section { padding: 0 0 44px; margin: 0 0 44px; border-bottom: 1px solid var(--line); scroll-margin-top: 100px; }
+.legal-section h2 { font-size: clamp(24px, 2.6vw, 32px); margin-bottom: 16px; }
+.legal-section h3 { font-size: 18px; margin: 22px 0 8px; }
+.legal-section p { color: var(--text-2); margin-bottom: 14px; line-height: 1.7; }
+.legal-section a { color: var(--jade); text-decoration: underline; text-underline-offset: 3px; }
+.legal-section code { color: var(--jade); font-size: .88em; }
+.legal-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.legal-card { padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); transition: border-color .3s, transform .4s var(--ease); }
+.legal-card:hover { border-color: rgba(140, 234, 184, .35); transform: translateY(-2px); }
+.legal-card strong { display: block; margin-bottom: 6px; font-size: 15.5px; }
+.legal-card p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+.legal-table { margin: 6px 0 16px; border: 1px solid var(--line); border-radius: 16px; overflow-x: auto; }
+.legal-table table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.legal-table th { padding: 12px 16px; text-align: left; color: var(--jade); font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; background: rgba(140, 234, 184, .05); border-bottom: 1px solid var(--line); }
+.legal-table td { padding: 13px 16px; vertical-align: top; color: var(--text-2); border-bottom: 1px solid var(--line); line-height: 1.55; }
+.legal-table tr:last-child td { border-bottom: 0; }
+.legal-table td:first-child { color: var(--text); font-weight: 600; white-space: nowrap; }
+.legal-list { margin: 0 0 16px; padding: 0; list-style: none; display: grid; gap: 10px; }
+.legal-list li { position: relative; padding-left: 22px; color: var(--text-2); line-height: 1.65; }
+.legal-list li::before { content: ""; position: absolute; left: 4px; top: .62em; width: 7px; height: 7px; border-radius: 50%; background: var(--jade); box-shadow: 0 0 0 4px rgba(140, 234, 184, .12); }
+.legal-end { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 24px; border: 1px solid var(--line-2); border-radius: 18px; background: radial-gradient(80% 140% at 0% 0%, rgba(140, 234, 184, .09), transparent 60%), var(--card); }
+.legal-end p { margin: 0; font-size: 18px; font-weight: 650; }
+.footer-links a[aria-current="page"] { color: var(--jade); }
+
 /* ------------------------------ responsive --------------------------- */
 @media (max-width: 1024px) {
   .nav { display: none; }
@@ -763,6 +799,12 @@ code, pre { font-family: var(--mono); }
   .step-num { position: absolute; left: 0; top: 0; }
   .feature { padding: 20px 0; }
   .footer-top { flex-direction: column; }
+  .legal-hero { padding: 110px 0 40px; }
+  .legal-layout { grid-template-columns: 1fr; padding-top: 32px; }
+  .legal-toc { position: static; }
+  .legal-toc nav { grid-template-columns: 1fr 1fr; }
+  .legal-cards { grid-template-columns: 1fr; }
+  .legal-table td:first-child { white-space: normal; }
 }
 
 /* -------------------------- mouvement réduit ------------------------- */

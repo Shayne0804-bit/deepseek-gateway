@@ -50,14 +50,18 @@
   window.matchMedia('(min-width: 1025px)').addEventListener('change', (event) => { if (event.matches) setMenu(false); });
 
   /* ------------------- section courante dans la nav -------------------- */
-  const navLinks = $$('.nav a[href^="#"]');
+  const navLinks = $$('.nav a[href^="#"], .legal-toc a[href^="#"]');
   if ('IntersectionObserver' in window && navLinks.length) {
-    const byId = new Map(navLinks.map((link) => [link.getAttribute('href').slice(1), link]));
+    const byId = new Map();
+    navLinks.forEach((link) => {
+      const id = link.getAttribute('href').slice(1);
+      byId.set(id, (byId.get(id) || []).concat(link));
+    });
     const navObserver = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
         navLinks.forEach((link) => link.classList.remove('is-current'));
-        byId.get(entry.target.id)?.classList.add('is-current');
+        byId.get(entry.target.id)?.forEach((link) => link.classList.add('is-current'));
       }
     }, { rootMargin: '-45% 0px -50% 0px' });
     byId.forEach((_, id) => { const section = document.getElementById(id); if (section) navObserver.observe(section); });

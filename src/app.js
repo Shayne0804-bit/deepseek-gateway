@@ -8,6 +8,7 @@ import { APP_VERSION, loadConfig } from './config.js';
 import {
   cleanupAdminSessions,
   cleanupPortalEmailCodes,
+  cleanupSignupIdentities,
   cleanupPortalSessions,
   clearTrialRequestQuotas,
   raiseTrialCreditQuota,
@@ -71,6 +72,9 @@ const ASSETS = {
   '/index.html': { file: 'landing.html', type: 'text/html; charset=utf-8' },
   '/assets/landing.js': { file: 'landing.js', type: 'text/javascript; charset=utf-8' },
   '/assets/site.css': { file: 'site.css', type: 'text/css; charset=utf-8' },
+  '/confidentialite': { file: 'privacy.html', type: 'text/html; charset=utf-8' },
+  '/confidentialite/': { file: 'privacy.html', type: 'text/html; charset=utf-8' },
+  '/privacy': { file: 'privacy.html', type: 'text/html; charset=utf-8' },
   '/assets/morph.js': { file: 'morph.js', type: 'text/javascript; charset=utf-8' },
   '/assets/mascot.svg': { file: 'mascot.svg', type: 'image/svg+xml' },
   // Console d'administration
@@ -116,6 +120,19 @@ function gzipAsset(asset, buffer) {
   return gz;
 }
 
+const htmlEscape = (value) => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/** Exploitant et contact de la page de confidentialité (variables PRIVACY_*). */
+function fillPrivacyFields(html, config) {
+  if (!html.includes('{{PRIVACY_')) return html;
+  const controller = config.privacyController ? htmlEscape(config.privacyController) : 'l’exploitant de VALARIA Gateway';
+  const email = /^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(config.privacyContactEmail || '') ? htmlEscape(config.privacyContactEmail) : '';
+  const contact = email
+    ? `<a href="mailto:${email}">${email}</a>`
+    : 'l’adresse de contact communiquée par l’administrateur du service';
+  return html.replaceAll('{{PRIVACY_CONTROLLER}}', controller).replaceAll('{{PRIVACY_CONTACT}}', contact);
+}
+
 function serveAsset(req, res, config, asset) {
   fs.readFile(path.join(config.publicDir, asset.file), (err, buffer) => {
     if (err) {
@@ -126,7 +143,7 @@ function serveAsset(req, res, config, asset) {
     if (isHtml) {
       // Version injectee dans les URLs d'assets (?v=...) : contourne le cache
       // navigateur/Cloudflare apres chaque deploiement.
-      buffer = Buffer.from(buffer.toString('utf8').replaceAll('{{APP_VERSION}}', APP_VERSION));
+      buffer = Buffer.from(fillPrivacyFields(buffer.toString('utf8').replaceAll('{{APP_VERSION}}', APP_VERSION), config));
     }
     const headers = {
       'content-type': asset.type,
@@ -471,6 +488,9 @@ export async function startGateway(overrides = {}) {
         await cleanupAdminSessions(db, nowIso);
         await cleanupPortalSessions(db, nowIso);
         await cleanupPortalEmailCodes(db, nowIso);
+        // Les traces d'inscription ne servent qu'aux fenêtres anti-abus : au-delà, on les efface.
+        const signupDays = Math.max(config.signupIpWindowDays || 0, config.signupDeviceWindowDays || 0, 1);
+        await cleanupSignupIdentities(db, new Date(Date.now() - signupDays * 86_400_000).toISOString());
         ipLimiter.prune();
         adminApi.prune();
         portalApi.prune();

@@ -164,6 +164,9 @@ export function loadConfig(overrides = {}) {
     // Connexion portail par code recu par email (OTP).
     mailTransport: overrides.mailTransport ?? raw('MAIL_TRANSPORT') ?? '',
     mailFrom: overrides.mailFrom ?? raw('MAIL_FROM') ?? '',
+    // Page de confidentialité : identité de l'exploitant et adresse de contact.
+    privacyController: overrides.privacyController ?? raw('PRIVACY_CONTROLLER') ?? '',
+    privacyContactEmail: overrides.privacyContactEmail ?? raw('PRIVACY_CONTACT_EMAIL') ?? '',
     mailTimeoutMs: overrides.mailTimeoutMs ?? intOr(raw('MAIL_TIMEOUT_MS'), 15000),
     mailFromName: overrides.mailFromName ?? raw('MAIL_FROM_NAME') ?? 'VALARIA Gateway API',
     smtpUrl: overrides.smtpUrl ?? raw('SMTP_URL') ?? '',

@@ -225,6 +225,12 @@ test('les trois surfaces web sont servies : site public, console admin, espace u
   assert.equal(portal.status, 200);
   assert.match(await portal.text(), /Mon espace/);
 
+  const privacy = await fetch(`${base}/confidentialite`);
+  assert.equal(privacy.status, 200);
+  const privacyHtml = await privacy.text();
+  assert.match(privacyHtml, /Vos droits/);
+  assert.doesNotMatch(privacyHtml, /\{\{PRIVACY_/, 'les champs exploitant/contact doivent être remplis');
+
   const robots = await fetch(`${base}/robots.txt`);
   assert.equal(robots.status, 200);
   assert.match(await robots.text(), /Disallow: \//);
