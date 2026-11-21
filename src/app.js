@@ -120,6 +120,37 @@ function gzipAsset(asset, buffer) {
   return gz;
 }
 
+/* Indexation : seules les pages publiques sont ouvertes aux moteurs de recherche. */
+const PUBLIC_PAGES = ['/', '/signup', '/confidentialite'];
+const PRIVATE_PATHS = ['/admin', '/portal', '/device', '/payment', '/privacy', '/index.html', '/healthz',
+  '/v1/', '/beta/', '/anthropic/', '/chat/', '/completions', '/responses', '/messages', '/models'];
+
+/** Origine publique du site : PUBLIC_BASE_URL, sinon l'hôte de la requête (nettoyé). */
+function siteOrigin(req, config) {
+  if (config.publicBaseUrl) return config.publicBaseUrl.replace(/\/+$/, '');
+  const raw = config.trustProxy ? (req.headers['x-forwarded-host'] ?? req.headers.host) : req.headers.host;
+  const host = String(raw ?? '').split(',')[0].trim();
+  const safeHost = /^[a-z0-9.-]+(:\d+)?$/i.test(host) ? host : 'localhost';
+  return `${isHttpsRequest(req, config.trustProxy) ? 'https' : 'http'}://${safeHost}`;
+}
+
+function robotsTxt(origin) {
+  return [
+    'User-agent: *',
+    ...PUBLIC_PAGES.map((page) => `Allow: ${page === '/' ? '/$' : page}`),
+    'Allow: /assets/',
+    ...PRIVATE_PATHS.map((path) => `Disallow: ${path}`),
+    '',
+    `Sitemap: ${origin}/sitemap.xml`,
+    '',
+  ].join('\n');
+}
+
+function sitemapXml(origin) {
+  const urls = PUBLIC_PAGES.map((page) => `  <url><loc>${htmlEscape(origin + page)}</loc></url>`).join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
+}
+
 const htmlEscape = (value) => String(value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /** Exploitant et contact de la page de confidentialité (variables PRIVACY_*). */
@@ -400,12 +431,13 @@ export async function startGateway(overrides = {}) {
       return;
     }
 
-    if (pathname === '/robots.txt') {
+    if (pathname === '/robots.txt' || pathname === '/sitemap.xml') {
+      const isRobots = pathname === '/robots.txt';
       res.writeHead(200, {
-        'content-type': 'text/plain; charset=utf-8',
+        'content-type': isRobots ? 'text/plain; charset=utf-8' : 'application/xml; charset=utf-8',
         'cache-control': 'public, max-age=3600',
       });
-      res.end('User-agent: *\nDisallow: /\n');
+      res.end(isRobots ? robotsTxt(siteOrigin(req, config)) : sitemapXml(siteOrigin(req, config)));
       return;
     }
 

@@ -233,7 +233,15 @@ test('les trois surfaces web sont servies : site public, console admin, espace u
 
   const robots = await fetch(`${base}/robots.txt`);
   assert.equal(robots.status, 200);
-  assert.match(await robots.text(), /Disallow: \//);
+  const robotsTxt = await robots.text();
+    assert.match(robotsTxt, /^Allow: \/\$$/m, 'la page d’accueil est indexable');
+    for (const path of ['/admin', '/portal', '/device', '/payment', '/v1/']) {
+      assert.match(robotsTxt, new RegExp(`^Disallow: ${path}$`, 'm'), `${path} reste bloqué`);
+    }
+    assert.match(robotsTxt, /^Sitemap: https?:\/\/.+\/sitemap\.xml$/m);
+    const sitemap = await (await fetch(robots.url.replace('robots.txt', 'sitemap.xml'))).text();
+    assert.match(sitemap, /<loc>[^<]+\/confidentialite<\/loc>/);
+    assert.doesNotMatch(sitemap, /portal|admin/);
 });
 
 test('les assets texte sont servis compresses (gzip) sans cache long', async () => {
