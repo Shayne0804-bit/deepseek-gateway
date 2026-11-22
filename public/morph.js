@@ -1,5 +1,5 @@
-/* Morphose VALARIA : nuage de particules WebGL qui forme le V, puis
-   sphère, V, galaxie. Sans dépendance. Monté automatiquement sur tout
+/* Morphose VALARIA : nuage de particules WebGL qui forme le V, puis un
+   ordinateur, un terminal, le V, une sphère et une galaxie. Sans dépendance. Monté automatiquement sur tout
    <canvas data-morph="hero|ambient|center|field">. Mouvement réduit : image fixe. */
 (() => {
   'use strict';
@@ -22,6 +22,74 @@
     // Tableaux de bord : nébuleuse légère et dispersée, ouverte longtemps, donc moins de particules.
     field: { desktop: 3200, mobile: 1300, f: 3.3, fMobile: 2.2, offsetX: 0.1, base: 0.32, scroll: false, size: 1.5 },
   };
+
+  /* --- Formes dessinées : on répartit les particules sur des traits, des surfaces
+     et des cercles, au prorata de leur poids (longueur ou aire × densité). --- */
+  const len = (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+  const seg = (a, b, density = 1, jitter = 0.035) => ({ kind: 'seg', a, b, jitter, w: density * len(a, b) });
+  const area = (o, u, v, density = 1, jitter = 0.02) => ({ kind: 'area', o, u, v, jitter, w: density * Math.hypot(...u) * Math.hypot(...v) });
+  const ring = (c, r, density = 1, jitter = 0.02) => ({ kind: 'ring', c, r, jitter, w: density * 2 * Math.PI * r });
+  const outline = (p, density, jitter) => p.map((a, i) => seg(a, p[(i + 1) % p.length], density, jitter));
+
+  function sampleShape(prims, out, n) {
+    const total = prims.reduce((sum, p) => sum + p.w, 0);
+    for (let i = 0; i < n; i++) {
+      let r = Math.random() * total;
+      let p = prims[prims.length - 1];
+      for (const q of prims) { r -= q.w; if (r <= 0) { p = q; break; } }
+      let x; let y; let z;
+      if (p.kind === 'seg') {
+        const t = Math.random();
+        x = p.a[0] + (p.b[0] - p.a[0]) * t; y = p.a[1] + (p.b[1] - p.a[1]) * t; z = p.a[2] + (p.b[2] - p.a[2]) * t;
+      } else if (p.kind === 'area') {
+        const s = Math.random(); const t = Math.random();
+        x = p.o[0] + p.u[0] * s + p.v[0] * t; y = p.o[1] + p.u[1] * s + p.v[1] * t; z = p.o[2] + p.u[2] * s + p.v[2] * t;
+      } else {
+        const a = Math.random() * Math.PI * 2;
+        x = p.c[0] + Math.cos(a) * p.r; y = p.c[1] + Math.sin(a) * p.r; z = p.c[2];
+      }
+      const j = p.jitter;
+      out[i * 3] = x + (Math.random() - 0.5) * 2 * j;
+      out[i * 3 + 1] = y + (Math.random() - 0.5) * 2 * j;
+      out[i * 3 + 2] = z + (Math.random() - 0.5) * 2 * j;
+    }
+  }
+
+  /** Ordinateur portable : écran incliné avec des lignes de code, clavier et pavé tactile. */
+  function laptopPrims() {
+    const BL = [-1.6, -0.5, -0.35]; const BR = [1.6, -0.5, -0.35];
+    const TL = [-1.6, 1.45, -0.75]; const TR = [1.6, 1.45, -0.75];
+    const sp = (s, t) => [0, 1, 2].map((k) => BL[k] + (BR[k] - BL[k]) * s + (TL[k] - BL[k]) * t);
+    const code = [[0.08, 0.5, 0.84], [0.13, 0.74, 0.7], [0.13, 0.46, 0.56], [0.08, 0.62, 0.42], [0.13, 0.36, 0.28], [0.08, 0.22, 0.14]];
+    const kb = (s, t) => [-1.75 + 3.5 * s, -0.56 + 0.02 * t, -0.3 + 1.75 * t];
+    return [
+      ...outline([BL, BR, TR, TL], 3.2),
+      ...outline([sp(0.03, 0.04), sp(0.97, 0.04), sp(0.97, 0.96), sp(0.03, 0.96)], 1.1, 0.02),
+      ...code.map(([a, b, t]) => seg(sp(a, t), sp(b, t), 1.8, 0.025)),
+      area(sp(0, 0), [3.2, 0, 0], [0, 1.95, -0.4], 0.22),
+      ...outline([kb(0, 0), kb(1, 0), kb(1, 1), kb(0, 1)], 2.4),
+      ...[0.18, 0.3, 0.42, 0.54].map((t) => seg(kb(0.08, t), kb(0.92, t), 0.9, 0.02)),
+      ...outline([kb(0.36, 0.66), kb(0.64, 0.66), kb(0.64, 0.92), kb(0.36, 0.92)], 1.3, 0.015),
+    ];
+  }
+
+  /** Fenêtre de terminal : barre de titre et ses trois points, invite « > _ » et lignes de sortie. */
+  function terminalPrims() {
+    const z = 0;
+    const p = (x, y) => [x, y, z];
+    return [
+      ...outline([p(-1.85, -1.25), p(1.85, -1.25), p(1.85, 1.3), p(-1.85, 1.3)], 3),
+      seg(p(-1.85, 0.92), p(1.85, 0.92), 2.2, 0.02),
+      area(p(-1.85, 0.92), [3.7, 0, 0], [0, 0.38, 0], 0.35),
+      ring(p(-1.55, 1.11), 0.07, 5, 0.025), ring(p(-1.32, 1.11), 0.07, 5, 0.025), ring(p(-1.09, 1.11), 0.07, 5, 0.025),
+      seg(p(-1.4, 0.55), p(-0.85, 0.15), 6, 0.07),
+      seg(p(-0.85, 0.15), p(-1.4, -0.25), 6, 0.07),
+      seg(p(-0.55, -0.25), p(0.25, -0.25), 6, 0.06),
+      seg(p(-1.4, -0.65), p(0.9, -0.65), 1.4, 0.03),
+      seg(p(-1.4, -0.9), p(0.2, -0.9), 1.4, 0.03),
+      area(p(-1.85, -1.25), [3.7, 0, 0], [0, 2.17, 0], 0.08, 0.05),
+    ];
+  }
 
   function startMorph(cv, opts) {
     const gl = cv.getContext('webgl', { alpha: true, antialias: false, premultipliedAlpha: true, powerPreference: 'low-power' });
@@ -74,8 +142,13 @@
       colors[k] = c[0]; colors[k + 1] = c[1]; colors[k + 2] = c[2];
       seeds[i] = Math.random();
     }
-    const stages = [vee, sphere, vee, galaxy];
-    const tilts = [0, 0, 0, 0.5];
+    const laptop = new Float32Array(N * 3);
+    const terminal = new Float32Array(N * 3);
+    sampleShape(laptopPrims(), laptop, N);
+    sampleShape(terminalPrims(), terminal, N);
+    // Boucle : V, ordinateur, terminal, V, sphère, galaxie. L'inclinaison montre le clavier et la spirale.
+    const stages = [vee, laptop, terminal, vee, sphere, galaxy];
+    const tilts = [0, 0.32, 0, 0, 0, 0.5];
     const pos = new Float32Array(N * 3);
 
     const vs = `
@@ -167,9 +240,11 @@
         const tt = (t - 2.2) / phase;
         const s = Math.floor(tt);
         e = ease(clamp((tt - s - 0.55) / 0.45, 0, 1));
-        a = stages[s % 4];
-        b = stages[(s + 1) % 4];
-        tilt = tilts[s % 4] + (tilts[(s + 1) % 4] - tilts[s % 4]) * e;
+        const cur = s % stages.length;
+        const next = (s + 1) % stages.length;
+        a = stages[cur];
+        b = stages[next];
+        tilt = tilts[cur] + (tilts[next] - tilts[cur]) * e;
       }
       for (let i = 0; i < N * 3; i++) pos[i] = a[i] + (b[i] - a[i]) * e;
       gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
