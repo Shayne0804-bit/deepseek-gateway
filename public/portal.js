@@ -758,13 +758,18 @@
     try {
       const data = await api('/pass/confirm', { method: 'POST', body: { order_id: orderId } });
       const order = data.order || {};
-      if (status) {
-        status.className = `portal-status alert ${order.status === 'completed' ? 'ok' : 'warn'}`;
-        status.textContent = order.status === 'completed'
-          ? `Paiement confirmé : pass « ${order.plan} » activé.`
-          : 'Paiement en attente de confirmation. Actualisez dans quelques instants.';
-      }
       if (order.status === 'completed') await loadMe();
+      if (status) {
+        const done = order.status === 'completed';
+        status.className = `portal-status alert ${done ? 'ok' : 'warn'}`;
+        status.textContent = done
+          ? (order.kind === 'payg' ? 'Paiement confirmé : le crédit est ajouté à votre solde.' : `Paiement confirmé : pass ${state.me?.plan?.name || order.plan} activé.`)
+          : order.status === 'failed_credit'
+            ? `Paiement reçu, mais l’activation a échoué. Contactez le support avec la commande ${order.id}.`
+            : order.status === 'failed'
+              ? 'Paiement non abouti : rien n’a été activé.'
+              : 'Paiement en attente de confirmation. Actualisez dans quelques instants.';
+      }
     } catch (err) {
       if (status) {
         status.className = 'portal-status alert warn';
@@ -1768,7 +1773,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     } catch {
       return;
     }
-    if (target.origin !== location.origin || !target.pathname.startsWith('/device')) return;
+    if (target.origin !== location.origin || !['/device', '/payment'].some((prefix) => target.pathname.startsWith(prefix))) return;
     location.assign(target.pathname + target.search);
   }
 
