@@ -576,7 +576,7 @@
     return `${formatted}\u00A0${label}`;
   }
 
-  /** Apercu PAYG : les montants de base sont en FCFA, convertis dans la devise detectee. */
+  /** Pay as you go : les montants de base sont en FCFA, convertis dans la devise detectee. */
   const BILLING_BASE_FCFA = 655.957;
 
   function billingCurrencyInfo() {
@@ -719,7 +719,7 @@
         </ul>
         ${state.paymentsEnabled
           ? `<button type="button" class="btn btn-primary btn-block plan-buy" data-buy-plan="${esc(plan.id)}">${plan.id === currentId ? 'Renouveler ce pass' : 'Payer ce pass'}</button>`
-          : '<button type="button" class="btn btn-primary btn-block" disabled>Paiement bientôt disponible</button>'}
+          : '<button type="button" class="btn btn-primary btn-block" disabled>Paiement indisponible</button>'}
       </article>`).join('');
   }
 
