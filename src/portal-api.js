@@ -659,7 +659,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
             support: 'Communauté',
             features: [
               `${config.trialQuotaUsd} $ de crédit site`,
-              `${config.trialQuotaUsd} $ max / semaine`,
+              `${config.trialQuotaUsd} $ max / 7 jours`,
               `${config.trialDays} jours`,
             ],
           };

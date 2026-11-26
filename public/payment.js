@@ -72,7 +72,7 @@
         <div class="spec-row"><dt>Fin du pass</dt><dd>${fmtDate(me?.client?.expiresAt)}</dd></div>
         <div class="spec-row"><dt>Crédit site</dt><dd>${fmtUsd(quota.limit)}</dd></div>
         ${limits.credit5h ? `<div class="spec-row"><dt>Plafond 5 h</dt><dd>${fmtUsd(limits.credit5h.limit)}</dd></div>` : ''}
-        ${limits.creditWeek ? `<div class="spec-row"><dt>Plafond semaine</dt><dd>${fmtUsd(limits.creditWeek.limit)}</dd></div>` : ''}
+        ${limits.creditWeek ? `<div class="spec-row"><dt>Plafond sur 7 jours</dt><dd>${fmtUsd(limits.creditWeek.limit)}</dd></div>` : ''}
         <div class="spec-row"><dt>Montant payé</dt><dd>${esc(order.amount)} ${esc(order.currency)}</dd></div>
       </dl>
       <p class="small muted">Votre clé API et vos accès sont disponibles dans le dashboard.</p>`;

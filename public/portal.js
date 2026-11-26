@@ -62,13 +62,13 @@
   }
 
   const fmtInt = (value) => NF.format(Number(value) || 0);
-  const fmtUsd = (value) => `${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(Number(value) || 0)} $`;
+  const fmtUsd = (value) => `${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(Number(value) || 0)} $`;
   const fmtUsd2 = (value) => `${new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value) || 0)} $`;
   const COUNT_FORMATS = { int: fmtInt, usd: fmtUsd2, days: (v) => `${fmtInt(v)} j` };
   const fmtCompact = (value) => {
     const n = Number(value) || 0;
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)} M`;
-    if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)} k`;
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1).replace('.', ',')} M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1).replace('.', ',')} k`;
     return NF.format(n);
   };
   const fmtDate = (iso) => { const d = new Date(iso); return Number.isNaN(d.getTime()) ? '—' : DATE_SHORT.format(d); };
@@ -622,6 +622,8 @@
     }
     const note = $('#billing-currency-note');
     if (note) note.textContent = `Montants affichés en ${info.label} selon votre localisation.`;
+    const help = $('#billing-custom-help');
+    if (help) help.textContent = `Minimum ${formatBillingAmount(1000)}. Le crédit est ajouté à votre solde dès le paiement confirmé.`;
     const enabled = Boolean(state.paymentsEnabled);
     document.querySelectorAll('[data-billing-base]').forEach((button) => { button.disabled = !enabled; });
     if (input) input.disabled = !enabled;
@@ -685,7 +687,7 @@
       </div>
       <dl class="spec-list" style="margin-top:18px">
         <div class="spec-row"><dt>fin du pass</dt><dd>${me.client.expiresAt ? fmtDate(me.client.expiresAt) : 'sans date de fin'}</dd></div>
-        <div class="spec-row"><dt>quota</dt><dd>${fmtInt(me.quota.requests.limit || 0)} requêtes · ${fmtUsd(me.quota.usd.limit || 0)}</dd></div>
+        <div class="spec-row"><dt>quota</dt><dd>${fmtInt(me.quota.requests.limit || 0)} requêtes · ${fmtUsd2(me.quota.usd.limit || 0)}</dd></div>
       </dl>`;
     }
     const features = (plan.features ?? []).map((feature) => `<span class="chip">${esc(feature)}</span>`).join('');
@@ -816,7 +818,7 @@
     }
     const status = me.client.enabled ? 'Actif' : 'Désactivé';
     const rows = [
-      ['empreinte', `${me.client.keyPrefix}…`],
+      ['empreinte', `${me.client.keyPrefix}`],
       ['statut', status],
       ['créée le', fmtDate(me.client.createdAt)],
       ['fin du pass', me.client.expiresAt ? fmtDate(me.client.expiresAt) : 'sans date de fin'],
@@ -831,7 +833,7 @@
     const rows = [
       ['nom', me.client.name],
       ['email', me.client.email || 'non renseigné'],
-      ['clé API', me.client.hasKey ? `${me.client.keyPrefix}…` : 'non créée'],
+      ['clé API', me.client.hasKey ? `${me.client.keyPrefix}` : 'non créée'],
       ['compte', me.client.enabled ? 'actif' : 'désactivé'],
       ['créé le', fmtDate(me.client.createdAt)],
       ['fin du pass', me.client.expiresAt ? fmtDate(me.client.expiresAt) : 'sans date de fin'],
@@ -851,7 +853,7 @@
     const anthropicModel = models.find((name) => /^claude/i.test(name)) || openaiModel;
     const codexModel = models.find((name) => /^gpt-5-codex/i.test(name)) || 'gpt-5-codex';
     const hasKey = Boolean(me.client?.hasKey);
-    const keyHint = hasKey ? `${me.client.keyPrefix}…` : 'Aucune clé active';
+    const keyHint = hasKey ? `${me.client.keyPrefix}` : 'Aucune clé active';
     const keyState = hasKey
       ? `<span class="badge badge-ok">${keyHint}</span>`
       : '<span class="badge badge-warn">à créer</span>';
@@ -1391,7 +1393,7 @@ codex</code></pre>
                 <tr><td><code>429</code> · <code>rate_limit_exceeded</code></td><td>Trop de requêtes par minute.</td><td>Attendez le délai indiqué par l'en-tête <code>Retry-After</code>, puis réessayez.</td></tr>
                 <tr><td><code>429</code> · <code>concurrency_limit_exceeded</code></td><td>Trop d'appels en même temps.</td><td>Attendez la fin d'un appel en cours avant d'en lancer un autre.</td></tr>
                 <tr><td><code>429</code> · <code>credit_window_exceeded</code></td><td>Plafond de crédit sur 5 heures atteint.</td><td>Le plafond se libère au fil des heures : réessayez plus tard.</td></tr>
-                <tr><td><code>429</code> · <code>credit_week_exceeded</code></td><td>Plafond de crédit de la semaine atteint.</td><td>Attendez la semaine suivante ou passez à un pass plus grand.</td></tr>
+                <tr><td><code>429</code> · <code>credit_week_exceeded</code></td><td>Plafond de crédit sur 7 jours glissants atteint.</td><td>Le plafond se libère à mesure que vos dépenses de plus de 7 jours sortent du calcul. Sinon, passez à un pass plus grand.</td></tr>
                 <tr><td><code>429</code> · <code>insufficient_quota</code></td><td>Crédit du pass épuisé.</td><td>Consultez <strong>Consommation</strong>, puis renouvelez votre pass.</td></tr>
               </tbody>
             </table></div>
@@ -1470,7 +1472,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
       return '<div class="empty-state"><strong>Aucune consommation</strong><p>Vos requêtes apparaîtront ici dès le premier appel.</p></div>';
     }
     const rows = series.map((row) => `<tr>
-      <td>${esc(row.day)}</td>
+      <td>${esc(String(row.day).split('-').reverse().join('/'))}</td>
       <td class="right">${fmtInt(row.requests)}</td>
       <td class="right">${fmtCompact(row.tokens)}</td>
       <td class="right">${fmtUsd(row.cost)}</td>
@@ -1707,7 +1709,7 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     $('#portal-quotas').innerHTML = cards.join('');
 
     const series = me.usage?.series ?? [];
-    $('#portal-chart-hint').textContent = `${fmtInt(me.usage?.totals?.requests ?? 0)} requêtes · ${fmtUsd(me.usage?.totals?.cost ?? 0)} de crédit site`;
+    $('#portal-chart-hint').textContent = `${fmtInt(me.usage?.totals?.requests ?? 0)} requêtes · ${fmtUsd2(me.usage?.totals?.cost ?? 0)} de crédit site`;
     $('#portal-chart').innerHTML = chartMarkup(series);
 
     $('#portal-limits').innerHTML = limitsMarkup(me);

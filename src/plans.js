@@ -21,7 +21,7 @@ export const PASS_PLANS = Object.freeze([
     maxOutputTokens: 8192,
     keys: 1,
     support: 'Email sous 72 h',
-    features: ['7 jours renouvelables', '5 $ de crédit site', '5 $ max / 5 h', '5 $ max / semaine'],
+    features: ['7 jours renouvelables', '5 $ de crédit site', '5 $ max / 5 h', '5 $ max / 7 jours'],
   },
   {
     id: 'createur',
@@ -38,7 +38,7 @@ export const PASS_PLANS = Object.freeze([
     maxOutputTokens: 16384,
     keys: 3,
     support: 'Email sous 48 h',
-    features: ['14 jours renouvelables', '15 $ de crédit site', '10 $ max / 5 h', '15 $ max / semaine'],
+    features: ['14 jours renouvelables', '15 $ de crédit site', '10 $ max / 5 h', '15 $ max / 7 jours'],
   },
   {
     id: 'equipe',
@@ -55,7 +55,7 @@ export const PASS_PLANS = Object.freeze([
     maxOutputTokens: 32768,
     keys: 8,
     support: 'Support prioritaire 24 h',
-    features: ['30 jours renouvelables', '40 $ de crédit site', '20 $ max / 5 h', '40 $ max / semaine'],
+    features: ['30 jours renouvelables', '40 $ de crédit site', '20 $ max / 5 h', '40 $ max / 7 jours'],
   },
   {
     id: 'business',
@@ -72,7 +72,7 @@ export const PASS_PLANS = Object.freeze([
     maxOutputTokens: 32768,
     keys: 25,
     support: 'Support dédié + SLA 99,5 %',
-    features: ['30 jours renouvelables', '100 $ de crédit site', '50 $ max / 5 h', '100 $ max / semaine'],
+    features: ['30 jours renouvelables', '100 $ de crédit site', '50 $ max / 5 h', '100 $ max / 7 jours'],
   },
 ]);
 

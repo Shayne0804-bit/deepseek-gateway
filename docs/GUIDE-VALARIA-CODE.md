@@ -35,7 +35,7 @@ code reçu par email si vous ne l’avez plus sous la main.
 
 ### Les pass
 
-| Pass | Durée | Crédit | Plafond sur 5 h | Plafond par semaine | Clés |
+| Pass | Durée | Crédit | Plafond sur 5 h | Plafond sur 7 jours | Clés |
 |---|---|---|---|---|---|
 | Découverte | 7 jours | 5 $ | 5 $ | 5 $ | 1 |
 | Créateur | 14 jours | 15 $ | 10 $ | 15 $ | 3 |
@@ -258,7 +258,7 @@ raison :
 | 429 | `rate_limit_exceeded` | trop de requêtes par minute | attendre le délai de l’en-tête `Retry-After` |
 | 429 | `concurrency_limit_exceeded` | trop d’appels en même temps | attendre la fin d’un appel en cours |
 | 429 | `credit_window_exceeded` | plafond de crédit sur 5 heures atteint | réessayer plus tard |
-| 429 | `credit_week_exceeded` | plafond de crédit de la semaine atteint | attendre la semaine suivante ou changer de pass |
+| 429 | `credit_week_exceeded` | plafond de crédit sur 7 jours glissants atteint | attendre que les dépenses de plus de 7 jours sortent du calcul, ou changer de pass |
 | 429 | `insufficient_quota` | crédit du pass épuisé | renouveler le pass |
 
 ## 5. Dépannage
