@@ -112,7 +112,7 @@
     const galaxy = new Float32Array(N * 3);
     const colors = new Float32Array(N * 3);
     const seeds = new Float32Array(N);
-    const palette = [[0.55, 0.92, 0.72], [0.24, 0.81, 0.71], [0.89, 1, 0.93], [0.94, 0.78, 0.45]];
+    const palette = [[0.55, 0.8, 0.92], [0.24, 0.52, 0.81], [0.89, 0.97, 1], [0.94, 0.78, 0.45]];
     for (let i = 0; i < N; i++) {
       const k = i * 3;
       const u = Math.random() * 2 - 1;

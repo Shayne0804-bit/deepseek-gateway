@@ -41,14 +41,14 @@ export function buildPortalCodeEmail({ to, code, minutes, from, fromName }) {
   ].join('\n');
   const html = `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><title>${subject}</title></head>
-<body style="margin:0;padding:24px;background:#040705;color:#d6f7df;font-family:ui-monospace,Consolas,monospace">
-  <div style="max-width:520px;margin:0 auto;border:1px solid #1f4a30;background:#07110b;padding:24px">
-    <p style="margin:0 0 6px;color:#3ee97f;font-size:12px">&gt;_ VALARIA Gateway API</p>
+<body style="margin:0;padding:24px;background:#030708;color:#d6eff7;font-family:ui-monospace,Consolas,monospace">
+  <div style="max-width:520px;margin:0 auto;border:1px solid #1f3d4a;background:#040f14;padding:24px">
+    <p style="margin:0 0 6px;color:#3eb7e9;font-size:12px">&gt;_ VALARIA Gateway API</p>
     <h1 style="margin:0 0 16px;font-size:20px">Code de connexion</h1>
     <p style="margin:0 0 18px;line-height:1.6">Saisissez ce code dans votre espace pour vous connecter.</p>
-    <p style="margin:0 0 18px;font-size:32px;letter-spacing:8px;color:#3ee97f;font-weight:700">${code}</p>
-    <p style="margin:0 0 8px;line-height:1.6;color:#a8d8b8">Valable <strong>${minutes} minutes</strong>, à usage unique.</p>
-    <p style="margin:0;font-size:12px;line-height:1.6;color:#5d8769">Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail : sans ce code, personne ne peut ouvrir votre espace.</p>
+    <p style="margin:0 0 18px;font-size:32px;letter-spacing:8px;color:#3eb7e9;font-weight:700">${code}</p>
+    <p style="margin:0 0 8px;line-height:1.6;color:#a8cbd8">Valable <strong>${minutes} minutes</strong>, à usage unique.</p>
+    <p style="margin:0;font-size:12px;line-height:1.6;color:#5d7d87">Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail : sans ce code, personne ne peut ouvrir votre espace.</p>
   </div>
 </body></html>`;
 
@@ -107,22 +107,22 @@ export function buildPaymentReceiptEmail({ to, receipt, from, fromName }) {
   ].filter(Boolean).join('\n');
   const html = `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><title>${escapeHtml(subject)}</title></head>
-<body style="margin:0;padding:24px;background:#040705;color:#d6f7df;font-family:ui-monospace,Consolas,monospace">
-  <div style="max-width:540px;margin:0 auto;border:1px solid #1f4a30;background:#07110b;padding:24px">
-    <p style="margin:0 0 6px;color:#3ee97f;font-size:12px">&gt;_ VALARIA Gateway API</p>
+<body style="margin:0;padding:24px;background:#030708;color:#d6eff7;font-family:ui-monospace,Consolas,monospace">
+  <div style="max-width:540px;margin:0 auto;border:1px solid #1f3d4a;background:#040f14;padding:24px">
+    <p style="margin:0 0 6px;color:#3eb7e9;font-size:12px">&gt;_ VALARIA Gateway API</p>
     <h1 style="margin:0 0 16px;font-size:20px">Reçu de paiement</h1>
     <p style="margin:0 0 18px;line-height:1.6">Votre paiement a été confirmé et votre pass est activé.</p>
-    <p style="margin:0 0 14px;font-size:18px;color:#3ee97f"><strong>${escapeHtml(receipt.planName)}</strong></p>
+    <p style="margin:0 0 14px;font-size:18px;color:#3eb7e9"><strong>${escapeHtml(receipt.planName)}</strong></p>
     <table style="width:100%;border-collapse:collapse;font-size:13px;line-height:1.7">
-      <tr><td style="color:#8ab89a;padding:4px 0">Reçu</td><td style="text-align:right">${escapeHtml(receipt.orderId)}</td></tr>
-      <tr><td style="color:#8ab89a;padding:4px 0">Montant payé</td><td style="text-align:right"><strong>${escapeHtml(amount)}</strong></td></tr>
-      <tr><td style="color:#8ab89a;padding:4px 0">Date</td><td style="text-align:right">${escapeHtml(receipt.paidAt)}</td></tr>
-      <tr><td style="color:#8ab89a;padding:4px 0">Fin du pass</td><td style="text-align:right">${escapeHtml(receipt.expiresAt)}</td></tr>
-      <tr><td style="color:#8ab89a;padding:4px 0">Crédit site</td><td style="text-align:right">${escapeHtml(receipt.quotaUsd)} $</td></tr>
-      ${receipt.credit5h ? `<tr><td style="color:#8ab89a;padding:4px 0">Plafond 5 h</td><td style="text-align:right">${escapeHtml(receipt.credit5h)} $</td></tr>` : ''}
-      ${receipt.creditWeek ? `<tr><td style="color:#8ab89a;padding:4px 0">Plafond semaine</td><td style="text-align:right">${escapeHtml(receipt.creditWeek)} $</td></tr>` : ''}
+      <tr><td style="color:#8aabb8;padding:4px 0">Reçu</td><td style="text-align:right">${escapeHtml(receipt.orderId)}</td></tr>
+      <tr><td style="color:#8aabb8;padding:4px 0">Montant payé</td><td style="text-align:right"><strong>${escapeHtml(amount)}</strong></td></tr>
+      <tr><td style="color:#8aabb8;padding:4px 0">Date</td><td style="text-align:right">${escapeHtml(receipt.paidAt)}</td></tr>
+      <tr><td style="color:#8aabb8;padding:4px 0">Fin du pass</td><td style="text-align:right">${escapeHtml(receipt.expiresAt)}</td></tr>
+      <tr><td style="color:#8aabb8;padding:4px 0">Crédit site</td><td style="text-align:right">${escapeHtml(receipt.quotaUsd)} $</td></tr>
+      ${receipt.credit5h ? `<tr><td style="color:#8aabb8;padding:4px 0">Plafond 5 h</td><td style="text-align:right">${escapeHtml(receipt.credit5h)} $</td></tr>` : ''}
+      ${receipt.creditWeek ? `<tr><td style="color:#8aabb8;padding:4px 0">Plafond semaine</td><td style="text-align:right">${escapeHtml(receipt.creditWeek)} $</td></tr>` : ''}
     </table>
-    <p style="margin:18px 0 0;font-size:12px;line-height:1.6;color:#5d8769">Ce reçu est généré automatiquement par VALARIA Gateway API.</p>
+    <p style="margin:18px 0 0;font-size:12px;line-height:1.6;color:#5d7d87">Ce reçu est généré automatiquement par VALARIA Gateway API.</p>
   </div>
 </body></html>`;
   const fromHeader = fromName ? `${encodeHeader(fromName)} <${from}>` : `<${from}>`;

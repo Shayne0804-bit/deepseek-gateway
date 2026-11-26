@@ -695,17 +695,17 @@
     }).join('');
     const labels = series.map((row, i) => {
       if (i % 5 !== 0 && i !== n - 1) return '';
-      return `<text x="${(padL + i * slot + slot / 2).toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="9" fill="#9fb4a7" font-family="Consolas, monospace">${esc(shortDay(row.day))}</text>`;
+      return `<text x="${(padL + i * slot + slot / 2).toFixed(1)}" y="${H - 7}" text-anchor="middle" font-size="9" fill="#9faeb4" font-family="Consolas, monospace">${esc(shortDay(row.day))}</text>`;
     }).join('');
     return `<div class="chart">
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Consommation de tokens par jour">
         <defs>
           <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#8ceab8"/>
-            <stop offset="1" stop-color="#3ccfb4" stop-opacity="0.4"/>
+            <stop offset="0" stop-color="#8ccbea"/>
+            <stop offset="1" stop-color="#3c84cf" stop-opacity="0.4"/>
           </linearGradient>
         </defs>
-        <line x1="${padL}" y1="${H - padB}" x2="${W}" y2="${H - padB}" stroke="rgba(220,255,235,.14)" stroke-width="1"/>
+        <line x1="${padL}" y1="${H - padB}" x2="${W}" y2="${H - padB}" stroke="rgba(220, 244, 255,.14)" stroke-width="1"/>
         ${bars}
         ${labels}
       </svg>

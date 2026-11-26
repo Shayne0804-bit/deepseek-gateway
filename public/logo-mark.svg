@@ -9,36 +9,36 @@
     @keyframes pulse { 50% { opacity: .9; transform: scale(1.35); } }
     @media (prefers-reduced-motion: reduce) { .d, .tw, .core { animation: none; } }
   </style>
-  <rect x="1.5" y="1.5" width="93" height="93" rx="26" fill="#0A140F" stroke="#24402F" stroke-width="2"/>
+  <rect x="1.5" y="1.5" width="93" height="93" rx="26" fill="#071117" stroke="#1C3B48" stroke-width="2"/>
   <circle class="core" cx="48" cy="74" r="9" fill="#F0C674" opacity=".22"/>
-  <circle class="d tw" style="--x:53.6px;--y:0.0px;--i:0.03s" cx="22.2" cy="23.0" r="3" fill="#E4FFEE"/>
-  <circle class="d" style="--x:11.7px;--y:46.4px;--i:0.09s" cx="30.8" cy="23.0" r="3" fill="#8CEAB8"/>
-  <circle class="d" style="--x:-23.2px;--y:42.7px;--i:0.14s" cx="65.2" cy="23.0" r="3" fill="#3CCFB4"/>
-  <circle class="d" style="--x:-44.9px;--y:-12.4px;--i:0.15s" cx="73.8" cy="23.0" r="3" fill="#8CEAB8"/>
-  <circle class="d tw" style="--x:13.5px;--y:-30.4px;--i:0.14s" cx="17.9" cy="30.4" r="3" fill="#8CEAB8"/>
-  <circle class="d" style="--x:-12.3px;--y:-45.3px;--i:0.13s" cx="26.5" cy="30.4" r="3" fill="#8CEAB8"/>
-  <circle class="d" style="--x:-16.2px;--y:-36.6px;--i:0.26s" cx="35.1" cy="30.4" r="3" fill="#E4FFEE"/>
-  <circle class="d" style="--x:10.5px;--y:-27.8px;--i:0.24s" cx="60.9" cy="30.4" r="3" fill="#3CCFB4"/>
-  <circle class="d tw" style="--x:41.3px;--y:-21.7px;--i:0.28s" cx="69.5" cy="30.4" r="3" fill="#3CCFB4"/>
-  <circle class="d" style="--x:-47.2px;--y:-24.9px;--i:0.33s" cx="78.1" cy="30.4" r="3" fill="#8CEAB8"/>
-  <circle class="d" style="--x:-25.1px;--y:25.9px;--i:0.35s" cx="22.2" cy="37.9" r="3" fill="#8CEAB8"/>
-  <circle class="d" style="--x:-15.1px;--y:26.6px;--i:0.31s" cx="30.8" cy="37.9" r="3" fill="#8CEAB8"/>
-  <circle class="d tw" style="--x:-31.4px;--y:15.1px;--i:0.41s" cx="39.4" cy="37.9" r="3" fill="#E4FFEE"/>
-  <circle class="d" style="--x:-44.8px;--y:-16.9px;--i:0.43s" cx="56.6" cy="37.9" r="3" fill="#3CCFB4"/>
-  <circle class="d" style="--x:31.9px;--y:12.3px;--i:0.42s" cx="65.2" cy="37.9" r="3" fill="#3CCFB4"/>
-  <circle class="d" style="--x:-38.6px;--y:-2.1px;--i:0.40s" cx="73.8" cy="37.9" r="3" fill="#8CEAB8"/>
-  <circle class="d tw" style="--x:23.2px;--y:-15.0px;--i:0.44s" cx="26.5" cy="45.3" r="3" fill="#8CEAB8"/>
-  <circle class="d" style="--x:-25.6px;--y:38.1px;--i:0.54s" cx="35.1" cy="45.3" r="3" fill="#8CEAB8"/>
-  <circle class="d" style="--x:-30.8px;--y:-2.9px;--i:0.50s" cx="60.9" cy="45.3" r="3" fill="#8CEAB8"/>
-  <circle class="d" style="--x:-7.7px;--y:36.1px;--i:0.53s" cx="69.5" cy="45.3" r="3" fill="#3CCFB4"/>
-  <circle class="d tw" style="--x:-20.8px;--y:36.4px;--i:0.57s" cx="30.8" cy="52.8" r="3" fill="#8CEAB8"/>
-  <circle class="d" style="--x:5.6px;--y:52.9px;--i:0.58s" cx="39.4" cy="52.8" r="3" fill="#E4FFEE"/>
-  <circle class="d" style="--x:29.4px;--y:-34.2px;--i:0.63s" cx="56.6" cy="52.8" r="3" fill="#3CCFB4"/>
-  <circle class="d" style="--x:-40.9px;--y:-4.2px;--i:0.66s" cx="65.2" cy="52.8" r="3" fill="#3CCFB4"/>
-  <circle class="d tw" style="--x:35.2px;--y:-14.0px;--i:0.68s" cx="35.1" cy="60.2" r="3" fill="#E4FFEE"/>
-  <circle class="d" style="--x:-0.3px;--y:43.6px;--i:0.67s" cx="43.7" cy="60.2" r="3" fill="#8CEAB8"/>
-  <circle class="d" style="--x:-18.3px;--y:33.0px;--i:0.75s" cx="52.3" cy="60.2" r="3" fill="#3CCFB4"/>
-  <circle class="d" style="--x:21.1px;--y:-20.4px;--i:0.77s" cx="60.9" cy="60.2" r="3" fill="#8CEAB8"/>
+  <circle class="d tw" style="--x:53.6px;--y:0.0px;--i:0.03s" cx="22.2" cy="23.0" r="3" fill="#E4F7FF"/>
+  <circle class="d" style="--x:11.7px;--y:46.4px;--i:0.09s" cx="30.8" cy="23.0" r="3" fill="#8CCBEA"/>
+  <circle class="d" style="--x:-23.2px;--y:42.7px;--i:0.14s" cx="65.2" cy="23.0" r="3" fill="#3C84CF"/>
+  <circle class="d" style="--x:-44.9px;--y:-12.4px;--i:0.15s" cx="73.8" cy="23.0" r="3" fill="#8CCBEA"/>
+  <circle class="d tw" style="--x:13.5px;--y:-30.4px;--i:0.14s" cx="17.9" cy="30.4" r="3" fill="#8CCBEA"/>
+  <circle class="d" style="--x:-12.3px;--y:-45.3px;--i:0.13s" cx="26.5" cy="30.4" r="3" fill="#8CCBEA"/>
+  <circle class="d" style="--x:-16.2px;--y:-36.6px;--i:0.26s" cx="35.1" cy="30.4" r="3" fill="#E4F7FF"/>
+  <circle class="d" style="--x:10.5px;--y:-27.8px;--i:0.24s" cx="60.9" cy="30.4" r="3" fill="#3C84CF"/>
+  <circle class="d tw" style="--x:41.3px;--y:-21.7px;--i:0.28s" cx="69.5" cy="30.4" r="3" fill="#3C84CF"/>
+  <circle class="d" style="--x:-47.2px;--y:-24.9px;--i:0.33s" cx="78.1" cy="30.4" r="3" fill="#8CCBEA"/>
+  <circle class="d" style="--x:-25.1px;--y:25.9px;--i:0.35s" cx="22.2" cy="37.9" r="3" fill="#8CCBEA"/>
+  <circle class="d" style="--x:-15.1px;--y:26.6px;--i:0.31s" cx="30.8" cy="37.9" r="3" fill="#8CCBEA"/>
+  <circle class="d tw" style="--x:-31.4px;--y:15.1px;--i:0.41s" cx="39.4" cy="37.9" r="3" fill="#E4F7FF"/>
+  <circle class="d" style="--x:-44.8px;--y:-16.9px;--i:0.43s" cx="56.6" cy="37.9" r="3" fill="#3C84CF"/>
+  <circle class="d" style="--x:31.9px;--y:12.3px;--i:0.42s" cx="65.2" cy="37.9" r="3" fill="#3C84CF"/>
+  <circle class="d" style="--x:-38.6px;--y:-2.1px;--i:0.40s" cx="73.8" cy="37.9" r="3" fill="#8CCBEA"/>
+  <circle class="d tw" style="--x:23.2px;--y:-15.0px;--i:0.44s" cx="26.5" cy="45.3" r="3" fill="#8CCBEA"/>
+  <circle class="d" style="--x:-25.6px;--y:38.1px;--i:0.54s" cx="35.1" cy="45.3" r="3" fill="#8CCBEA"/>
+  <circle class="d" style="--x:-30.8px;--y:-2.9px;--i:0.50s" cx="60.9" cy="45.3" r="3" fill="#8CCBEA"/>
+  <circle class="d" style="--x:-7.7px;--y:36.1px;--i:0.53s" cx="69.5" cy="45.3" r="3" fill="#3C84CF"/>
+  <circle class="d tw" style="--x:-20.8px;--y:36.4px;--i:0.57s" cx="30.8" cy="52.8" r="3" fill="#8CCBEA"/>
+  <circle class="d" style="--x:5.6px;--y:52.9px;--i:0.58s" cx="39.4" cy="52.8" r="3" fill="#E4F7FF"/>
+  <circle class="d" style="--x:29.4px;--y:-34.2px;--i:0.63s" cx="56.6" cy="52.8" r="3" fill="#3C84CF"/>
+  <circle class="d" style="--x:-40.9px;--y:-4.2px;--i:0.66s" cx="65.2" cy="52.8" r="3" fill="#3C84CF"/>
+  <circle class="d tw" style="--x:35.2px;--y:-14.0px;--i:0.68s" cx="35.1" cy="60.2" r="3" fill="#E4F7FF"/>
+  <circle class="d" style="--x:-0.3px;--y:43.6px;--i:0.67s" cx="43.7" cy="60.2" r="3" fill="#8CCBEA"/>
+  <circle class="d" style="--x:-18.3px;--y:33.0px;--i:0.75s" cx="52.3" cy="60.2" r="3" fill="#3C84CF"/>
+  <circle class="d" style="--x:21.1px;--y:-20.4px;--i:0.77s" cx="60.9" cy="60.2" r="3" fill="#8CCBEA"/>
   <circle class="d tw" style="--x:33.7px;--y:17.9px;--i:0.72s" cx="39.4" cy="67.7" r="3.4" fill="#F0C674"/>
   <circle class="d" style="--x:49.3px;--y:26.3px;--i:0.75s" cx="48.0" cy="67.7" r="3.4" fill="#F0C674"/>
   <circle class="d" style="--x:-20.4px;--y:-22.4px;--i:0.80s" cx="56.6" cy="67.7" r="3.4" fill="#F0C674"/>

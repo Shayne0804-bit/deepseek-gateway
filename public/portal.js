@@ -1564,23 +1564,23 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
     }).join('');
     const grid = [0.5, 1].map((f) => {
       const y = (H - padB - f * (H - padB - padT)).toFixed(1);
-      return `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="rgba(220,255,235,.07)" stroke-dasharray="3 5"></line>`;
+      return `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="rgba(220, 244, 255,.07)" stroke-dasharray="3 5"></line>`;
     }).join('');
     const first = series[0]?.day ? DAY_LABEL.format(new Date(`${series[0].day}T00:00:00Z`)) : '';
     const last = series[n - 1]?.day ? DAY_LABEL.format(new Date(`${series[n - 1].day}T00:00:00Z`)) : '';
     return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Consommation quotidienne en tokens sur 30 jours, ${fmtInt(total)} tokens au total">
       <defs>
         <linearGradient id="portalGrad" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0%" stop-color="#3ccfb4" stop-opacity=".45"></stop>
-          <stop offset="100%" stop-color="#8ceab8"></stop>
+          <stop offset="0%" stop-color="#3c84cf" stop-opacity=".45"></stop>
+          <stop offset="100%" stop-color="#8ccbea"></stop>
         </linearGradient>
       </defs>
       ${grid}
-      <line x1="0" y1="${H - padB}" x2="${W}" y2="${H - padB}" stroke="rgba(220,255,235,.14)" stroke-width="1"></line>
+      <line x1="0" y1="${H - padB}" x2="${W}" y2="${H - padB}" stroke="rgba(220, 244, 255,.14)" stroke-width="1"></line>
       ${bars}
-      <text x="0" y="${H - 6}" fill="#9fb4a7" font-size="11" font-family="monospace">${first}</text>
-      <text x="${W}" y="${H - 6}" text-anchor="end" fill="#9fb4a7" font-size="11" font-family="monospace">${last}</text>
-      <text x="4" y="${padT + 4}" fill="#9fb4a7" font-size="11" font-family="monospace">max ${fmtCompact(max)} tokens/jour</text>
+      <text x="0" y="${H - 6}" fill="#9faeb4" font-size="11" font-family="monospace">${first}</text>
+      <text x="${W}" y="${H - 6}" text-anchor="end" fill="#9faeb4" font-size="11" font-family="monospace">${last}</text>
+      <text x="4" y="${padT + 4}" fill="#9faeb4" font-size="11" font-family="monospace">max ${fmtCompact(max)} tokens/jour</text>
     </svg>`;
   }
 
