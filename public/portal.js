@@ -641,6 +641,29 @@
     return decimals === 0 ? Math.round(value) : Number(value.toFixed(2));
   }
 
+  /**
+   * Ouvre l'onglet de paiement pendant le clic (sinon le navigateur le bloque
+   * comme popup), puis le dirige vers SasPay une fois l'URL connue.
+   */
+  function openPaymentTab() {
+    const tab = window.open('', '_blank');
+    if (!tab) return null;
+    tab.opener = null;
+    try { tab.document.title = 'Paiement…'; tab.document.body.textContent = 'Préparation du paiement…'; } catch { /* onglet deja ailleurs */ }
+    return tab;
+  }
+
+  function sendToCheckout(tab, url) {
+    if (tab && !tab.closed) {
+      tab.location.href = url;
+      return true;
+    }
+    window.location.assign(url); // popup bloquee : on garde l'ancien comportement
+    return false;
+  }
+
+  const PAYMENT_TAB_NOTE = 'La page de paiement est ouverte dans un nouvel onglet. Une fois le paiement fini, actualisez cette page pour voir votre espace à jour.';
+
   async function startWalletRecharge(button) {
     const input = $('#billing-custom-input');
     const status = $('#billing-status');
@@ -652,18 +675,22 @@
     const label = button.textContent;
     button.disabled = true;
     button.textContent = 'Préparation…';
+    const tab = openPaymentTab();
     try {
       const data = await api('/wallet/checkout', { method: 'POST', body: { amount } });
       if (!data.checkout_url) throw new Error('Page de paiement indisponible.');
-      window.location.assign(data.checkout_url);
+      if (sendToCheckout(tab, data.checkout_url) && status) status.textContent = PAYMENT_TAB_NOTE;
     } catch (err) {
+      tab?.close();
       if (status) status.textContent = err.message;
+    } finally {
       button.disabled = false;
       button.textContent = label;
     }
   }
 
-  function planCurrencyNote() {    const currency = state.currency;
+  function planCurrencyNote() {
+    const currency = state.currency;
     if (!currency || currency.currency === 'EUR') return 'Prix affichés en euros (EUR).';
     const country = currency.country
       ? new Intl.DisplayNames(['fr'], { type: 'region' }).of(currency.country)
@@ -732,14 +759,16 @@
     button.disabled = true;
     button.textContent = 'Préparation du paiement…';
     const status = $('#portal-status');
+    const tab = openPaymentTab();
     try {
       const data = await api('/pass/checkout', { method: 'POST', body: { plan: planId } });
-      if (data.checkout_url) {
-        window.location.assign(data.checkout_url);
-        return;
+      if (!data.checkout_url) throw new Error('Le paiement en ligne n’a pas renvoyé de page de paiement.');
+      if (sendToCheckout(tab, data.checkout_url) && status) {
+        status.className = 'portal-status alert ok';
+        status.textContent = PAYMENT_TAB_NOTE;
       }
-      throw new Error('Le paiement en ligne n’a pas renvoyé de page de paiement.');
     } catch (err) {
+      tab?.close();
       if (status) {
         status.className = 'portal-status alert danger';
         status.textContent = err.message;
