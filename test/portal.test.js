@@ -165,6 +165,7 @@ test('catalogue des pass et pass applique au compte', async () => {
     assert.equal(login.status, 200);
     const cookie = login.headers.getSetCookie()[0].split(';')[0];
     const me = await (await fetch(`${started.url}/portal/api/me`, { headers: { cookie } })).json();
+    assert.equal(me.paymentsEnabled, false);
     assert.equal(me.plan.id, 'createur');
     assert.equal(me.plan.name, 'Créateur');
     assert.equal(me.plans.length, 4);

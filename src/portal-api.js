@@ -626,6 +626,7 @@ export function createPortalApi({ config, db, log, mailer = null }) {
         enabled: client.enabled,
         walletUsd: client.walletUsd ?? 0,
       },
+      paymentsEnabled: Boolean(config.saspayApiKey),
       status: access ? access.code : 'ok',
       statusMessage: access ? access.message : null,
       quota: quotaView(client),

@@ -1751,7 +1751,10 @@ ANTHROPIC_AUTH_TOKEN=VOTRE_CLE</pre>
 
   async function loadMe() {
     const me = await api('/me');
+    // /config peut avoir echoue avant la connexion : /me fait foi pour le paiement.
+    if (typeof me.paymentsEnabled === 'boolean') state.paymentsEnabled = me.paymentsEnabled;
     renderMe(me);
+    renderBillingPreview();
     redirectAfterLogin();
   }
 
